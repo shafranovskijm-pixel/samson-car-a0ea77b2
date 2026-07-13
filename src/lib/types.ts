@@ -1,5 +1,5 @@
 export type BrandTier = "economy" | "comfort" | "business" | "premium" | "luxury";
-export type Brand = { id: string; name: string; tier?: BrandTier };
+export type Brand = { id: string; name: string; tier?: BrandTier | string };
 
 export const TIER_COEFFICIENT: Record<BrandTier, number> = {
   economy: 1.0,
