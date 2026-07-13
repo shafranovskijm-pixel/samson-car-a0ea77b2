@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ServicesRouteImport } from './routes/services'
 import { Route as ScheduleRouteImport } from './routes/schedule'
+import { Route as MechanicsRouteImport } from './routes/mechanics'
 import { Route as ClientsRouteImport } from './routes/clients'
 import { Route as CarsRouteImport } from './routes/cars'
 import { Route as BrandsRouteImport } from './routes/brands'
@@ -24,6 +25,11 @@ const ServicesRoute = ServicesRouteImport.update({
 const ScheduleRoute = ScheduleRouteImport.update({
   id: '/schedule',
   path: '/schedule',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MechanicsRoute = MechanicsRouteImport.update({
+  id: '/mechanics',
+  path: '/mechanics',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ClientsRoute = ClientsRouteImport.update({
@@ -52,6 +58,7 @@ export interface FileRoutesByFullPath {
   '/brands': typeof BrandsRoute
   '/cars': typeof CarsRoute
   '/clients': typeof ClientsRoute
+  '/mechanics': typeof MechanicsRoute
   '/schedule': typeof ScheduleRoute
   '/services': typeof ServicesRoute
 }
@@ -60,6 +67,7 @@ export interface FileRoutesByTo {
   '/brands': typeof BrandsRoute
   '/cars': typeof CarsRoute
   '/clients': typeof ClientsRoute
+  '/mechanics': typeof MechanicsRoute
   '/schedule': typeof ScheduleRoute
   '/services': typeof ServicesRoute
 }
@@ -69,20 +77,36 @@ export interface FileRoutesById {
   '/brands': typeof BrandsRoute
   '/cars': typeof CarsRoute
   '/clients': typeof ClientsRoute
+  '/mechanics': typeof MechanicsRoute
   '/schedule': typeof ScheduleRoute
   '/services': typeof ServicesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/brands' | '/cars' | '/clients' | '/schedule' | '/services'
+  fullPaths:
+    | '/'
+    | '/brands'
+    | '/cars'
+    | '/clients'
+    | '/mechanics'
+    | '/schedule'
+    | '/services'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/brands' | '/cars' | '/clients' | '/schedule' | '/services'
+  to:
+    | '/'
+    | '/brands'
+    | '/cars'
+    | '/clients'
+    | '/mechanics'
+    | '/schedule'
+    | '/services'
   id:
     | '__root__'
     | '/'
     | '/brands'
     | '/cars'
     | '/clients'
+    | '/mechanics'
     | '/schedule'
     | '/services'
   fileRoutesById: FileRoutesById
@@ -92,6 +116,7 @@ export interface RootRouteChildren {
   BrandsRoute: typeof BrandsRoute
   CarsRoute: typeof CarsRoute
   ClientsRoute: typeof ClientsRoute
+  MechanicsRoute: typeof MechanicsRoute
   ScheduleRoute: typeof ScheduleRoute
   ServicesRoute: typeof ServicesRoute
 }
@@ -110,6 +135,13 @@ declare module '@tanstack/react-router' {
       path: '/schedule'
       fullPath: '/schedule'
       preLoaderRoute: typeof ScheduleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mechanics': {
+      id: '/mechanics'
+      path: '/mechanics'
+      fullPath: '/mechanics'
+      preLoaderRoute: typeof MechanicsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/clients': {
@@ -148,6 +180,7 @@ const rootRouteChildren: RootRouteChildren = {
   BrandsRoute: BrandsRoute,
   CarsRoute: CarsRoute,
   ClientsRoute: ClientsRoute,
+  MechanicsRoute: MechanicsRoute,
   ScheduleRoute: ScheduleRoute,
   ServicesRoute: ServicesRoute,
 }
