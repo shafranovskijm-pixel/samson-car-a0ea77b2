@@ -69,6 +69,19 @@ export const getPriceForBrand = async (service_id: string, brand_id: string | nu
     .maybeSingle();
   return data?.price ?? null;
 };
+export const listPricesForBrand = async (
+  brand_id: string,
+): Promise<Record<string, number>> => {
+  const { data, error } = await supabase
+    .from("service_prices")
+    .select("service_id, price")
+    .eq("brand_id", brand_id);
+  if (error) throw error;
+  const map: Record<string, number> = {};
+  (data ?? []).forEach((r) => (map[r.service_id as string] = r.price as number));
+  return map;
+};
+
 
 // CLIENTS
 export const listClients = async (): Promise<Client[]> =>
