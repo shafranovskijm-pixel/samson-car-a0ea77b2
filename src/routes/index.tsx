@@ -32,6 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { listBrands, listServices, listPricesForBrand } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import heroAsset from "@/assets/samson-hero.jpg.asset.json";
 
 export const Route = createFileRoute("/")({
