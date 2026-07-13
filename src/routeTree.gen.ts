@@ -16,6 +16,7 @@ import { Route as ClientsRouteImport } from './routes/clients'
 import { Route as CarsRouteImport } from './routes/cars'
 import { Route as CalendarRouteImport } from './routes/calendar'
 import { Route as BrandsRouteImport } from './routes/brands'
+import { Route as IndexRouteImport } from './routes/index'
 
 const ServicesRoute = ServicesRouteImport.update({
   id: '/services',
@@ -52,8 +53,14 @@ const BrandsRoute = BrandsRouteImport.update({
   path: '/brands',
   getParentRoute: () => rootRouteImport,
 } as any)
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
+  '/': typeof IndexRoute
   '/brands': typeof BrandsRoute
   '/calendar': typeof CalendarRoute
   '/cars': typeof CarsRoute
@@ -63,6 +70,7 @@ export interface FileRoutesByFullPath {
   '/services': typeof ServicesRoute
 }
 export interface FileRoutesByTo {
+  '/': typeof IndexRoute
   '/brands': typeof BrandsRoute
   '/calendar': typeof CalendarRoute
   '/cars': typeof CarsRoute
@@ -73,6 +81,7 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
   '/brands': typeof BrandsRoute
   '/calendar': typeof CalendarRoute
   '/cars': typeof CarsRoute
@@ -84,6 +93,7 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/'
     | '/brands'
     | '/calendar'
     | '/cars'
@@ -93,6 +103,7 @@ export interface FileRouteTypes {
     | '/services'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/'
     | '/brands'
     | '/calendar'
     | '/cars'
@@ -102,6 +113,7 @@ export interface FileRouteTypes {
     | '/services'
   id:
     | '__root__'
+    | '/'
     | '/brands'
     | '/calendar'
     | '/cars'
@@ -112,6 +124,7 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  IndexRoute: typeof IndexRoute
   BrandsRoute: typeof BrandsRoute
   CalendarRoute: typeof CalendarRoute
   CarsRoute: typeof CarsRoute
@@ -172,10 +185,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BrandsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
   BrandsRoute: BrandsRoute,
   CalendarRoute: CalendarRoute,
   CarsRoute: CarsRoute,
