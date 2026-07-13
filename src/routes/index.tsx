@@ -9,15 +9,9 @@ import {
   Phone,
   MapPin,
   Sparkles,
-  Gauge,
-  Cog,
-  Droplet,
-  Disc3,
-  Wind,
-  Zap,
-  Car as CarIcon,
   CheckCircle2,
   ChevronRight,
+  ChevronLeft,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -33,7 +27,17 @@ import {
 } from "@/components/ui/select";
 import { listBrands, listServices, listPricesForBrand } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { TIER_COEFFICIENT, TIER_LABEL, type BrandTier } from "@/lib/types";
 import heroAsset from "@/assets/samson-hero.jpg.asset.json";
+import imgFluids from "@/assets/cat-fluids.jpg";
+import imgEngine from "@/assets/cat-engine.jpg";
+import imgFuel from "@/assets/cat-fuel.jpg";
+import imgSuspension from "@/assets/cat-suspension.jpg";
+import imgAlignment from "@/assets/cat-alignment.jpg";
+import imgBrakes from "@/assets/cat-brakes.jpg";
+import imgAc from "@/assets/cat-ac.jpg";
+import imgTires from "@/assets/cat-tires.jpg";
+import imgElectric from "@/assets/cat-electric.jpg";
 
 export const Route = createFileRoute("/")({
   ssr: false,
@@ -55,18 +59,18 @@ export const Route = createFileRoute("/")({
   component: LandingPage,
 });
 
-const CATEGORY_ICONS: Record<string, typeof Wrench> = {
-  Диагностика: Gauge,
-  ТО: Cog,
-  "Замена масла": Droplet,
-  Тормоза: Disc3,
-  Подвеска: Wrench,
-  Двигатель: Zap,
-  Электрика: Zap,
-  Кондиционер: Wind,
-  Шиномонтаж: CarIcon,
-  Кузов: Sparkles,
-};
+// 9 канонических категорий как у крупных автосервисов
+const CATEGORIES: { name: string; img: string }[] = [
+  { name: "Жидкости и фильтры", img: imgFluids },
+  { name: "Двигатель и навесное оборудование", img: imgEngine },
+  { name: "Топливная система", img: imgFuel },
+  { name: "Ходовая часть и рулевое управление", img: imgSuspension },
+  { name: "Регулировочные работы", img: imgAlignment },
+  { name: "Тормозная система", img: imgBrakes },
+  { name: "Кондиционер и отопление", img: imgAc },
+  { name: "Шиномонтажные работы", img: imgTires },
+  { name: "Электрика и электроника", img: imgElectric },
+];
 
 function LandingPage() {
   const { openLogin } = useAuth();
