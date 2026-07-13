@@ -1,0 +1,57 @@
+export type Brand = { id: string; name: string };
+export type Service = {
+  id: string;
+  name: string;
+  category: string;
+  base_price: number;
+  duration_minutes: number;
+};
+export type Client = { id: string; full_name: string; phone: string | null; email: string | null };
+export type Car = {
+  id: string;
+  client_id: string;
+  brand_id: string | null;
+  model: string;
+  year: number | null;
+  license_plate: string | null;
+  vin: string | null;
+  color: string | null;
+  engine_volume: number | null;
+  engine_power: number | null;
+  transmission: string | null;
+  drive_type: string | null;
+  mileage: number | null;
+};
+export type Mechanic = {
+  id: string;
+  full_name: string;
+  specialization: string | null;
+  phone: string | null;
+  color: string;
+};
+export type AppointmentStatus = "scheduled" | "in_progress" | "done" | "cancelled";
+export type Appointment = {
+  id: string;
+  car_id: string;
+  mechanic_id: string | null;
+  starts_at: string;
+  duration_minutes: number;
+  status: AppointmentStatus;
+  mileage: number | null;
+  comment: string | null;
+  total_price: number;
+};
+
+export const STATUS_LABELS: Record<AppointmentStatus, string> = {
+  scheduled: "Запланировано",
+  in_progress: "В работе",
+  done: "Выполнено",
+  cancelled: "Отменено",
+};
+
+export const STATUS_COLORS: Record<AppointmentStatus, string> = {
+  scheduled: "bg-blue-100 text-blue-800 border-blue-300",
+  in_progress: "bg-amber-100 text-amber-800 border-amber-300",
+  done: "bg-green-100 text-green-800 border-green-300",
+  cancelled: "bg-gray-100 text-gray-600 border-gray-300",
+};

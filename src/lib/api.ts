@@ -1,0 +1,193 @@
+import { supabase } from "@/integrations/supabase/client";
+import type {
+  Appointment,
+  Brand,
+  Car,
+  Client,
+  Mechanic,
+  Service,
+} from "./types";
+
+const throwIf = <T,>(x: { data: T | null; error: unknown }): T => {
+  if (x.error) throw x.error;
+  return x.data as T;
+};
+
+// BRANDS
+export const listBrands = async (): Promise<Brand[]> =>
+  throwIf(await supabase.from("brands").select("*").order("name"));
+export const createBrand = async (name: string) =>
+  throwIf(await supabase.from("brands").insert({ name }).select().single());
+export const updateBrand = async (id: string, name: string) =>
+  throwIf(await supabase.from("brands").update({ name }).eq("id", id).select().single());
+export const deleteBrand = async (id: string) => {
+  const { error } = await supabase.from("brands").delete().eq("id", id);
+  if (error) throw error;
+};
+
+// SERVICES
+export const listServices = async (): Promise<Service[]> =>
+  throwIf(await supabase.from("services").select("*").order("category").order("name"));
+export const createService = async (
+  input: Omit<Service, "id">,
+) => throwIf(await supabase.from("services").insert(input).select().single());
+export const updateService = async (id: string, input: Partial<Omit<Service, "id">>) =>
+  throwIf(await supabase.from("services").update(input).eq("id", id).select().single());
+export const deleteService = async (id: string) => {
+  const { error } = await supabase.from("services").delete().eq("id", id);
+  if (error) throw error;
+};
+
+// SERVICE PRICES (brand overrides)
+export const listServicePrices = async (
+  serviceId: string,
+): Promise<{ service_id: string; brand_id: string; price: number }[]> =>
+  throwIf(await supabase.from("service_prices").select("*").eq("service_id", serviceId));
+export const upsertServicePrice = async (service_id: string, brand_id: string, price: number) =>
+  throwIf(
+    await supabase
+      .from("service_prices")
+      .upsert({ service_id, brand_id, price })
+      .select()
+      .single(),
+  );
+export const deleteServicePrice = async (service_id: string, brand_id: string) => {
+  const { error } = await supabase
+    .from("service_prices")
+    .delete()
+    .eq("service_id", service_id)
+    .eq("brand_id", brand_id);
+  if (error) throw error;
+};
+export const getPriceForBrand = async (service_id: string, brand_id: string | null) => {
+  if (!brand_id) return null;
+  const { data } = await supabase
+    .from("service_prices")
+    .select("price")
+    .eq("service_id", service_id)
+    .eq("brand_id", brand_id)
+    .maybeSingle();
+  return data?.price ?? null;
+};
+
+// CLIENTS
+export const listClients = async (): Promise<Client[]> =>
+  throwIf(await supabase.from("clients").select("*").order("full_name"));
+export const createClient = async (input: Omit<Client, "id">) =>
+  throwIf(await supabase.from("clients").insert(input).select().single());
+export const updateClient = async (id: string, input: Partial<Omit<Client, "id">>) =>
+  throwIf(await supabase.from("clients").update(input).eq("id", id).select().single());
+export const deleteClient = async (id: string) => {
+  const { error } = await supabase.from("clients").delete().eq("id", id);
+  if (error) throw error;
+};
+
+// CARS
+export const listCars = async (): Promise<Car[]> =>
+  throwIf(await supabase.from("cars").select("*").order("created_at", { ascending: false }));
+export const listCarsByClient = async (client_id: string): Promise<Car[]> =>
+  throwIf(await supabase.from("cars").select("*").eq("client_id", client_id));
+export const createCar = async (input: Omit<Car, "id">) =>
+  throwIf(await supabase.from("cars").insert(input).select().single());
+export const updateCar = async (id: string, input: Partial<Omit<Car, "id">>) =>
+  throwIf(await supabase.from("cars").update(input).eq("id", id).select().single());
+export const deleteCar = async (id: string) => {
+  const { error } = await supabase.from("cars").delete().eq("id", id);
+  if (error) throw error;
+};
+
+// MECHANICS
+export const listMechanics = async (): Promise<Mechanic[]> =>
+  throwIf(await supabase.from("mechanics").select("*").order("full_name"));
+export const createMechanic = async (input: Omit<Mechanic, "id">) =>
+  throwIf(await supabase.from("mechanics").insert(input).select().single());
+export const updateMechanic = async (id: string, input: Partial<Omit<Mechanic, "id">>) =>
+  throwIf(await supabase.from("mechanics").update(input).eq("id", id).select().single());
+export const deleteMechanic = async (id: string) => {
+  const { error } = await supabase.from("mechanics").delete().eq("id", id);
+  if (error) throw error;
+};
+
+// APPOINTMENTS
+export type AppointmentWithRelations = Appointment & {
+  car: (Car & { brand: Brand | null; client: Client }) | null;
+  mechanic: Mechanic | null;
+  services: { service_id: string; price: number; service: Service | null }[];
+};
+
+const APPT_SELECT = `
+  *,
+  car:cars(*, brand:brands(*), client:clients(*)),
+  mechanic:mechanics(*),
+  services:appointment_services(service_id, price, service:services(*))
+`;
+
+export const listAppointments = async (
+  from?: Date,
+  to?: Date,
+): Promise<AppointmentWithRelations[]> => {
+  let q = supabase.from("appointments").select(APPT_SELECT).order("starts_at");
+  if (from) q = q.gte("starts_at", from.toISOString());
+  if (to) q = q.lte("starts_at", to.toISOString());
+  return throwIf(await q) as AppointmentWithRelations[];
+};
+
+export const getAppointment = async (id: string): Promise<AppointmentWithRelations> =>
+  throwIf(await supabase.from("appointments").select(APPT_SELECT).eq("id", id).single()) as AppointmentWithRelations;
+
+export const createAppointment = async (input: {
+  car_id: string;
+  mechanic_id: string | null;
+  starts_at: string;
+  duration_minutes: number;
+  status: string;
+  mileage: number | null;
+  comment: string | null;
+  services: { service_id: string; price: number }[];
+}) => {
+  const { services, ...appt } = input;
+  const created = throwIf(
+    await supabase.from("appointments").insert(appt).select().single(),
+  ) as { id: string };
+  if (services.length > 0) {
+    const { error } = await supabase
+      .from("appointment_services")
+      .insert(services.map((s) => ({ ...s, appointment_id: created.id })));
+    if (error) throw error;
+  }
+  return created;
+
+};
+
+export const updateAppointment = async (
+  id: string,
+  input: {
+    car_id: string;
+    mechanic_id: string | null;
+    starts_at: string;
+    duration_minutes: number;
+    status: string;
+    mileage: number | null;
+    comment: string | null;
+    services: { service_id: string; price: number }[];
+  },
+) => {
+  const { services, ...appt } = input;
+  throwIf(await supabase.from("appointments").update(appt).eq("id", id).select().single());
+  const { error: delErr } = await supabase
+    .from("appointment_services")
+    .delete()
+    .eq("appointment_id", id);
+  if (delErr) throw delErr;
+  if (services.length > 0) {
+    const { error } = await supabase
+      .from("appointment_services")
+      .insert(services.map((s) => ({ ...s, appointment_id: id })));
+    if (error) throw error;
+  }
+};
+
+export const deleteAppointment = async (id: string) => {
+  const { error } = await supabase.from("appointments").delete().eq("id", id);
+  if (error) throw error;
+};
