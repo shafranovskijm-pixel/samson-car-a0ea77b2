@@ -9,11 +9,17 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ServicesRouteImport } from './routes/services'
 import { Route as ScheduleRouteImport } from './routes/schedule'
 import { Route as ClientsRouteImport } from './routes/clients'
 import { Route as CarsRouteImport } from './routes/cars'
 import { Route as IndexRouteImport } from './routes/index'
 
+const ServicesRoute = ServicesRouteImport.update({
+  id: '/services',
+  path: '/services',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ScheduleRoute = ScheduleRouteImport.update({
   id: '/schedule',
   path: '/schedule',
@@ -40,12 +46,14 @@ export interface FileRoutesByFullPath {
   '/cars': typeof CarsRoute
   '/clients': typeof ClientsRoute
   '/schedule': typeof ScheduleRoute
+  '/services': typeof ServicesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/cars': typeof CarsRoute
   '/clients': typeof ClientsRoute
   '/schedule': typeof ScheduleRoute
+  '/services': typeof ServicesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,13 +61,14 @@ export interface FileRoutesById {
   '/cars': typeof CarsRoute
   '/clients': typeof ClientsRoute
   '/schedule': typeof ScheduleRoute
+  '/services': typeof ServicesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/cars' | '/clients' | '/schedule'
+  fullPaths: '/' | '/cars' | '/clients' | '/schedule' | '/services'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/cars' | '/clients' | '/schedule'
-  id: '__root__' | '/' | '/cars' | '/clients' | '/schedule'
+  to: '/' | '/cars' | '/clients' | '/schedule' | '/services'
+  id: '__root__' | '/' | '/cars' | '/clients' | '/schedule' | '/services'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -67,10 +76,18 @@ export interface RootRouteChildren {
   CarsRoute: typeof CarsRoute
   ClientsRoute: typeof ClientsRoute
   ScheduleRoute: typeof ScheduleRoute
+  ServicesRoute: typeof ServicesRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/services': {
+      id: '/services'
+      path: '/services'
+      fullPath: '/services'
+      preLoaderRoute: typeof ServicesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/schedule': {
       id: '/schedule'
       path: '/schedule'
@@ -107,6 +124,7 @@ const rootRouteChildren: RootRouteChildren = {
   CarsRoute: CarsRoute,
   ClientsRoute: ClientsRoute,
   ScheduleRoute: ScheduleRoute,
+  ServicesRoute: ServicesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
