@@ -79,6 +79,7 @@ function LandingPage() {
 
   const [brandId, setBrandId] = useState<string>("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
   const { data: brandPrices = {} } = useQuery({
     queryKey: ["brand-prices", brandId],
@@ -86,14 +87,23 @@ function LandingPage() {
     enabled: !!brandId,
   });
 
-  const priceOf = (id: string, base: number) => brandPrices[id] ?? base;
+  const currentBrand = useMemo(() => brands.find((b) => b.id === brandId), [brands, brandId]);
+  const tier = (currentBrand?.tier as BrandTier | undefined) ?? "economy";
+  const coeff = TIER_COEFFICIENT[tier];
 
-  const grouped = useMemo(() => {
+  // Итоговая цена: приоритет — ручное переопределение по марке, иначе базовая × коэффициент класса
+  const priceOf = (id: string, base: number) => {
+    if (brandId && brandPrices[id] != null) return brandPrices[id];
+    if (brandId) return Math.round((base * coeff) / 50) * 50; // округление до 50 ₽
+    return base;
+  };
+
+  const byCategory = useMemo(() => {
     const map: Record<string, typeof services> = {};
     services.forEach((s) => {
       (map[s.category] ??= []).push(s);
     });
-    return Object.entries(map).sort(([a], [b]) => a.localeCompare(b, "ru"));
+    return map;
   }, [services]);
 
   const totals = useMemo(() => {
@@ -106,7 +116,7 @@ function LandingPage() {
       }
     });
     return { sum, mins };
-  }, [selected, services, brandPrices]);
+  }, [selected, services, brandPrices, brandId, coeff]);
 
   const toggle = (id: string) => {
     setSelected((prev) => {
