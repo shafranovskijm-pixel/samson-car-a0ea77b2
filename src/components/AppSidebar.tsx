@@ -1,5 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
+  Home,
   Calendar,
   ListChecks,
   Users,
@@ -21,7 +22,8 @@ import {
 } from "@/components/ui/sidebar";
 
 const items = [
-  { title: "Календарь", url: "/", icon: Calendar },
+  { title: "Главная", url: "/", icon: Home },
+  { title: "Календарь", url: "/calendar", icon: Calendar },
   { title: "Записи по дням", url: "/schedule", icon: ListChecks },
   { title: "Клиенты", url: "/clients", icon: Users },
   { title: "Машины", url: "/cars", icon: Car },
@@ -30,20 +32,22 @@ const items = [
   { title: "Мастера", url: "/mechanics", icon: UserCog },
 ];
 
+
 export function AppSidebar() {
   const pathname = useRouterState({ select: (r) => r.location.pathname });
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="px-3 py-4">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <Wrench className="h-4 w-4" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-gradient-to-br from-orange-500 to-red-600 text-white font-bold">
+            S
           </div>
           <div className="font-semibold group-data-[collapsible=icon]:hidden">
-            Автосервис CRM
+            Samson Auto
           </div>
         </div>
       </SidebarHeader>
+
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Разделы</SidebarGroupLabel>

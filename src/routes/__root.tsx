@@ -114,8 +114,9 @@ function RootComponent() {
           <div className="flex flex-1 flex-col">
             <header className="flex h-12 items-center border-b bg-background px-3">
               <SidebarTrigger />
-              <div className="ml-3 text-sm font-medium">Автосервис</div>
+              <div className="ml-3 text-sm font-medium">Samson Auto — автосервис</div>
             </header>
+
             <main className="flex-1 overflow-auto">
               <Outlet />
             </main>
