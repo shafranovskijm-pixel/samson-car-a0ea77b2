@@ -1,0 +1,38 @@
+/* react-big-calendar tweaks for shadcn theme */
+.rbc-calendar {
+  font-family: inherit;
+  color: var(--color-foreground);
+}
+.rbc-toolbar button {
+  color: var(--color-foreground);
+  border-color: var(--color-border);
+  background: transparent;
+}
+.rbc-toolbar button.rbc-active,
+.rbc-toolbar button:hover,
+.rbc-toolbar button:focus {
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
+}
+.rbc-header,
+.rbc-time-header-content,
+.rbc-time-content,
+.rbc-month-view,
+.rbc-time-view,
+.rbc-agenda-view,
+.rbc-timeslot-group,
+.rbc-day-bg + .rbc-day-bg,
+.rbc-month-row + .rbc-month-row {
+  border-color: var(--color-border);
+}
+.rbc-today {
+  background: color-mix(in oklch, var(--color-primary) 8%, transparent);
+}
+.rbc-off-range-bg {
+  background: color-mix(in oklch, var(--color-muted) 40%, transparent);
+}
+.rbc-event {
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 12px;
+}
