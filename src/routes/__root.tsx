@@ -112,23 +112,75 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <QueryClientProvider client={queryClient}>
-      <SidebarProvider>
-        <div className="flex min-h-screen w-full">
-          <AppSidebar />
-          <div className="flex flex-1 flex-col">
-            <header className="flex h-12 items-center border-b bg-background px-3">
-              <SidebarTrigger />
-              <div className="ml-3 text-sm font-medium">Samson Auto — автосервис</div>
-            </header>
-
-            <main className="flex-1 overflow-auto">
-              <Outlet />
-            </main>
-          </div>
-        </div>
+      <AuthProvider>
+        <AppShell />
         <Toaster />
-      </SidebarProvider>
+      </AuthProvider>
     </QueryClientProvider>
+  );
+}
+
+function AppShell() {
+  const { isAuthed, logout } = useAuth();
+  const pathname = useRouterState({ select: (r) => r.location.pathname });
+  const isLanding = pathname === "/";
+
+  // Landing page — no sidebar
+  if (isLanding) {
+    return (
+      <main className="min-h-screen">
+        <Outlet />
+      </main>
+    );
+  }
+
+  // CRM routes — require auth
+  if (!isAuthed) {
+    return <LockedScreen />;
+  }
+
+  return (
+    <SidebarProvider>
+      <div className="flex min-h-screen w-full">
+        <AppSidebar />
+        <div className="flex flex-1 flex-col">
+          <header className="flex h-12 items-center justify-between border-b bg-background px-3">
+            <div className="flex items-center">
+              <SidebarTrigger />
+              <div className="ml-3 text-sm font-medium">Samson Auto — CRM</div>
+            </div>
+            <Button variant="ghost" size="sm" onClick={logout}>
+              <LogOut className="mr-2 h-4 w-4" /> Выйти
+            </Button>
+          </header>
+          <main className="flex-1 overflow-auto">
+            <Outlet />
+          </main>
+        </div>
+      </div>
+    </SidebarProvider>
+  );
+}
+
+function LockedScreen() {
+  const { openLogin } = useAuth();
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-[#0a0a0f] px-4 text-white">
+      <div className="max-w-md text-center">
+        <h1 className="text-2xl font-bold">Доступ ограничен</h1>
+        <p className="mt-2 text-sm text-white/60">
+          Раздел CRM доступен только сотрудникам Samson Auto.
+        </p>
+        <div className="mt-6 flex justify-center gap-2">
+          <Button onClick={openLogin} className="bg-red-600 text-white hover:bg-red-700">
+            Войти в CRM
+          </Button>
+          <Button variant="outline" asChild>
+            <Link to="/">На главную</Link>
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
 
