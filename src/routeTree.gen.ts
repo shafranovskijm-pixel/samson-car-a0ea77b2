@@ -13,6 +13,7 @@ import { Route as ServicesRouteImport } from './routes/services'
 import { Route as ScheduleRouteImport } from './routes/schedule'
 import { Route as ClientsRouteImport } from './routes/clients'
 import { Route as CarsRouteImport } from './routes/cars'
+import { Route as BrandsRouteImport } from './routes/brands'
 import { Route as IndexRouteImport } from './routes/index'
 
 const ServicesRoute = ServicesRouteImport.update({
@@ -35,6 +36,11 @@ const CarsRoute = CarsRouteImport.update({
   path: '/cars',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BrandsRoute = BrandsRouteImport.update({
+  id: '/brands',
+  path: '/brands',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -43,6 +49,7 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/brands': typeof BrandsRoute
   '/cars': typeof CarsRoute
   '/clients': typeof ClientsRoute
   '/schedule': typeof ScheduleRoute
@@ -50,6 +57,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/brands': typeof BrandsRoute
   '/cars': typeof CarsRoute
   '/clients': typeof ClientsRoute
   '/schedule': typeof ScheduleRoute
@@ -58,6 +66,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/brands': typeof BrandsRoute
   '/cars': typeof CarsRoute
   '/clients': typeof ClientsRoute
   '/schedule': typeof ScheduleRoute
@@ -65,14 +74,22 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/cars' | '/clients' | '/schedule' | '/services'
+  fullPaths: '/' | '/brands' | '/cars' | '/clients' | '/schedule' | '/services'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/cars' | '/clients' | '/schedule' | '/services'
-  id: '__root__' | '/' | '/cars' | '/clients' | '/schedule' | '/services'
+  to: '/' | '/brands' | '/cars' | '/clients' | '/schedule' | '/services'
+  id:
+    | '__root__'
+    | '/'
+    | '/brands'
+    | '/cars'
+    | '/clients'
+    | '/schedule'
+    | '/services'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BrandsRoute: typeof BrandsRoute
   CarsRoute: typeof CarsRoute
   ClientsRoute: typeof ClientsRoute
   ScheduleRoute: typeof ScheduleRoute
@@ -109,6 +126,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CarsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/brands': {
+      id: '/brands'
+      path: '/brands'
+      fullPath: '/brands'
+      preLoaderRoute: typeof BrandsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -121,6 +145,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BrandsRoute: BrandsRoute,
   CarsRoute: CarsRoute,
   ClientsRoute: ClientsRoute,
   ScheduleRoute: ScheduleRoute,
