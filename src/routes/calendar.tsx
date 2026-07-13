@@ -39,7 +39,7 @@ const messages = {
   showMore: (n: number) => `+ ещё ${n}`,
 };
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/calendar")({
   ssr: false,
   component: CalendarPage,
 });
