@@ -13,9 +13,6 @@ const throwIf = <T,>(x: { data: T | null; error: unknown }): T => {
   if (x.error) throw x.error;
   return x.data as T;
 };
-  if (x.error) throw x.error;
-  return x.data as T;
-};
 
 // BRANDS
 export const listBrands = async (): Promise<Brand[]> =>
