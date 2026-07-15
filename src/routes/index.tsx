@@ -25,9 +25,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { listBrands, listServices, listPricesForBrand } from "@/lib/api";
+import { listBrands, listCarModels, listServices, listPricesForBrand } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { TIER_COEFFICIENT, TIER_LABEL, type BrandTier } from "@/lib/types";
+import { TIER_COEFFICIENT, TIER_LABEL, resolveTier, type BrandTier } from "@/lib/types";
 import heroAsset from "@/assets/samson-hero.jpg.asset.json";
 import imgFluids from "@/assets/cat-fluids.jpg";
 import imgEngine from "@/assets/cat-engine.jpg";
