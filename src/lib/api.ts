@@ -3,12 +3,16 @@ import type {
   Appointment,
   Brand,
   Car,
+  CarModel,
   Client,
   Mechanic,
   Service,
 } from "./types";
 
 const throwIf = <T,>(x: { data: T | null; error: unknown }): T => {
+  if (x.error) throw x.error;
+  return x.data as T;
+};
   if (x.error) throw x.error;
   return x.data as T;
 };
