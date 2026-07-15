@@ -292,3 +292,17 @@ function CarsPage() {
     </div>
   );
 }
+
+function ModelsDatalist({ brandId }: { brandId: string }) {
+  const { data: models = [] } = useQuery({
+    queryKey: ["car-models", brandId],
+    queryFn: () => listCarModels(brandId),
+  });
+  return (
+    <datalist id={`models-${brandId}`}>
+      {models.map((m) => (
+        <option key={m.id} value={m.name} />
+      ))}
+    </datalist>
+  );
+}
