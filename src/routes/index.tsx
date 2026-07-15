@@ -524,9 +524,10 @@ function LandingPage() {
                       <span className="font-medium text-white">{selected.size}</span>
                     </div>
                     <div className="flex justify-between text-white/70">
-                      <span>Марка</span>
-                      <span className="font-medium text-white">
+                      <span>Авто</span>
+                      <span className="font-medium text-white text-right">
                         {currentBrand?.name ?? "—"}
+                        {currentModel ? ` ${currentModel.name}` : ""}
                       </span>
                     </div>
                     {brandId && (
