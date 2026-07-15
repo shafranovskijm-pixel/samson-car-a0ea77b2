@@ -17,7 +17,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  createCar, deleteCar, listBrands, listCars, listClients, updateCar,
+  createCar, deleteCar, listBrands, listCarModels, listCars, listClients, updateCar,
 } from "@/lib/api";
 import type { Car } from "@/lib/types";
 
