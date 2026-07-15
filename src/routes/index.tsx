@@ -282,7 +282,13 @@ function LandingPage() {
                   <label className="mb-2 block text-xs font-medium uppercase tracking-wider text-white/50">
                     Марка автомобиля
                   </label>
-                  <Select value={brandId} onValueChange={setBrandId}>
+                  <Select
+                    value={brandId}
+                    onValueChange={(v) => {
+                      setBrandId(v);
+                      setModelId("");
+                    }}
+                  >
                     <SelectTrigger className="h-12 border-white/10 bg-white/5 text-white">
                       <SelectValue placeholder="Выберите марку — например, Toyota" />
                     </SelectTrigger>
@@ -299,15 +305,57 @@ function LandingPage() {
                       ))}
                     </SelectContent>
                   </Select>
+
                   {brandId && (
-                    <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-                      <span className="rounded-full bg-red-500/15 px-2 py-1 text-red-300">
-                        Класс: {TIER_LABEL[tier]}
-                      </span>
-                      <span className="text-white/50">
-                        Коэффициент × {coeff.toFixed(2)}
-                      </span>
-                    </div>
+                    <>
+                      <label className="mb-2 mt-4 block text-xs font-medium uppercase tracking-wider text-white/50">
+                        Модель {models.length > 0 && (
+                          <span className="ml-1 normal-case text-white/40">
+                            ({models.length} в справочнике)
+                          </span>
+                        )}
+                      </label>
+                      <Select value={modelId} onValueChange={setModelId}>
+                        <SelectTrigger className="h-12 border-white/10 bg-white/5 text-white">
+                          <SelectValue
+                            placeholder={
+                              models.length
+                                ? "Выберите модель для точного расчёта"
+                                : "У этой марки пока нет моделей в справочнике"
+                            }
+                          />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-80">
+                          {models.map((m) => {
+                            const mt = (m.tier ?? currentBrand?.tier) as BrandTier | undefined;
+                            return (
+                              <SelectItem key={m.id} value={m.id}>
+                                {m.name}
+                                {mt ? (
+                                  <span className="ml-2 text-xs text-white/50">
+                                    · {TIER_LABEL[mt] ?? ""}
+                                  </span>
+                                ) : null}
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectContent>
+                      </Select>
+
+                      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                        <span className="rounded-full bg-red-500/15 px-2 py-1 text-red-300">
+                          Класс: {TIER_LABEL[tier]}
+                        </span>
+                        <span className="text-white/50">
+                          Коэффициент × {coeff.toFixed(2)}
+                        </span>
+                        {currentModel && currentModel.tier && currentBrand?.tier && currentModel.tier !== currentBrand.tier && (
+                          <span className="rounded bg-orange-500/15 px-2 py-1 text-orange-300">
+                            Класс модели отличается от марки
+                          </span>
+                        )}
+                      </div>
+                    </>
                   )}
                 </CardContent>
               </Card>
