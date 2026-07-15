@@ -223,7 +223,13 @@ function CarsPage() {
             </div>
             <div>
               <Label>Модель</Label>
-              <Input value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} />
+              <Input
+                list={form.brand_id ? `models-${form.brand_id}` : undefined}
+                value={form.model}
+                onChange={(e) => setForm({ ...form, model: e.target.value })}
+                placeholder={form.brand_id ? "Начните вводить или выберите" : "Сначала выберите марку"}
+              />
+              {form.brand_id && <ModelsDatalist brandId={form.brand_id} />}
             </div>
             <div>
               <Label>Год</Label>
