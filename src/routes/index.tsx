@@ -78,6 +78,7 @@ function LandingPage() {
   const { data: services = [] } = useQuery({ queryKey: ["services"], queryFn: listServices });
 
   const [brandId, setBrandId] = useState<string>("");
+  const [modelId, setModelId] = useState<string>("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
@@ -87,8 +88,15 @@ function LandingPage() {
     enabled: !!brandId,
   });
 
+  const { data: models = [] } = useQuery({
+    queryKey: ["car-models", brandId],
+    queryFn: () => listCarModels(brandId),
+    enabled: !!brandId,
+  });
+
   const currentBrand = useMemo(() => brands.find((b) => b.id === brandId), [brands, brandId]);
-  const tier = (currentBrand?.tier as BrandTier | undefined) ?? "economy";
+  const currentModel = useMemo(() => models.find((m) => m.id === modelId), [models, modelId]);
+  const tier: BrandTier = resolveTier(currentBrand, currentModel);
   const coeff = TIER_COEFFICIENT[tier];
 
   // Итоговая цена: приоритет — ручное переопределение по марке, иначе базовая × коэффициент класса
