@@ -1,5 +1,11 @@
 export type BrandTier = "economy" | "comfort" | "business" | "premium" | "luxury";
 export type Brand = { id: string; name: string; tier?: BrandTier | string };
+export type CarModel = {
+  id: string;
+  brand_id: string;
+  name: string;
+  tier: BrandTier | string | null;
+};
 
 export const TIER_COEFFICIENT: Record<BrandTier, number> = {
   economy: 1.0,
@@ -14,6 +20,15 @@ export const TIER_LABEL: Record<BrandTier, string> = {
   business: "Бизнес",
   premium: "Премиум",
   luxury: "Люкс",
+};
+export const TIER_OPTIONS: BrandTier[] = ["economy", "comfort", "business", "premium", "luxury"];
+
+export const resolveTier = (
+  brand?: Brand | null,
+  model?: CarModel | null,
+): BrandTier => {
+  const raw = (model?.tier ?? brand?.tier ?? "economy") as string;
+  return (raw in TIER_COEFFICIENT ? raw : "economy") as BrandTier;
 };
 export type Service = {
   id: string;

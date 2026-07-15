@@ -17,7 +17,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  createCar, deleteCar, listBrands, listCars, listClients, updateCar,
+  createCar, deleteCar, listBrands, listCarModels, listCars, listClients, updateCar,
 } from "@/lib/api";
 import type { Car } from "@/lib/types";
 
@@ -223,7 +223,13 @@ function CarsPage() {
             </div>
             <div>
               <Label>Модель</Label>
-              <Input value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} />
+              <Input
+                list={form.brand_id ? `models-${form.brand_id}` : undefined}
+                value={form.model}
+                onChange={(e) => setForm({ ...form, model: e.target.value })}
+                placeholder={form.brand_id ? "Начните вводить или выберите" : "Сначала выберите марку"}
+              />
+              {form.brand_id && <ModelsDatalist brandId={form.brand_id} />}
             </div>
             <div>
               <Label>Год</Label>
@@ -284,5 +290,19 @@ function CarsPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function ModelsDatalist({ brandId }: { brandId: string }) {
+  const { data: models = [] } = useQuery({
+    queryKey: ["car-models", brandId],
+    queryFn: () => listCarModels(brandId),
+  });
+  return (
+    <datalist id={`models-${brandId}`}>
+      {models.map((m) => (
+        <option key={m.id} value={m.name} />
+      ))}
+    </datalist>
   );
 }

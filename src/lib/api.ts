@@ -3,6 +3,7 @@ import type {
   Appointment,
   Brand,
   Car,
+  CarModel,
   Client,
   Mechanic,
   Service,
@@ -25,7 +26,23 @@ export const deleteBrand = async (id: string) => {
   if (error) throw error;
 };
 
-// SERVICES
+// CAR MODELS
+export const listCarModels = async (brand_id?: string): Promise<CarModel[]> => {
+  let q = supabase.from("car_models").select("*").order("name");
+  if (brand_id) q = q.eq("brand_id", brand_id);
+  return throwIf(await q) as CarModel[];
+};
+export const createCarModel = async (input: { brand_id: string; name: string; tier: string | null }) =>
+  throwIf(await supabase.from("car_models").insert(input).select().single());
+export const updateCarModel = async (
+  id: string,
+  input: Partial<{ name: string; tier: string | null }>,
+) => throwIf(await supabase.from("car_models").update(input).eq("id", id).select().single());
+export const deleteCarModel = async (id: string) => {
+  const { error } = await supabase.from("car_models").delete().eq("id", id);
+  if (error) throw error;
+};
+
 export const listServices = async (): Promise<Service[]> =>
   throwIf(await supabase.from("services").select("*").order("category").order("name"));
 export const createService = async (
