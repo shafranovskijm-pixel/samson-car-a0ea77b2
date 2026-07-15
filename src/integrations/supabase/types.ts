@@ -122,6 +122,38 @@ export type Database = {
         }
         Relationships: []
       }
+      car_models: {
+        Row: {
+          brand_id: string
+          created_at: string
+          id: string
+          name: string
+          tier: string | null
+        }
+        Insert: {
+          brand_id: string
+          created_at?: string
+          id?: string
+          name: string
+          tier?: string | null
+        }
+        Update: {
+          brand_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          tier?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "car_models_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cars: {
         Row: {
           brand_id: string | null
@@ -135,6 +167,7 @@ export type Database = {
           license_plate: string | null
           mileage: number | null
           model: string
+          model_id: string | null
           transmission: string | null
           vin: string | null
           year: number | null
@@ -151,6 +184,7 @@ export type Database = {
           license_plate?: string | null
           mileage?: number | null
           model: string
+          model_id?: string | null
           transmission?: string | null
           vin?: string | null
           year?: number | null
@@ -167,6 +201,7 @@ export type Database = {
           license_plate?: string | null
           mileage?: number | null
           model?: string
+          model_id?: string | null
           transmission?: string | null
           vin?: string | null
           year?: number | null
@@ -184,6 +219,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cars_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "car_models"
             referencedColumns: ["id"]
           },
         ]
