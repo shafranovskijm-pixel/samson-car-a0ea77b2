@@ -7,8 +7,11 @@ import type {
   Client,
   ClientReminder,
   Mechanic,
+  MechanicServiceRate,
+  MechanicShift,
   Service,
 } from "./types";
+
 
 
 const throwIf = <T,>(x: { data: T | null; error: unknown }): T => {
