@@ -232,18 +232,26 @@ function CalendarPage() {
           onNavigate={setDate}
           views={[Views.MONTH, Views.WEEK, Views.DAY, Views.AGENDA]}
           selectable
+          resizable
+          draggableAccessor={() => true}
+          onEventDrop={onEventDrop}
+          onEventResize={onEventResize}
           getNow={() => new Date()}
           onSelectSlot={(slot) => openNew(slot.start as Date)}
-          onSelectEvent={(ev) =>
-            setDialog({ open: true, id: ev.id as string, start: null, prefill: null })
-          }
-          eventPropGetter={(ev) => ({
-            style: {
-              backgroundColor: ev.resource?.color ?? "#64748b",
-              border: "none",
-              opacity: ev.resource?.status === "cancelled" ? 0.4 : 1,
-            },
-          })}
+          onSelectEvent={(ev) => {
+            const e = ev as { id: string };
+            setDialog({ open: true, id: e.id, start: null, prefill: null });
+          }}
+          eventPropGetter={(ev) => {
+            const e = ev as { resource?: { color?: string; status?: string } };
+            return {
+              style: {
+                backgroundColor: e.resource?.color ?? "#64748b",
+                border: "none",
+                opacity: e.resource?.status === "cancelled" ? 0.4 : 1,
+              },
+            };
+          }}
           slotPropGetter={(slotDate) =>
             slotDate.getTime() < now.getTime() - 60_000
               ? { style: { backgroundColor: "rgba(0,0,0,0.04)" } }
@@ -256,11 +264,11 @@ function CalendarPage() {
               new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
             return isPast ? { style: { backgroundColor: "rgba(0,0,0,0.03)" } } : {};
           }}
-          tooltipAccessor={(ev) =>
-            `${ev.title} · ${STATUS_LABELS[ev.resource?.status as keyof typeof STATUS_LABELS] ?? ""}`
-          }
+          tooltipAccessor={(ev) => {
+            const e = ev as { title: string; resource?: { status?: string } };
+            return `${e.title} · ${STATUS_LABELS[e.resource?.status as keyof typeof STATUS_LABELS] ?? ""}`;
+          }}
         />
-
       </div>
 
       <AppointmentDialog
