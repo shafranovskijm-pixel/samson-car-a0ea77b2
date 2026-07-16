@@ -43,6 +43,9 @@ type Props = {
   appointmentId?: string | null;
   defaultStart?: Date | null;
   defaultCarId?: string | null;
+  defaultServices?: { service_id: string; price: number }[];
+  defaultBrandId?: string | null;
+  defaultModelId?: string | null;
 };
 
 export function AppointmentDialog({
@@ -51,7 +54,11 @@ export function AppointmentDialog({
   appointmentId,
   defaultStart,
   defaultCarId,
+  defaultServices,
+  defaultBrandId,
+  defaultModelId,
 }: Props) {
+
   const qc = useQueryClient();
   const isEdit = !!appointmentId;
 
