@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
   Calendar as CalendarIcon,
   Clock,
@@ -8,12 +9,14 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Plus,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -21,7 +24,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { listBrands, listCarModels, listServices, listPricesForBrand } from "@/lib/api";
+import {
+  listBrands,
+  listCarModels,
+  listServices,
+  listPricesForBrand,
+  createCarModel,
+} from "@/lib/api";
 
 import { TIER_COEFFICIENT, TIER_LABEL, resolveTier, type BrandTier } from "@/lib/types";
 import imgFluids from "@/assets/cat-fluids.jpg";
@@ -78,6 +87,23 @@ function LandingPage() {
   const [modelId, setModelId] = useState<string>("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [newModelName, setNewModelName] = useState("");
+  const qc = useQueryClient();
+
+  const addModelMut = useMutation({
+    mutationFn: async (name: string) => {
+      if (!brandId) throw new Error("Сначала выберите марку");
+      return createCarModel({ brand_id: brandId, name: name.trim(), tier: null });
+    },
+    onSuccess: (m) => {
+      qc.invalidateQueries({ queryKey: ["car-models", brandId] });
+      setModelId((m as unknown as { id: string }).id);
+      setNewModelName("");
+      toast.success("Модель добавлена");
+    },
+    onError: (e: unknown) =>
+      toast.error(e instanceof Error ? e.message : "Не удалось добавить модель"),
+  });
 
   const { data: brandPrices = {} } = useQuery({
     queryKey: ["brand-prices", brandId],
@@ -433,6 +459,35 @@ function LandingPage() {
                           })}
                         </SelectContent>
                       </Select>
+
+                      <div className="mt-3 rounded-lg border border-dashed border-white/15 bg-white/[0.03] p-3">
+                        <div className="mb-2 text-xs text-white/60">
+                          Нет вашей модели в списке? Добавьте — сохранится автоматически.
+                        </div>
+                        <div className="flex gap-2">
+                          <Input
+                            value={newModelName}
+                            onChange={(e) => setNewModelName(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && newModelName.trim()) {
+                                e.preventDefault();
+                                addModelMut.mutate(newModelName);
+                              }
+                            }}
+                            placeholder="Например, Camry"
+                            className="h-10 border-white/10 bg-white/5 text-white placeholder:text-white/40"
+                          />
+                          <Button
+                            type="button"
+                            onClick={() => addModelMut.mutate(newModelName)}
+                            disabled={!newModelName.trim() || addModelMut.isPending}
+                            className="bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                          >
+                            <Plus className="mr-1 h-4 w-4" />
+                            Добавить
+                          </Button>
+                        </div>
+                      </div>
 
                       <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
                         <span className="rounded-full bg-red-500/15 px-2 py-1 text-red-300">
