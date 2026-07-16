@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   Plus, Trash2, Pencil, Search, Car as CarIcon, Phone, Mail, User,
-  Bell, History as HistoryIcon, Check,
+  Bell, History as HistoryIcon, Check, Archive, ArchiveRestore,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
