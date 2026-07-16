@@ -37,7 +37,20 @@ export type Service = {
   base_price: number;
   duration_minutes: number;
 };
-export type Client = { id: string; full_name: string; phone: string | null; email: string | null };
+export type Client = {
+  id: string;
+  full_name: string;
+  phone: string | null;
+  email: string | null;
+  address?: string | null;
+  birthday?: string | null;
+  telegram?: string | null;
+  note?: string | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  custom_fields?: any;
+
+};
+
 export type Car = {
   id: string;
   client_id: string;

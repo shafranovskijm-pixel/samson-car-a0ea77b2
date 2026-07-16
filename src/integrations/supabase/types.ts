@@ -262,30 +262,45 @@ export type Database = {
       }
       clients: {
         Row: {
+          address: string | null
+          birthday: string | null
           created_at: string
+          custom_fields: Json
           deleted_at: string | null
           email: string | null
           full_name: string
           id: string
+          note: string | null
           phone: string | null
+          telegram: string | null
           updated_at: string
         }
         Insert: {
+          address?: string | null
+          birthday?: string | null
           created_at?: string
+          custom_fields?: Json
           deleted_at?: string | null
           email?: string | null
           full_name: string
           id?: string
+          note?: string | null
           phone?: string | null
+          telegram?: string | null
           updated_at?: string
         }
         Update: {
+          address?: string | null
+          birthday?: string | null
           created_at?: string
+          custom_fields?: Json
           deleted_at?: string | null
           email?: string | null
           full_name?: string
           id?: string
+          note?: string | null
           phone?: string | null
+          telegram?: string | null
           updated_at?: string
         }
         Relationships: []
