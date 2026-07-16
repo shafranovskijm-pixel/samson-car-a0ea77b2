@@ -306,7 +306,7 @@ export function AppointmentDialog({
               <Select value={clientId} onValueChange={setClientId}>
                 <SelectTrigger><SelectValue placeholder="Выберите клиента" /></SelectTrigger>
                 <SelectContent>
-                  {clients.map((c) => (
+                  {clients.filter((c) => !c.is_archived).map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.full_name}{c.phone ? ` · ${c.phone}` : ""}
                     </SelectItem>
