@@ -279,13 +279,13 @@ function MechanicSalary({ mechanicId }: { mechanicId: string }) {
 
   return (
     <div>
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Wallet className="h-5 w-5" />
           <h2 className="text-lg font-semibold">Зарплата</h2>
         </div>
         <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
-          <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-32 sm:w-40"><SelectValue /></SelectTrigger>
           <SelectContent>
             {(Object.keys(PERIOD_LABELS) as Period[]).map((p) => (
               <SelectItem key={p} value={p}>{PERIOD_LABELS[p]}</SelectItem>
@@ -293,6 +293,7 @@ function MechanicSalary({ mechanicId }: { mechanicId: string }) {
           </SelectContent>
         </Select>
       </div>
+
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="rounded-lg border bg-card p-4">
           <div className="text-xs text-muted-foreground">Заработано ({PERIOD_LABELS[period].toLowerCase()})</div>
