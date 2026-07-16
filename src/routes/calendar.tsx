@@ -125,6 +125,7 @@ function CalendarPage() {
     end: Date | null;
     note: string;
   }>({ open: false, id: null, mechanic_id: "", start: null, end: null, note: "" });
+  const [activeMechanicId, setActiveMechanicId] = useState<string>("");
 
   const { data: appointments = [] } = useQuery({
     queryKey: ["appointments"],
