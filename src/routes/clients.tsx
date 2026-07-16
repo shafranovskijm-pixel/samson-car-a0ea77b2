@@ -350,14 +350,43 @@ function ClientsPage() {
                   const Icon = CATEGORY_ICONS[cat];
                   return (
                     <div className="mb-2 flex items-center gap-2">
-                      <span
-                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium text-white ${CLIENT_CATEGORY_COLORS[cat]}`}
-                      >
-                        <Icon className="h-3.5 w-3.5" />
-                        {CLIENT_CATEGORY_LABELS[cat]}
-                      </span>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium text-white shadow-sm transition hover:opacity-90 ${CLIENT_CATEGORY_COLORS[cat]}`}
+                          >
+                            <Icon className="h-3.5 w-3.5" />
+                            {CLIENT_CATEGORY_LABELS[cat]}
+                            <ChevronDown className="h-3 w-3 opacity-80" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start">
+                          {CLIENT_CATEGORY_ORDER.map((c) => {
+                            const CIcon = CATEGORY_ICONS[c];
+                            return (
+                              <DropdownMenuItem
+                                key={c}
+                                onClick={() => categoryM.mutate({ id: selected.id, category: c })}
+                                className="gap-2"
+                              >
+                                <Check
+                                  className={`h-3.5 w-3.5 ${c === cat ? "opacity-100" : "opacity-0"}`}
+                                />
+                                <span
+                                  className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-white ${CLIENT_CATEGORY_COLORS[c]}`}
+                                >
+                                  <CIcon className="h-3 w-3" />
+                                </span>
+                                {CLIENT_CATEGORY_LABELS[c]}
+                              </DropdownMenuItem>
+                            );
+                          })}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   );
+
                 })()}
                 <h1 className="text-2xl font-bold">{selected.full_name}</h1>
 
