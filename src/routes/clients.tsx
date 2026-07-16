@@ -4,11 +4,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   Plus, Trash2, Pencil, Search, Car as CarIcon, Phone, Mail, User,
+  Bell, History as HistoryIcon, Check,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -16,10 +19,16 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  createCar, createClient, deleteCar, deleteClient, listBrands, listCarModels,
-  listCars, listClients, updateCar, updateClient,
+  createCar, createClient, createClientReminder, deleteCar, deleteClient,
+  deleteClientReminder, listAppointmentsByClient, listBrands, listCarModels,
+  listCars, listClientReminders, listClients, updateCar, updateClient,
+  updateClientReminder,
 } from "@/lib/api";
-import type { Car, Client } from "@/lib/types";
+import type {
+  Car, Client, ClientReminder, ReminderInterval,
+} from "@/lib/types";
+import { REMINDER_INTERVAL_LABELS, STATUS_LABELS } from "@/lib/types";
+
 
 export const Route = createFileRoute("/clients")({
   ssr: false,
