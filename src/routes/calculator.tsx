@@ -219,9 +219,6 @@ function LandingPage() {
 
         <div className="relative mx-auto max-w-7xl px-6">
           <div className="mb-8 text-center">
-            <Badge className="mb-3 border-orange-500/40 bg-orange-500/10 text-orange-300">
-              Калькулятор
-            </Badge>
             <h2 className="text-4xl font-bold md:text-5xl">
               Рассчитайте стоимость{" "}
               <span className="bg-gradient-to-r from-orange-400 to-red-500 bg-clip-text text-transparent">
@@ -230,14 +227,6 @@ function LandingPage() {
             </h2>
           </div>
 
-          {/* Индикатор шагов */}
-          <div className="mb-8 flex items-center justify-center gap-2">
-            <StepBadge n={1} label="Услуги" />
-            <ChevronRight className="h-4 w-4 text-white/30" />
-            <StepBadge n={2} label="Авто" />
-            <ChevronRight className="h-4 w-4 text-white/30" />
-            <StepBadge n={3} label="Итог" />
-          </div>
 
           {/* ШАГ 1 — УСЛУГИ */}
           {step === 1 && (
