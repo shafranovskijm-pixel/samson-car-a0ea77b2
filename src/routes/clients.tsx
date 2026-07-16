@@ -709,3 +709,320 @@ function ModelsDatalist({ brandId }: { brandId: string }) {
     </datalist>
   );
 }
+
+// ============ HISTORY ============
+function ClientHistory({ clientId }: { clientId: string }) {
+  const { data: items = [], isLoading } = useQuery({
+    queryKey: ["client-history", clientId],
+    queryFn: () => listAppointmentsByClient(clientId),
+  });
+
+  return (
+    <div className="mt-8">
+      <div className="mb-3 flex items-center gap-2">
+        <HistoryIcon className="h-5 w-5" />
+        <h2 className="text-lg font-semibold">
+          История{" "}
+          <span className="text-sm font-normal text-muted-foreground">· {items.length}</span>
+        </h2>
+      </div>
+      {isLoading ? (
+        <div className="text-sm text-muted-foreground">Загрузка…</div>
+      ) : items.length === 0 ? (
+        <div className="rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
+          Записей пока нет
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {items.map((a) => {
+            const brand = a.car?.brand?.name ?? "";
+            const model = a.car?.model ?? "";
+            const plate = a.car?.license_plate ? ` · ${a.car.license_plate}` : "";
+            return (
+              <div key={a.id} className="rounded-lg border bg-card p-3 text-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-medium">
+                      {new Date(a.starts_at).toLocaleString("ru-RU", {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      })}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {brand} {model}{plate}
+                    </div>
+                    {a.services.length > 0 && (
+                      <div className="mt-1 text-xs">
+                        {a.services
+                          .map((s) => s.service?.name ?? "—")
+                          .join(", ")}
+                      </div>
+                    )}
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <div className="font-semibold">{a.total_price} ₽</div>
+                    <div className="text-xs text-muted-foreground">
+                      {STATUS_LABELS[a.status] ?? a.status}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============ REMINDERS ============
+const INTERVAL_MS: Record<Exclude<ReminderInterval, "custom">, number> = {
+  day: 24 * 60 * 60 * 1000,
+  week: 7 * 24 * 60 * 60 * 1000,
+  month: 30 * 24 * 60 * 60 * 1000,
+  half_year: 182 * 24 * 60 * 60 * 1000,
+  year: 365 * 24 * 60 * 60 * 1000,
+};
+
+function computeRemindAt(kind: ReminderInterval, customDate: string): string {
+  if (kind === "custom") {
+    if (!customDate) throw new Error("Выберите дату напоминания");
+    return new Date(customDate).toISOString();
+  }
+  return new Date(Date.now() + INTERVAL_MS[kind]).toISOString();
+}
+
+function ClientReminders({ clientId }: { clientId: string }) {
+  const qc = useQueryClient();
+  const { data: items = [] } = useQuery({
+    queryKey: ["client-reminders", clientId],
+    queryFn: () => listClientReminders(clientId),
+  });
+
+  const [dialog, setDialog] = useState<{ open: boolean; editing: ClientReminder | null }>({
+    open: false, editing: null,
+  });
+  const [form, setForm] = useState({
+    title: "",
+    note: "",
+    interval_kind: "week" as ReminderInterval,
+    custom_date: "",
+    repeat: false,
+  });
+
+  const openNew = () => {
+    setDialog({ open: true, editing: null });
+    setForm({ title: "", note: "", interval_kind: "week", custom_date: "", repeat: false });
+  };
+  const openEdit = (r: ClientReminder) => {
+    setDialog({ open: true, editing: r });
+    setForm({
+      title: r.title,
+      note: r.note ?? "",
+      interval_kind: r.interval_kind,
+      custom_date: r.interval_kind === "custom"
+        ? new Date(r.remind_at).toISOString().slice(0, 16)
+        : "",
+      repeat: r.repeat,
+    });
+  };
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["client-reminders", clientId] });
+
+  const saveM = useMutation({
+    mutationFn: async () => {
+      if (!form.title.trim()) throw new Error("Введите название");
+      const remind_at = computeRemindAt(form.interval_kind, form.custom_date);
+      const payload = {
+        client_id: clientId,
+        title: form.title.trim(),
+        note: form.note.trim() || null,
+        remind_at,
+        interval_kind: form.interval_kind,
+        repeat: form.repeat,
+      };
+      if (dialog.editing) await updateClientReminder(dialog.editing.id, payload);
+      else await createClientReminder(payload);
+    },
+    onSuccess: () => {
+      toast.success("Сохранено");
+      invalidate();
+      setDialog({ open: false, editing: null });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const toggleDoneM = useMutation({
+    mutationFn: async (r: ClientReminder) => {
+      if (r.done_at) {
+        await updateClientReminder(r.id, { done_at: null });
+        return;
+      }
+      if (r.repeat && r.interval_kind !== "custom") {
+        const next = new Date(Date.now() + INTERVAL_MS[r.interval_kind]).toISOString();
+        await updateClientReminder(r.id, { remind_at: next, done_at: null });
+      } else {
+        await updateClientReminder(r.id, { done_at: new Date().toISOString() });
+      }
+    },
+    onSuccess: invalidate,
+  });
+
+  const delM = useMutation({
+    mutationFn: (id: string) => deleteClientReminder(id),
+    onSuccess: () => { toast.success("Удалено"); invalidate(); },
+  });
+
+  const now = Date.now();
+
+  return (
+    <div className="mt-8">
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Bell className="h-5 w-5" />
+          <h2 className="text-lg font-semibold">
+            Напоминания{" "}
+            <span className="text-sm font-normal text-muted-foreground">· {items.length}</span>
+          </h2>
+        </div>
+        <Button size="sm" onClick={openNew}>
+          <Plus className="mr-1 h-4 w-4" />Напоминание
+        </Button>
+      </div>
+
+      {items.length === 0 ? (
+        <div className="rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
+          Напоминаний пока нет
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {items.map((r) => {
+            const ts = new Date(r.remind_at).getTime();
+            const overdue = !r.done_at && ts < now;
+            const soon = !r.done_at && ts >= now && ts - now < 3 * 24 * 60 * 60 * 1000;
+            const cls = r.done_at
+              ? "opacity-60"
+              : overdue
+                ? "border-red-400 bg-red-50 dark:bg-red-950/20"
+                : soon
+                  ? "border-amber-400 bg-amber-50 dark:bg-amber-950/20"
+                  : "";
+            return (
+              <div key={r.id} className={`rounded-lg border bg-card p-3 text-sm ${cls}`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className={`font-medium ${r.done_at ? "line-through" : ""}`}>
+                      {r.title}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(r.remind_at).toLocaleString("ru-RU", {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      })}
+                      {" · "}
+                      {REMINDER_INTERVAL_LABELS[r.interval_kind]}
+                      {r.repeat ? " · повтор" : ""}
+                    </div>
+                    {r.note && <div className="mt-1 text-xs">{r.note}</div>}
+                  </div>
+                  <div className="flex shrink-0 gap-1">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      title={r.done_at ? "Вернуть" : "Выполнено"}
+                      onClick={() => toggleDoneM.mutate(r)}
+                    >
+                      <Check className="h-4 w-4" />
+                    </Button>
+                    <Button size="icon" variant="ghost" onClick={() => openEdit(r)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => { if (confirm("Удалить напоминание?")) delM.mutate(r.id); }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <Dialog open={dialog.open} onOpenChange={(o) => setDialog((s) => ({ ...s, open: o }))}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {dialog.editing ? "Редактировать напоминание" : "Новое напоминание"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-3">
+            <div>
+              <Label>Название</Label>
+              <Input
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                placeholder="Например: ТО, замена масла, позвонить"
+              />
+            </div>
+            <div>
+              <Label>Комментарий</Label>
+              <Textarea
+                value={form.note}
+                onChange={(e) => setForm({ ...form, note: e.target.value })}
+                rows={2}
+              />
+            </div>
+            <div>
+              <Label>Когда напомнить</Label>
+              <Select
+                value={form.interval_kind}
+                onValueChange={(v) => setForm({ ...form, interval_kind: v as ReminderInterval })}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="day">Через день</SelectItem>
+                  <SelectItem value="week">Через неделю</SelectItem>
+                  <SelectItem value="month">Через месяц</SelectItem>
+                  <SelectItem value="half_year">Через полгода</SelectItem>
+                  <SelectItem value="year">Через год</SelectItem>
+                  <SelectItem value="custom">Произвольная дата</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {form.interval_kind === "custom" && (
+              <div>
+                <Label>Дата и время</Label>
+                <Input
+                  type="datetime-local"
+                  value={form.custom_date}
+                  onChange={(e) => setForm({ ...form, custom_date: e.target.value })}
+                />
+              </div>
+            )}
+            {form.interval_kind !== "custom" && (
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={form.repeat}
+                  onCheckedChange={(v) => setForm({ ...form, repeat: v === true })}
+                />
+                Повторять каждый {REMINDER_INTERVAL_LABELS[form.interval_kind].toLowerCase()}
+              </label>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialog({ open: false, editing: null })}>
+              Отмена
+            </Button>
+            <Button onClick={() => saveM.mutate()} disabled={saveM.isPending}>
+              Сохранить
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
