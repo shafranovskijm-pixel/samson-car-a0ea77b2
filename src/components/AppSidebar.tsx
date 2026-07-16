@@ -8,6 +8,7 @@ import {
   UserCog,
   Settings,
   GripVertical,
+  BarChart3,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -46,6 +47,7 @@ const DEFAULT_ITEMS: Item[] = [
   { title: "Калькулятор", url: "/calculator", icon: Calculator },
   { title: "Календарь", url: "/calendar", icon: Calendar },
   { title: "Записи по дням", url: "/schedule", icon: ListChecks },
+  { title: "Статистика", url: "/stats", icon: BarChart3 },
   { title: "Клиенты", url: "/clients", icon: Users },
   { title: "Мастера", url: "/mechanics", icon: UserCog },
   { title: "Настройки калькулятора", url: "/settings", icon: Settings },

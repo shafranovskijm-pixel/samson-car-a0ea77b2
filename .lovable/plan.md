@@ -1,49 +1,69 @@
-## 1. Убрать «Главную», сделать «Калькулятор» стартовой страницей
 
-- `src/routes/index.tsx` — переделать в redirect на `/calculator` (`beforeLoad: () => throw redirect({ to: "/calculator" })`). Существующая логика дашборда (статистика + ближайшие записи) переносится в блок внизу калькулятора (см. пункт 3).
-- `src/components/AppSidebar.tsx` — удалить пункт «Главная». Порядок по умолчанию:
-  1. Калькулятор
-  2. Календарь
-  3. Записи по дням
-  4. Клиенты
-  5. Мастера
-  6. Настройки калькулятора
+## Что делаем
 
-## 2. Drag & Drop в боковом меню с сохранением
+1. **Статистика — отдельный пункт меню** (`/stats`), с дебиторкой.
+2. **Убрать `<AdminStats />` из калькулятора** — там ей не место.
+3. **В «Записях по дням» — переключатели-кнопки**: статус работы и статус оплаты, меняются по клику прямо в карточке.
 
-- Установить `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities`.
-- В `AppSidebar` обернуть `SidebarMenu` в `DndContext` + `SortableContext` (vertical). Каждый `SidebarMenuItem` — `useSortable`.
-- Иконка «≡» слева от пункта — drag-handle (`{...attributes} {...listeners}`); клик по остальной области по-прежнему открывает ссылку.
-- Порядок пунктов хранится в `localStorage` под ключом `sidebar-order-v1` как массив `url`. При старте — читаем и упорядочиваем `items`; неизвестные url добавляются в конец (устойчивость к будущим правкам меню).
-- Читаем localStorage через `useEffect`, чтобы не ломать SSR-гидратацию.
+---
 
-## 3. Статистика внизу калькулятора
+## 1. База — новое поле «статус оплаты»
 
-- В `src/routes/calculator.tsx` под текущим содержимым добавить блок «Статистика»:
-  - 4 карточки: Клиентов / Машин / Мастеров / Записей сегодня (из `listClients`, `listCars`, `listMechanics`, `listAppointments` за сегодня).
-  - Список «Ближайшие записи» (следующие 7 дней, до 8 штук), как сейчас на главной, со ссылкой «Открыть календарь →».
-- Логика и запросы взяты из старой `index.tsx`; сам файл `index.tsx` становится redirect-ом.
+Миграция добавляет к `appointments`:
 
-## 4. Адаптация под телефон
+- `payment_status` — `paid` / `prepaid` / `unpaid` (по умолчанию `unpaid`).
+- `paid_amount numeric` — сколько фактически получено (для «предоплаты» и дебиторки).
 
-- **Хедер (`__root.tsx`)**: заголовок «Samson Auto — CRM» на мобильных сокращается до «Samson Auto», часы Уссурийска остаются справа (`UssuriyskClock` уже `hidden sm:flex` — оставим, чтобы в узком экране не ломать хедер; текст сокращается).
-- **Общие отступы**: страницы (`calculator`, `calendar`, `clients`, `mechanics`, `schedule`) — `p-4 sm:p-6`, заголовки `text-2xl sm:text-3xl`.
-- **Календарь (`calendar.tsx`)**: на экранах < `sm` дефолтный view = `Views.DAY` (неделя нечитаема на телефоне). Toolbar `react-big-calendar` уже адаптивный; высота календаря — `calc(100dvh - 220px)` вместо `100vh` (учтёт адресную строку iOS).
-- **Таблицы (клиенты/мастера/расписание)**: обёртка `overflow-x-auto` для горизонтального скролла на узких экранах. Основные списки клиентов и мастеров используем в один столбец на мобильных (`grid-cols-1 md:grid-cols-2`).
-- **Диалоги (`AppointmentDialog`, диалоги клиента/мастера)**: `max-h-[90vh]` уже есть; изменить `grid-cols-2` → `grid-cols-1 sm:grid-cols-2` в наиболее плотных строках (клиент/машина, мастер/статус, ставки).
-- **Sidebar на мобильных** — уже offcanvas через shadcn Sheet (свайп/кнопка «≡»). DnD внутри Sheet работает так же.
+Дебиторка считается как `SUM(total_price - paid_amount)` по записям со статусом работы `done` и оплатой ≠ `paid`.
+
+## 2. Типы и API (`src/lib/types.ts`, `src/lib/api.ts`)
+
+- `PaymentStatus = "paid" | "prepaid" | "unpaid"` + `PAYMENT_LABELS` + `PAYMENT_COLORS`.
+- В типе `Appointment` — новые поля.
+- В `api.ts` — `updateAppointmentPayment(id, { payment_status, paid_amount })` и `updateAppointmentStatus(id, status)` (короткий патч без пересохранения услуг).
+
+## 3. Меню (`src/components/AppSidebar.tsx`)
+
+В `DEFAULT_ITEMS` добавляем пункт **«Статистика»** → `/stats` (иконка `BarChart3`). Порядок в localStorage переживёт добавление — новый пункт просто допишется в конец.
+
+## 4. Калькулятор (`src/routes/calculator.tsx`)
+
+Удаляем импорт и рендер `<AdminStats />` (строки 45 и 600).
+
+## 5. Новая страница `/stats` (`src/routes/stats.tsx`)
+
+Использует существующий компонент `AdminStats` (клиенты/машины/мастера/сегодня + ближайшие записи) и добавляет блок **«Дебиторка»**:
+
+- Сумма долга (итого не оплачено по завершённым работам).
+- Список должников: клиент, машина, дата визита, `total_price − paid_amount`, кнопка «Открыть запись».
+- Заголовок страницы + head-мета.
+
+## 6. «Записи по дням» (`src/routes/schedule.tsx`)
+
+В карточке визита правый блок заменяем на два ряда кнопок-переключателей:
+
+- **Статус работы** — цикл `scheduled → in_progress → done → cancelled → scheduled`. Клик по бейджу-кнопке → `updateAppointmentStatus` + invalidate `appointments`. Цвет — из `STATUS_COLORS`.
+- **Статус оплаты** — цикл `unpaid → prepaid → paid → unpaid`. При переходе в `paid` — `paid_amount = total_price`; в `unpaid` — `0`; в `prepaid` — оставляем текущее (либо `total_price/2` при первом клике, если 0). Клик → `updateAppointmentPayment` + invalidate.
+
+Чтобы клик по кнопкам не открывал диалог редактирования, оборачиваю карточку в `div` вместо `button`, а название/детали делаю кликабельными для открытия диалога. `stopPropagation` на кнопках статусов.
+
+Добавляется фильтр по статусу оплаты рядом со статусом работы (по аналогии).
+
+## Технические детали
+
+- Миграция включает `GRANT` уже покрыт (таблица существует), только `ALTER TABLE ADD COLUMN` + `UPDATE` дефолтов для существующих строк (unpaid, paid_amount = 0).
+- `updateAppointmentPayment` / `updateAppointmentStatus` — точечные `update` по id, чтобы не тянуть весь `updateAppointment` с услугами.
+- `AdminStats` расширяю: принимает опциональный проп `showDebtors` — на `/stats` показывает блок дебиторки; на других экранах не используется.
 
 ## Файлы
 
-- `src/routes/index.tsx` — заменить на redirect
-- `src/components/AppSidebar.tsx` — убрать «Главную», добавить DnD и localStorage
-- `src/routes/calculator.tsx` — добавить блок статистики внизу
-- `src/routes/__root.tsx` — адаптивный заголовок хедера
-- `src/routes/calendar.tsx` — дефолтный view по ширине экрана, `100dvh`
-- `src/routes/clients.tsx`, `mechanics.tsx`, `schedule.tsx` — адаптивные отступы/таблицы
-- `src/components/AppointmentDialog.tsx` — адаптивные grid-строки
-- `package.json` — `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities`
-
-## Уточнения
-
-Никаких неоднозначностей — задача понятна. По каналу доставки напоминаний (Telegram / Email) жду ответ отдельно.
+```text
+migration           add appointments.payment_status + paid_amount
+src/lib/types.ts               +PaymentStatus, поля в Appointment
+src/lib/api.ts                 +updateAppointmentStatus, updateAppointmentPayment; select включает новые поля
+src/components/AppSidebar.tsx  +пункт «Статистика»
+src/routes/calculator.tsx      -AdminStats
+src/components/AdminStats.tsx  +опц. блок «Дебиторка»
+src/routes/stats.tsx           новый роут
+src/routes/schedule.tsx        кнопки-переключатели статусов + фильтр оплаты
+```

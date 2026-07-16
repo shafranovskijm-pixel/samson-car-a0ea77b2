@@ -42,7 +42,7 @@ import imgBrakes from "@/assets/cat-brakes.jpg";
 import imgAc from "@/assets/cat-ac.jpg";
 import imgTires from "@/assets/cat-tires.jpg";
 import imgElectric from "@/assets/cat-electric.jpg";
-import { AdminStats } from "@/components/AdminStats";
+
 
 
 export const Route = createFileRoute("/calculator")({
@@ -597,7 +597,7 @@ function LandingPage() {
         </div>
       </footer>
 
-      <AdminStats />
+      
     </div>
   );
 }

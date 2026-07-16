@@ -87,6 +87,7 @@ export type MechanicShift = {
   note: string | null;
 };
 export type AppointmentStatus = "scheduled" | "in_progress" | "done" | "cancelled";
+export type PaymentStatus = "paid" | "prepaid" | "unpaid";
 export type Appointment = {
   id: string;
   car_id: string;
@@ -97,6 +98,8 @@ export type Appointment = {
   mileage: number | null;
   comment: string | null;
   total_price: number;
+  payment_status: PaymentStatus;
+  paid_amount: number;
 };
 
 export const STATUS_LABELS: Record<AppointmentStatus, string> = {
@@ -112,6 +115,27 @@ export const STATUS_COLORS: Record<AppointmentStatus, string> = {
   done: "bg-green-100 text-green-800 border-green-300",
   cancelled: "bg-gray-100 text-gray-600 border-gray-300",
 };
+
+export const STATUS_CYCLE: AppointmentStatus[] = [
+  "scheduled",
+  "in_progress",
+  "done",
+  "cancelled",
+];
+
+export const PAYMENT_LABELS: Record<PaymentStatus, string> = {
+  paid: "Оплачено",
+  prepaid: "Предоплата",
+  unpaid: "Не оплачен",
+};
+
+export const PAYMENT_COLORS: Record<PaymentStatus, string> = {
+  paid: "bg-green-100 text-green-800 border-green-300",
+  prepaid: "bg-amber-100 text-amber-800 border-amber-300",
+  unpaid: "bg-red-100 text-red-800 border-red-300",
+};
+
+export const PAYMENT_CYCLE: PaymentStatus[] = ["unpaid", "prepaid", "paid"];
 
 export type ReminderInterval = "day" | "week" | "month" | "half_year" | "year" | "custom";
 export const REMINDER_INTERVAL_LABELS: Record<ReminderInterval, string> = {
