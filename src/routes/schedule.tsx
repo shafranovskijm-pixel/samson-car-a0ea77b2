@@ -4,10 +4,24 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format, parseISO, startOfDay } from "date-fns";
 import { ru } from "date-fns/locale";
-import { Plus } from "lucide-react";
+import { Check, ChevronDown, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -23,10 +37,8 @@ import {
 } from "@/lib/api";
 import {
   PAYMENT_COLORS,
-  PAYMENT_CYCLE,
   PAYMENT_LABELS,
   STATUS_COLORS,
-  STATUS_CYCLE,
   STATUS_LABELS,
   type AppointmentStatus,
   type PaymentStatus,
