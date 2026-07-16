@@ -5,12 +5,12 @@ import { toast } from "sonner";
 import {
   Calendar as CalendarIcon,
   Clock,
-  Phone,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Plus,
 } from "lucide-react";
+
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
