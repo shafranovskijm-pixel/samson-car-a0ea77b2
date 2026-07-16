@@ -203,7 +203,7 @@ function MechanicsPage() {
             </div>
             <div>
               <Label>Цвет в календаре</Label>
-              <div className="mt-2 flex gap-2">
+              <div className="mt-2 grid grid-cols-8 gap-2">
                 {COLORS.map((c) => (
                   <button
                     key={c}
