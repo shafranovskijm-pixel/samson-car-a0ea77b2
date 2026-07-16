@@ -249,24 +249,58 @@ function SchedulePage() {
                         )}
                       </div>
                       <div className="flex flex-wrap gap-1.5 sm:justify-end">
-                        <button
-                          type="button"
-                          title="Переключить статус работы"
-                          onClick={() => cycleStatus(a.id, status)}
-                          className={`rounded-md border px-2 py-1 text-xs transition hover:opacity-80 ${STATUS_COLORS[status]}`}
-                        >
-                          {STATUS_LABELS[status]}
-                        </button>
-                        <button
-                          type="button"
-                          title="Переключить статус оплаты"
-                          onClick={() =>
-                            cyclePayment(a.id, payment, a.total_price ?? 0, a.paid_amount ?? 0)
-                          }
-                          className={`rounded-md border px-2 py-1 text-xs transition hover:opacity-80 ${PAYMENT_COLORS[payment]}`}
-                        >
-                          {PAYMENT_LABELS[payment]}
-                        </button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              type="button"
+                              className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium shadow-sm transition hover:opacity-90 ${STATUS_COLORS[status]}`}
+                            >
+                              {STATUS_LABELS[status]}
+                              <ChevronDown className="h-3 w-3 opacity-70" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {(Object.keys(STATUS_LABELS) as AppointmentStatus[]).map((s) => (
+                              <DropdownMenuItem
+                                key={s}
+                                onClick={() => setStatus(a.id, s)}
+                                className="gap-2"
+                              >
+                                <Check
+                                  className={`h-3.5 w-3.5 ${s === status ? "opacity-100" : "opacity-0"}`}
+                                />
+                                {STATUS_LABELS[s]}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              type="button"
+                              className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium shadow-sm transition hover:opacity-90 ${PAYMENT_COLORS[payment]}`}
+                            >
+                              {PAYMENT_LABELS[payment]}
+                              <ChevronDown className="h-3 w-3 opacity-70" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {(Object.keys(PAYMENT_LABELS) as PaymentStatus[]).map((p) => (
+                              <DropdownMenuItem
+                                key={p}
+                                onClick={() =>
+                                  setPayment(a.id, p, a.total_price ?? 0, a.paid_amount ?? 0)
+                                }
+                                className="gap-2"
+                              >
+                                <Check
+                                  className={`h-3.5 w-3.5 ${p === payment ? "opacity-100" : "opacity-0"}`}
+                                />
+                                {PAYMENT_LABELS[p]}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
                   </div>
