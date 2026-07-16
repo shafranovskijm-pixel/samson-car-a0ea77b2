@@ -106,6 +106,9 @@ export function AppointmentDialog({
   const [comment, setComment] = useState<string>("");
   const [selected, setSelected] = useState<SvcRow[]>([]);
   const [addServiceId, setAddServiceId] = useState<string>("");
+  const [reminderOn, setReminderOn] = useState<boolean>(false);
+  const [reminderInterval, setReminderInterval] = useState<ReminderInterval>("half_year");
+  const [reminderTitle, setReminderTitle] = useState<string>("");
 
   const { data: rates = [] } = useQuery({
     queryKey: ["mechanic-service-rates", mechanicId],
