@@ -105,8 +105,11 @@ function ClientsPage() {
   }, [clients, search, tab]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.matchMedia("(max-width: 767px)").matches) return;
     if (!selectedId && filtered.length > 0) setSelectedId(filtered[0].id);
   }, [selectedId, filtered]);
+
 
   const selected = clients.find((c) => c.id === selectedId) ?? null;
   const selectedCars = useMemo(
