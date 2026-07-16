@@ -14,6 +14,8 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Toaster } from "@/components/ui/sonner";
+import { UssuriyskClock } from "@/components/UssuriyskClock";
+
 
 function NotFoundComponent() {
   return (
@@ -105,10 +107,14 @@ function RootComponent() {
         <div className="flex min-h-screen w-full">
           <AppSidebar />
           <div className="flex flex-1 flex-col">
-            <header className="flex h-12 items-center border-b bg-background px-3">
+            <header className="flex h-12 items-center gap-3 border-b bg-background px-3">
               <SidebarTrigger />
-              <div className="ml-3 text-sm font-medium">Samson Auto — CRM</div>
+              <div className="text-sm font-medium">Samson Auto — CRM</div>
+              <div className="ml-auto">
+                <UssuriyskClock />
+              </div>
             </header>
+
             <main className="flex-1 overflow-auto">
               <Outlet />
             </main>

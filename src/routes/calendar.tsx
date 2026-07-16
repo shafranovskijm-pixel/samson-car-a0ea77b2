@@ -123,25 +123,8 @@ function CalendarPage() {
     if (hasPrefill) navigate({ search: {}, replace: true });
   };
 
-  // Живые часы по Уссурийску (Asia/Vladivostok, UTC+10)
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(t);
-  }, []);
-  const ussuriyskTime = useMemo(
-    () =>
-      new Intl.DateTimeFormat("ru-RU", {
-        timeZone: "Asia/Vladivostok",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        weekday: "short",
-        day: "2-digit",
-        month: "short",
-      }).format(now),
-    [now],
-  );
+  const now = useMemo(() => new Date(), []);
+
 
   return (
     <div className="p-4">
@@ -158,19 +141,11 @@ function CalendarPage() {
           )}
         </div>
         <div className="flex items-center gap-3">
-          <div className="hidden items-center gap-2 rounded-md border bg-muted/40 px-3 py-2 text-sm sm:flex">
-            <Clock className="h-4 w-4 text-red-600" />
-            <div className="leading-tight">
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                Уссурийск
-              </div>
-              <div className="font-mono font-semibold tabular-nums">{ussuriyskTime}</div>
-            </div>
-          </div>
           <Button onClick={() => openNew(new Date())}>
             <Plus className="mr-2 h-4 w-4" /> Новая запись
           </Button>
         </div>
+
       </div>
 
 

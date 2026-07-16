@@ -7,8 +7,11 @@ import type {
   Client,
   ClientReminder,
   Mechanic,
+  MechanicServiceRate,
+  MechanicShift,
   Service,
 } from "./types";
+
 
 
 const throwIf = <T,>(x: { data: T | null; error: unknown }): T => {
@@ -144,14 +147,19 @@ export const deleteMechanic = async (id: string) => {
 export type AppointmentWithRelations = Appointment & {
   car: (Car & { brand: Brand | null; client: Client }) | null;
   mechanic: Mechanic | null;
-  services: { service_id: string; price: number; service: Service | null }[];
+  services: {
+    service_id: string;
+    price: number;
+    mechanic_payout: number;
+    service: Service | null;
+  }[];
 };
 
 const APPT_SELECT = `
   *,
   car:cars(*, brand:brands(*), client:clients(*)),
   mechanic:mechanics(*),
-  services:appointment_services(service_id, price, service:services(*))
+  services:appointment_services(service_id, price, mechanic_payout, service:services(*))
 `;
 
 export const listAppointments = async (
@@ -167,6 +175,8 @@ export const listAppointments = async (
 export const getAppointment = async (id: string): Promise<AppointmentWithRelations> =>
   throwIf(await supabase.from("appointments").select(APPT_SELECT).eq("id", id).single()) as AppointmentWithRelations;
 
+type ApptServiceInput = { service_id: string; price: number; mechanic_payout: number };
+
 export const createAppointment = async (input: {
   car_id: string;
   mechanic_id: string | null;
@@ -175,7 +185,7 @@ export const createAppointment = async (input: {
   status: string;
   mileage: number | null;
   comment: string | null;
-  services: { service_id: string; price: number }[];
+  services: ApptServiceInput[];
 }) => {
   const { services, ...appt } = input;
   const created = throwIf(
@@ -188,7 +198,6 @@ export const createAppointment = async (input: {
     if (error) throw error;
   }
   return created;
-
 };
 
 export const updateAppointment = async (
@@ -201,7 +210,7 @@ export const updateAppointment = async (
     status: string;
     mileage: number | null;
     comment: string | null;
-    services: { service_id: string; price: number }[];
+    services: ApptServiceInput[];
   },
 ) => {
   const { services, ...appt } = input;
@@ -218,6 +227,7 @@ export const updateAppointment = async (
     if (error) throw error;
   }
 };
+
 
 export const deleteAppointment = async (id: string) => {
   const { error } = await supabase.from("appointments").delete().eq("id", id);
@@ -273,3 +283,100 @@ export const deleteClientReminder = async (id: string) => {
   if (error) throw error;
 };
 
+
+// MECHANIC SERVICE RATES
+export const listMechanicServiceRates = async (
+  mechanic_id?: string,
+): Promise<MechanicServiceRate[]> => {
+  let q = supabase.from("mechanic_service_rates").select("*");
+  if (mechanic_id) q = q.eq("mechanic_id", mechanic_id);
+  return throwIf(await q) as MechanicServiceRate[];
+};
+
+export const upsertMechanicServiceRate = async (
+  mechanic_id: string,
+  service_id: string,
+  amount: number,
+) =>
+  throwIf(
+    await supabase
+      .from("mechanic_service_rates")
+      .upsert({ mechanic_id, service_id, amount }, { onConflict: "mechanic_id,service_id" })
+      .select()
+      .single(),
+  ) as MechanicServiceRate;
+
+export const deleteMechanicServiceRate = async (mechanic_id: string, service_id: string) => {
+  const { error } = await supabase
+    .from("mechanic_service_rates")
+    .delete()
+    .eq("mechanic_id", mechanic_id)
+    .eq("service_id", service_id);
+  if (error) throw error;
+};
+
+// MECHANIC SHIFTS
+export const listMechanicShifts = async (mechanic_id: string): Promise<MechanicShift[]> =>
+  throwIf(
+    await supabase
+      .from("mechanic_shifts")
+      .select("*")
+      .eq("mechanic_id", mechanic_id)
+      .order("starts_at", { ascending: false }),
+  ) as MechanicShift[];
+
+export const createMechanicShift = async (input: Omit<MechanicShift, "id">) =>
+  throwIf(await supabase.from("mechanic_shifts").insert(input).select().single()) as MechanicShift;
+
+export const updateMechanicShift = async (
+  id: string,
+  input: Partial<Omit<MechanicShift, "id" | "mechanic_id">>,
+) =>
+  throwIf(
+    await supabase.from("mechanic_shifts").update(input).eq("id", id).select().single(),
+  ) as MechanicShift;
+
+export const deleteMechanicShift = async (id: string) => {
+  const { error } = await supabase.from("mechanic_shifts").delete().eq("id", id);
+  if (error) throw error;
+};
+
+// MECHANIC PAYOUTS (для расчёта ЗП)
+export type MechanicPayoutRow = {
+  appointment_id: string;
+  service_id: string;
+  price: number;
+  mechanic_payout: number;
+  starts_at: string;
+  status: string;
+  service_name: string | null;
+};
+
+export const listMechanicPayouts = async (
+  mechanic_id: string,
+): Promise<MechanicPayoutRow[]> => {
+  const { data, error } = await supabase
+    .from("appointment_services")
+    .select(
+      "appointment_id, service_id, price, mechanic_payout, service:services(name), appointment:appointments!inner(starts_at, status, mechanic_id)",
+    )
+    .eq("appointment.mechanic_id", mechanic_id);
+  if (error) throw error;
+  type Row = {
+    appointment_id: string;
+    service_id: string;
+    price: number;
+    mechanic_payout: number;
+    service: { name: string } | null;
+    appointment: { starts_at: string; status: string } | null;
+  };
+  return ((data ?? []) as unknown as Row[]).map((r) => ({
+    appointment_id: r.appointment_id,
+    service_id: r.service_id,
+    price: Number(r.price),
+    mechanic_payout: Number(r.mechanic_payout),
+    starts_at: r.appointment?.starts_at ?? "",
+    status: r.appointment?.status ?? "",
+    service_name: r.service?.name ?? null,
+  }));
+};

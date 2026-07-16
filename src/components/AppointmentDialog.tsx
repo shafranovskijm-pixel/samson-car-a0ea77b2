@@ -33,12 +33,15 @@ import {
   listCarModels,
   listCars,
   listClients,
+  listMechanicServiceRates,
   listMechanics,
   listServices,
   updateAppointment,
 } from "@/lib/api";
 
 import { STATUS_LABELS, type AppointmentStatus } from "@/lib/types";
+
+type SvcRow = { service_id: string; price: number; mechanic_payout: number };
 
 type Props = {
   open: boolean;
@@ -50,6 +53,7 @@ type Props = {
   defaultBrandId?: string | null;
   defaultModelId?: string | null;
 };
+
 
 export function AppointmentDialog({
   open,
@@ -97,8 +101,17 @@ export function AppointmentDialog({
   const [status, setStatus] = useState<AppointmentStatus>("scheduled");
   const [mileage, setMileage] = useState<string>("");
   const [comment, setComment] = useState<string>("");
-  const [selected, setSelected] = useState<{ service_id: string; price: number }[]>([]);
+  const [selected, setSelected] = useState<SvcRow[]>([]);
   const [addServiceId, setAddServiceId] = useState<string>("");
+
+  const { data: rates = [] } = useQuery({
+    queryKey: ["mechanic-service-rates", mechanicId],
+    queryFn: () => listMechanicServiceRates(mechanicId),
+    enabled: !!mechanicId,
+  });
+  const rateFor = (svc_id: string) =>
+    rates.find((r) => r.service_id === svc_id)?.amount ?? 0;
+
 
   useEffect(() => {
     if (!open) return;
@@ -113,7 +126,7 @@ export function AppointmentDialog({
       setStatus(existing.status as AppointmentStatus);
       setMileage(existing.mileage?.toString() ?? "");
       setComment(existing.comment ?? "");
-      setSelected(existing.services.map((s) => ({ service_id: s.service_id, price: s.price })));
+      setSelected(existing.services.map((s) => ({ service_id: s.service_id, price: s.price, mechanic_payout: s.mechanic_payout ?? 0 })));
     } else {
       const d = defaultStart ?? new Date();
       // try to auto-select a car matching prefilled brand/model
@@ -140,7 +153,11 @@ export function AppointmentDialog({
       setStatus("scheduled");
       setMileage("");
       setComment(prefillLabel ? `Из калькулятора: ${prefillLabel}` : "");
-      setSelected(defaultServices && defaultServices.length > 0 ? [...defaultServices] : []);
+      setSelected(
+        defaultServices && defaultServices.length > 0
+          ? defaultServices.map((s) => ({ ...s, mechanic_payout: 0 }))
+          : [],
+      );
     }
     setAddServiceId("");
   }, [
@@ -172,6 +189,19 @@ export function AppointmentDialog({
     }
   }, [carId, clientId, cars]);
 
+  // when mechanic changes, refill mechanic_payout from rates for services with 0 payout
+  useEffect(() => {
+    if (!mechanicId || rates.length === 0) return;
+    setSelected((prev) =>
+      prev.map((s) =>
+        s.mechanic_payout === 0
+          ? { ...s, mechanic_payout: rates.find((r) => r.service_id === s.service_id)?.amount ?? 0 }
+          : s,
+      ),
+    );
+  }, [mechanicId, rates]);
+
+
   const total = selected.reduce((s, x) => s + (x.price || 0), 0);
 
   const addService = async () => {
@@ -184,7 +214,10 @@ export function AppointmentDialog({
       const override = await getPriceForBrand(svc.id, selectedCar.brand_id);
       if (override != null) price = override;
     }
-    setSelected((prev) => [...prev, { service_id: svc.id, price }]);
+    setSelected((prev) => [
+      ...prev,
+      { service_id: svc.id, price, mechanic_payout: rateFor(svc.id) },
+    ]);
     setAddServiceId("");
   };
 
@@ -341,36 +374,66 @@ export function AppointmentDialog({
               {selected.map((row) => {
                 const svc = services.find((s) => s.id === row.service_id);
                 return (
-                  <div key={row.service_id} className="flex items-center gap-2 rounded border p-2">
-                    <div className="flex-1 text-sm">
-                      <div className="font-medium">{svc?.name}</div>
-                      <div className="text-xs text-muted-foreground">{svc?.category}</div>
+                  <div key={row.service_id} className="rounded border p-2">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 text-sm">
+                        <div className="font-medium">{svc?.name}</div>
+                        <div className="text-xs text-muted-foreground">{svc?.category}</div>
+                      </div>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        type="button"
+                        onClick={() =>
+                          setSelected((prev) => prev.filter((x) => x.service_id !== row.service_id))
+                        }
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
                     </div>
-                    <Input
-                      type="number"
-                      className="w-24"
-                      value={row.price}
-                      onChange={(e) => {
-                        const p = Number(e.target.value);
-                        setSelected((prev) =>
-                          prev.map((x) => (x.service_id === row.service_id ? { ...x, price: p } : x)),
-                        );
-                      }}
-                    />
-                    <span className="text-sm">₽</span>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      type="button"
-                      onClick={() =>
-                        setSelected((prev) => prev.filter((x) => x.service_id !== row.service_id))
-                      }
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
+                    <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
+                      <div className="flex items-center gap-1">
+                        <span className="text-muted-foreground">Клиенту:</span>
+                        <Input
+                          type="number"
+                          className="h-8 w-24"
+                          value={row.price}
+                          onChange={(e) => {
+                            const p = Number(e.target.value);
+                            setSelected((prev) =>
+                              prev.map((x) =>
+                                x.service_id === row.service_id ? { ...x, price: p } : x,
+                              ),
+                            );
+                          }}
+                        />
+                        <span>₽</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-muted-foreground">Мастеру:</span>
+                        <Input
+                          type="number"
+                          className="h-8 w-24"
+                          value={row.mechanic_payout}
+                          disabled={!mechanicId}
+                          onChange={(e) => {
+                            const p = Number(e.target.value);
+                            setSelected((prev) =>
+                              prev.map((x) =>
+                                x.service_id === row.service_id
+                                  ? { ...x, mechanic_payout: p }
+                                  : x,
+                              ),
+                            );
+                          }}
+                        />
+                        <span>₽</span>
+                      </div>
+                    </div>
                   </div>
                 );
               })}
+
             </div>
             <div className="mt-3 flex justify-end">
               <Badge variant="secondary" className="text-base">Итого: {total} ₽</Badge>

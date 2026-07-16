@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           appointment_id: string
           deleted_at: string | null
+          mechanic_payout: number
           price: number
           service_id: string
           updated_at: string
@@ -25,6 +26,7 @@ export type Database = {
         Insert: {
           appointment_id: string
           deleted_at?: string | null
+          mechanic_payout?: number
           price: number
           service_id: string
           updated_at?: string
@@ -32,6 +34,7 @@ export type Database = {
         Update: {
           appointment_id?: string
           deleted_at?: string | null
+          mechanic_payout?: number
           price?: number
           service_id?: string
           updated_at?: string
@@ -351,6 +354,86 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      mechanic_service_rates: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          mechanic_id: string
+          service_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          id?: string
+          mechanic_id: string
+          service_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          mechanic_id?: string
+          service_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mechanic_service_rates_mechanic_id_fkey"
+            columns: ["mechanic_id"]
+            isOneToOne: false
+            referencedRelation: "mechanics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mechanic_service_rates_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mechanic_shifts: {
+        Row: {
+          created_at: string
+          ends_at: string
+          id: string
+          mechanic_id: string
+          note: string | null
+          starts_at: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          ends_at: string
+          id?: string
+          mechanic_id: string
+          note?: string | null
+          starts_at: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          ends_at?: string
+          id?: string
+          mechanic_id?: string
+          note?: string | null
+          starts_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mechanic_shifts_mechanic_id_fkey"
+            columns: ["mechanic_id"]
+            isOneToOne: false
+            referencedRelation: "mechanics"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       mechanics: {
         Row: {
