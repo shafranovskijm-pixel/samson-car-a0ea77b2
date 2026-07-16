@@ -767,25 +767,65 @@ function ClientHistory({ clientId }: { clientId: string }) {
     queryKey: ["client-history", clientId],
     queryFn: () => listAppointmentsByClient(clientId),
   });
+  const [q, setQ] = useState("");
+
+  const filtered = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    if (!s) return items;
+    return items.filter((a) => {
+      const dateStr = new Date(a.starts_at).toLocaleString("ru-RU", {
+        dateStyle: "short",
+        timeStyle: "short",
+      });
+      const parts = [
+        dateStr,
+        a.car?.brand?.name ?? "",
+        a.car?.model ?? "",
+        a.car?.license_plate ?? "",
+        a.comment ?? "",
+        STATUS_LABELS[a.status] ?? a.status,
+        ...a.services.map((sv) => sv.service?.name ?? ""),
+      ]
+        .join(" ")
+        .toLowerCase();
+      return parts.includes(s);
+    });
+  }, [items, q]);
 
   return (
     <div className="mt-8">
-      <div className="mb-3 flex items-center gap-2">
-        <HistoryIcon className="h-5 w-5" />
-        <h2 className="text-lg font-semibold">
-          История{" "}
-          <span className="text-sm font-normal text-muted-foreground">· {items.length}</span>
-        </h2>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <HistoryIcon className="h-5 w-5" />
+          <h2 className="text-lg font-semibold">
+            История{" "}
+            <span className="text-sm font-normal text-muted-foreground">
+              · {filtered.length}
+              {q && items.length !== filtered.length ? ` из ${items.length}` : ""}
+            </span>
+          </h2>
+        </div>
+        {items.length > 0 && (
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Поиск по услугам, авто, дате…"
+              className="h-9 pl-8"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+          </div>
+        )}
       </div>
       {isLoading ? (
         <div className="text-sm text-muted-foreground">Загрузка…</div>
-      ) : items.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <div className="rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
-          Записей пока нет
+          {items.length === 0 ? "Записей пока нет" : "Ничего не найдено"}
         </div>
       ) : (
         <div className="space-y-2">
-          {items.map((a) => {
+          {filtered.map((a) => {
             const brand = a.car?.brand?.name ?? "";
             const model = a.car?.model ?? "";
             const plate = a.car?.license_plate ? ` · ${a.car.license_plate}` : "";
