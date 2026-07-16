@@ -467,10 +467,8 @@ function LandingPage() {
                     <Phone className="h-4 w-4 text-red-400" />
                     <span>+7 (800) 555-35-35</span>
                   </div>
-                  <div className="flex items-center gap-3 text-white/80">
-                    <MapPin className="h-4 w-4 text-red-400" />
-                    <span>Москва, ул. Автозаводская, 23</span>
-                  </div>
+
+
                   <div className="flex items-center gap-3 text-white/80">
                     <Clock className="h-4 w-4 text-red-400" />
                     <span>Ежедневно, 09:00 — 21:00</span>
