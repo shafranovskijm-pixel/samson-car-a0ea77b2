@@ -473,39 +473,108 @@ function MechanicShifts({ mechanicId, color = "#64748b" }: { mechanicId: string;
           <Plus className="mr-1 h-4 w-4" />Смена
         </Button>
       </div>
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <CalendarClock className="h-5 w-5" />
+          <h2 className="text-lg font-semibold">
+            График работы{" "}
+            <span className="text-sm font-normal text-muted-foreground">· {shifts.length}</span>
+          </h2>
+        </div>
+        <Button size="sm" onClick={openNew}>
+          <Plus className="mr-1 h-4 w-4" />Смена
+        </Button>
+      </div>
       {shifts.length === 0 ? (
         <div className="rounded-lg border border-dashed py-6 text-center text-sm text-muted-foreground">
           Смен пока нет
         </div>
       ) : (
-        <div className="space-y-2">
-          {shifts.map((s) => {
-            const start = new Date(s.starts_at);
-            const end = new Date(s.ends_at);
-            const past = end.getTime() < Date.now();
+        <div className="space-y-5">
+          {grouped.map(([weekKey, weekShifts]) => {
+            const weekStart = new Date(weekKey);
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekEnd.getDate() + 6);
+            const totalMin = weekShifts.reduce(
+              (s, sh) =>
+                s +
+                Math.round(
+                  (new Date(sh.ends_at).getTime() - new Date(sh.starts_at).getTime()) / 60000,
+                ),
+              0,
+            );
+            const totalH = Math.round((totalMin / 60) * 10) / 10;
             return (
-              <div key={s.id} className={`flex items-center justify-between rounded-lg border bg-card p-3 text-sm ${past ? "opacity-60" : ""}`}>
-                <div>
-                  <div className="font-medium">
-                    {start.toLocaleDateString("ru-RU", { weekday: "short", day: "2-digit", month: "short" })}
-                    {" · "}
-                    {start.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}
+              <div key={weekKey}>
+                <div className="mb-2 flex items-center justify-between text-xs uppercase tracking-wider text-muted-foreground">
+                  <span>
+                    Неделя с{" "}
+                    {weekStart.toLocaleDateString("ru-RU", { day: "2-digit", month: "short" })}
                     {" – "}
-                    {end.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}
-                  </div>
-                  {s.note && <div className="text-xs text-muted-foreground">{s.note}</div>}
+                    {weekEnd.toLocaleDateString("ru-RU", { day: "2-digit", month: "short" })}
+                  </span>
+                  <span>Всего: {totalH} ч</span>
                 </div>
-                <div className="flex gap-1">
-                  <Button size="icon" variant="ghost" onClick={() => openEdit(s)}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => { if (confirm("Удалить смену?")) delM.mutate(s.id); }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                <div className="space-y-2">
+                  {weekShifts.map((s) => {
+                    const start = new Date(s.starts_at);
+                    const end = new Date(s.ends_at);
+                    const past = end.getTime() < Date.now();
+                    const durH =
+                      Math.round(((end.getTime() - start.getTime()) / 3600000) * 10) / 10;
+                    return (
+                      <div
+                        key={s.id}
+                        className={`flex items-center justify-between rounded-lg border border-l-4 bg-card p-3 text-sm ${
+                          past ? "opacity-60" : ""
+                        }`}
+                        style={{
+                          borderLeftColor: color,
+                          background: past ? undefined : `${color}0d`,
+                        }}
+                      >
+                        <div>
+                          <div className="font-medium">
+                            {start.toLocaleDateString("ru-RU", {
+                              weekday: "short",
+                              day: "2-digit",
+                              month: "short",
+                            })}
+                            {" · "}
+                            {start.toLocaleTimeString("ru-RU", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                            {" – "}
+                            {end.toLocaleTimeString("ru-RU", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                            <span className="ml-2 text-xs font-normal text-muted-foreground">
+                              {durH} ч
+                            </span>
+                          </div>
+                          {s.note && (
+                            <div className="text-xs text-muted-foreground">{s.note}</div>
+                          )}
+                        </div>
+                        <div className="flex gap-1">
+                          <Button size="icon" variant="ghost" onClick={() => openEdit(s)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => {
+                              if (confirm("Удалить смену?")) delM.mutate(s.id);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );
