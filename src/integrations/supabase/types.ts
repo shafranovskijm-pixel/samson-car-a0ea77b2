@@ -17,18 +17,24 @@ export type Database = {
       appointment_services: {
         Row: {
           appointment_id: string
+          deleted_at: string | null
           price: number
           service_id: string
+          updated_at: string
         }
         Insert: {
           appointment_id: string
+          deleted_at?: string | null
           price: number
           service_id: string
+          updated_at?: string
         }
         Update: {
           appointment_id?: string
+          deleted_at?: string | null
           price?: number
           service_id?: string
+          updated_at?: string
         }
         Relationships: [
           {
@@ -52,6 +58,7 @@ export type Database = {
           car_id: string
           comment: string | null
           created_at: string
+          deleted_at: string | null
           duration_minutes: number
           id: string
           mechanic_id: string | null
@@ -59,11 +66,13 @@ export type Database = {
           starts_at: string
           status: string
           total_price: number
+          updated_at: string
         }
         Insert: {
           car_id: string
           comment?: string | null
           created_at?: string
+          deleted_at?: string | null
           duration_minutes?: number
           id?: string
           mechanic_id?: string | null
@@ -71,11 +80,13 @@ export type Database = {
           starts_at: string
           status?: string
           total_price?: number
+          updated_at?: string
         }
         Update: {
           car_id?: string
           comment?: string | null
           created_at?: string
+          deleted_at?: string | null
           duration_minutes?: number
           id?: string
           mechanic_id?: string | null
@@ -83,6 +94,7 @@ export type Database = {
           starts_at?: string
           status?: string
           total_price?: number
+          updated_at?: string
         }
         Relationships: [
           {
@@ -104,21 +116,27 @@ export type Database = {
       brands: {
         Row: {
           created_at: string
+          deleted_at: string | null
           id: string
           name: string
           tier: string
+          updated_at: string
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           id?: string
           name: string
           tier?: string
+          updated_at?: string
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           id?: string
           name?: string
           tier?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -126,23 +144,29 @@ export type Database = {
         Row: {
           brand_id: string
           created_at: string
+          deleted_at: string | null
           id: string
           name: string
           tier: string | null
+          updated_at: string
         }
         Insert: {
           brand_id: string
           created_at?: string
+          deleted_at?: string | null
           id?: string
           name: string
           tier?: string | null
+          updated_at?: string
         }
         Update: {
           brand_id?: string
           created_at?: string
+          deleted_at?: string | null
           id?: string
           name?: string
           tier?: string | null
+          updated_at?: string
         }
         Relationships: [
           {
@@ -160,6 +184,7 @@ export type Database = {
           client_id: string
           color: string | null
           created_at: string
+          deleted_at: string | null
           drive_type: string | null
           engine_power: number | null
           engine_volume: number | null
@@ -169,6 +194,7 @@ export type Database = {
           model: string
           model_id: string | null
           transmission: string | null
+          updated_at: string
           vin: string | null
           year: number | null
         }
@@ -177,6 +203,7 @@ export type Database = {
           client_id: string
           color?: string | null
           created_at?: string
+          deleted_at?: string | null
           drive_type?: string | null
           engine_power?: number | null
           engine_volume?: number | null
@@ -186,6 +213,7 @@ export type Database = {
           model: string
           model_id?: string | null
           transmission?: string | null
+          updated_at?: string
           vin?: string | null
           year?: number | null
         }
@@ -194,6 +222,7 @@ export type Database = {
           client_id?: string
           color?: string | null
           created_at?: string
+          deleted_at?: string | null
           drive_type?: string | null
           engine_power?: number | null
           engine_volume?: number | null
@@ -203,6 +232,7 @@ export type Database = {
           model?: string
           model_id?: string | null
           transmission?: string | null
+          updated_at?: string
           vin?: string | null
           year?: number | null
         }
@@ -233,24 +263,30 @@ export type Database = {
       clients: {
         Row: {
           created_at: string
+          deleted_at: string | null
           email: string | null
           full_name: string
           id: string
           phone: string | null
+          updated_at: string
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           email?: string | null
           full_name: string
           id?: string
           phone?: string | null
+          updated_at?: string
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           email?: string | null
           full_name?: string
           id?: string
           phone?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -258,44 +294,56 @@ export type Database = {
         Row: {
           color: string
           created_at: string
+          deleted_at: string | null
           full_name: string
           id: string
           phone: string | null
           specialization: string | null
+          updated_at: string
         }
         Insert: {
           color?: string
           created_at?: string
+          deleted_at?: string | null
           full_name: string
           id?: string
           phone?: string | null
           specialization?: string | null
+          updated_at?: string
         }
         Update: {
           color?: string
           created_at?: string
+          deleted_at?: string | null
           full_name?: string
           id?: string
           phone?: string | null
           specialization?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
       service_prices: {
         Row: {
           brand_id: string
+          deleted_at: string | null
           price: number
           service_id: string
+          updated_at: string
         }
         Insert: {
           brand_id: string
+          deleted_at?: string | null
           price: number
           service_id: string
+          updated_at?: string
         }
         Update: {
           brand_id?: string
+          deleted_at?: string | null
           price?: number
           service_id?: string
+          updated_at?: string
         }
         Relationships: [
           {
@@ -319,25 +367,31 @@ export type Database = {
           base_price: number
           category: string
           created_at: string
+          deleted_at: string | null
           duration_minutes: number
           id: string
           name: string
+          updated_at: string
         }
         Insert: {
           base_price?: number
           category: string
           created_at?: string
+          deleted_at?: string | null
           duration_minutes?: number
           id?: string
           name: string
+          updated_at?: string
         }
         Update: {
           base_price?: number
           category?: string
           created_at?: string
+          deleted_at?: string | null
           duration_minutes?: number
           id?: string
           name?: string
+          updated_at?: string
         }
         Relationships: []
       }
