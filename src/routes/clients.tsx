@@ -168,7 +168,9 @@ function ClientsPage() {
         telegram: clientForm.telegram.trim() || null,
         note: clientForm.note.trim() || null,
         custom_fields: cf,
+        category: clientForm.category,
       };
+
       if (!payload.full_name) throw new Error("Введите имя клиента");
       if (clientDialog.editing) {
         await updateClient(clientDialog.editing.id, payload);
