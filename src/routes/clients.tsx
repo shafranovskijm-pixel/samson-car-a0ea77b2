@@ -172,6 +172,17 @@ function ClientsPage() {
     },
   });
 
+  const archiveM = useMutation({
+    mutationFn: ({ id, is_archived }: { id: string; is_archived: boolean }) =>
+      updateClient(id, { is_archived }),
+    onSuccess: (_d, v) => {
+      toast.success(v.is_archived ? "В архиве" : "Восстановлен");
+      qc.invalidateQueries({ queryKey: ["clients"] });
+      setSelectedId(null);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   return (
     <div className="flex h-[calc(100vh-3rem)]">
       {/* LEFT: LIST */}
