@@ -201,7 +201,10 @@ export function AppointmentDialog({
       const override = await getPriceForBrand(svc.id, selectedCar.brand_id);
       if (override != null) price = override;
     }
-    setSelected((prev) => [...prev, { service_id: svc.id, price }]);
+    setSelected((prev) => [
+      ...prev,
+      { service_id: svc.id, price, mechanic_payout: rateFor(svc.id) },
+    ]);
     setAddServiceId("");
   };
 
