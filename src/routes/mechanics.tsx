@@ -388,12 +388,28 @@ function MechanicRates({ mechanicId }: { mechanicId: string }) {
 }
 
 // ================= SHIFTS =================
-function MechanicShifts({ mechanicId }: { mechanicId: string }) {
+function MechanicShifts({ mechanicId, color = "#64748b" }: { mechanicId: string; color?: string }) {
   const qc = useQueryClient();
   const { data: shifts = [] } = useQuery({
     queryKey: ["mechanic-shifts", mechanicId],
     queryFn: () => listMechanicShifts(mechanicId),
   });
+
+  const grouped = useMemo(() => {
+    const map = new Map<string, MechanicShift[]>();
+    for (const s of shifts) {
+      const d = new Date(s.starts_at);
+      const day = d.getDay(); // 0=Sun
+      const monOffset = (day + 6) % 7; // shift so Monday=0
+      const monday = new Date(d);
+      monday.setHours(0, 0, 0, 0);
+      monday.setDate(monday.getDate() - monOffset);
+      const key = monday.toISOString().slice(0, 10);
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(s);
+    }
+    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
+  }, [shifts]);
 
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<MechanicShift | null>(null);
