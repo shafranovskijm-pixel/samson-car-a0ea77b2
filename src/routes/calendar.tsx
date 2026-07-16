@@ -126,10 +126,6 @@ function CalendarPage() {
     : null;
 
   const openNew = (start: Date) => {
-    if (start.getTime() < Date.now() - 60_000) {
-      toast.error("Нельзя записать на прошедшее время");
-      return;
-    }
     setDialog({ open: true, id: null, start, prefill: currentPrefill });
     if (hasPrefill) navigate({ search: {}, replace: true });
   };
@@ -171,10 +167,6 @@ function CalendarPage() {
     const id = (event as { id: string }).id;
     const s = start instanceof Date ? start : new Date(start);
     const e = end instanceof Date ? end : new Date(end);
-    if (s.getTime() < Date.now() - 60_000) {
-      toast.error("Нельзя переместить на прошедшее время");
-      return;
-    }
     moveMutation.mutate({ id, start: s, end: e });
   };
 
