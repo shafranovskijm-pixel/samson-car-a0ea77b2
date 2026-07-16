@@ -29,12 +29,15 @@ import {
   deleteAppointment,
   getAppointment,
   getPriceForBrand,
+  listBrands,
+  listCarModels,
   listCars,
   listClients,
   listMechanics,
   listServices,
   updateAppointment,
 } from "@/lib/api";
+
 import { STATUS_LABELS, type AppointmentStatus } from "@/lib/types";
 
 type Props = {
@@ -43,6 +46,9 @@ type Props = {
   appointmentId?: string | null;
   defaultStart?: Date | null;
   defaultCarId?: string | null;
+  defaultServices?: { service_id: string; price: number }[];
+  defaultBrandId?: string | null;
+  defaultModelId?: string | null;
 };
 
 export function AppointmentDialog({
@@ -51,7 +57,11 @@ export function AppointmentDialog({
   appointmentId,
   defaultStart,
   defaultCarId,
+  defaultServices,
+  defaultBrandId,
+  defaultModelId,
 }: Props) {
+
   const qc = useQueryClient();
   const isEdit = !!appointmentId;
 
@@ -59,11 +69,24 @@ export function AppointmentDialog({
   const { data: cars = [] } = useQuery({ queryKey: ["cars"], queryFn: listCars });
   const { data: mechanics = [] } = useQuery({ queryKey: ["mechanics"], queryFn: listMechanics });
   const { data: services = [] } = useQuery({ queryKey: ["services"], queryFn: listServices });
+  const { data: brands = [] } = useQuery({ queryKey: ["brands"], queryFn: listBrands });
+  const { data: allModels = [] } = useQuery({
+    queryKey: ["car-models"],
+    queryFn: () => listCarModels(),
+  });
   const { data: existing } = useQuery({
     queryKey: ["appointment", appointmentId],
     queryFn: () => getAppointment(appointmentId!),
     enabled: !!appointmentId && open,
   });
+
+  const prefillLabel = useMemo(() => {
+    if (!defaultBrandId && !defaultModelId) return "";
+    const b = brands.find((x) => x.id === defaultBrandId)?.name ?? "";
+    const m = allModels.find((x) => x.id === defaultModelId)?.name ?? "";
+    return [b, m].filter(Boolean).join(" ");
+  }, [brands, allModels, defaultBrandId, defaultModelId]);
+
 
   const [clientId, setClientId] = useState<string>("");
   const [carId, setCarId] = useState<string>("");
@@ -93,19 +116,46 @@ export function AppointmentDialog({
       setSelected(existing.services.map((s) => ({ service_id: s.service_id, price: s.price })));
     } else {
       const d = defaultStart ?? new Date();
-      setClientId("");
-      setCarId(defaultCarId ?? "");
+      // try to auto-select a car matching prefilled brand/model
+      let autoCarId = defaultCarId ?? "";
+      let autoClientId = "";
+      if (!autoCarId && (defaultBrandId || defaultModelId)) {
+        const modelName = allModels.find((m) => m.id === defaultModelId)?.name;
+        const match = cars.find(
+          (c) =>
+            (!defaultBrandId || c.brand_id === defaultBrandId) &&
+            (!modelName || c.model?.toLowerCase() === modelName.toLowerCase()),
+        );
+        if (match) {
+          autoCarId = match.id;
+          autoClientId = match.client_id;
+        }
+      }
+      setClientId(autoClientId);
+      setCarId(autoCarId);
       setMechanicId("");
       setStartDate(format(d, "yyyy-MM-dd"));
       setStartTime(format(d, "HH:mm"));
       setDuration(60);
       setStatus("scheduled");
       setMileage("");
-      setComment("");
-      setSelected([]);
+      setComment(prefillLabel ? `Из калькулятора: ${prefillLabel}` : "");
+      setSelected(defaultServices && defaultServices.length > 0 ? [...defaultServices] : []);
     }
     setAddServiceId("");
-  }, [open, existing, defaultStart, defaultCarId]);
+  }, [
+    open,
+    existing,
+    defaultStart,
+    defaultCarId,
+    defaultServices,
+    defaultBrandId,
+    defaultModelId,
+    prefillLabel,
+    allModels,
+    cars,
+  ]);
+
 
   // filter cars by chosen client
   const carsForClient = useMemo(
