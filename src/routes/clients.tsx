@@ -227,9 +227,9 @@ function ClientsPage() {
           <div className="mx-auto max-w-3xl">
             {/* HEADER */}
             <div className="mb-6 flex items-start justify-between gap-4">
-              <div>
+              <div className="min-w-0">
                 <h1 className="text-2xl font-bold">{selected.full_name}</h1>
-                <div className="mt-2 flex flex-wrap gap-4 text-sm text-muted-foreground">
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
                   {selected.phone && (
                     <span className="inline-flex items-center gap-1">
                       <Phone className="h-4 w-4" />
@@ -242,8 +242,38 @@ function ClientsPage() {
                       {selected.email}
                     </span>
                   )}
+                  {selected.telegram && (
+                    <span className="inline-flex items-center gap-1">TG: {selected.telegram}</span>
+                  )}
+                  {selected.birthday && (
+                    <span className="inline-flex items-center gap-1">
+                      ДР: {new Date(selected.birthday).toLocaleDateString("ru-RU")}
+                    </span>
+                  )}
+                  {selected.address && (
+                    <span className="inline-flex items-center gap-1">Адрес: {selected.address}</span>
+                  )}
                 </div>
+                {selected.note && (
+                  <div className="mt-2 rounded-md bg-muted/50 p-2 text-sm text-foreground">
+                    {selected.note}
+                  </div>
+                )}
+                {selected.custom_fields &&
+                  Object.keys(selected.custom_fields as Record<string, string>).length > 0 && (
+                    <div className="mt-3 grid gap-1 text-sm">
+                      {Object.entries(selected.custom_fields as Record<string, string>).map(
+                        ([k, v]) => (
+                          <div key={k} className="flex gap-2">
+                            <span className="text-muted-foreground">{k}:</span>
+                            <span className="text-foreground">{String(v)}</span>
+                          </div>
+                        ),
+                      )}
+                    </div>
+                  )}
               </div>
+
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={() => openEditClient(selected)}>
                   <Pencil className="mr-1 h-4 w-4" />Изменить
