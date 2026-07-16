@@ -101,6 +101,7 @@ function parseServices(s: string): { service_id: string; price: number }[] {
 function CalendarPage() {
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/calendar" });
+  const [mode, setMode] = useState<"appointments" | "shifts">("appointments");
   const [view, setView] = useState<View>(
     typeof window !== "undefined" && window.innerWidth < 640 ? Views.DAY : Views.WEEK,
   );
@@ -116,13 +117,27 @@ function CalendarPage() {
     } | null;
   }>({ open: false, id: null, start: null, prefill: null });
 
+  const [shiftDlg, setShiftDlg] = useState<{
+    open: boolean;
+    id: string | null;
+    mechanic_id: string;
+    start: Date | null;
+    end: Date | null;
+    note: string;
+  }>({ open: false, id: null, mechanic_id: "", start: null, end: null, note: "" });
+
   const { data: appointments = [] } = useQuery({
     queryKey: ["appointments"],
     queryFn: () => listAppointments(),
   });
   const { data: mechanics = [] } = useQuery({ queryKey: ["mechanics"], queryFn: listMechanics });
+  const { data: shifts = [] } = useQuery({
+    queryKey: ["mechanic-shifts", "all"],
+    queryFn: listAllMechanicShifts,
+    enabled: mode === "shifts",
+  });
 
-  const events = useMemo(
+  const appointmentEvents = useMemo(
     () =>
       appointments.map((a) => {
         const start = new Date(a.starts_at);
@@ -135,11 +150,33 @@ function CalendarPage() {
           title,
           start,
           end,
-          resource: { color: mech?.color ?? "#64748b", status: a.status },
+          resource: { kind: "appt" as const, color: mech?.color ?? "#64748b", status: a.status },
         };
       }),
     [appointments, mechanics],
   );
+
+  const shiftEvents = useMemo(
+    () =>
+      shifts.map((s) => {
+        const mech = mechanics.find((m) => m.id === s.mechanic_id);
+        return {
+          id: s.id,
+          title: `${mech?.full_name ?? "Мастер"}${s.note ? " · " + s.note : ""}`,
+          start: new Date(s.starts_at),
+          end: new Date(s.ends_at),
+          resource: {
+            kind: "shift" as const,
+            color: mech?.color ?? "#64748b",
+            mechanic_id: s.mechanic_id,
+            note: s.note ?? "",
+          },
+        };
+      }),
+    [shifts, mechanics],
+  );
+
+  const events = mode === "appointments" ? appointmentEvents : shiftEvents;
 
   const hasPrefill = !!(search.services || search.brand || search.model);
   const currentPrefill = hasPrefill
@@ -153,6 +190,17 @@ function CalendarPage() {
   const openNew = (start: Date) => {
     setDialog({ open: true, id: null, start, prefill: currentPrefill });
     if (hasPrefill) navigate({ search: {}, replace: true });
+  };
+
+  const openNewShift = (start: Date, end: Date) => {
+    setShiftDlg({
+      open: true,
+      id: null,
+      mechanic_id: mechanics[0]?.id ?? "",
+      start,
+      end,
+      note: "",
+    });
   };
 
   const now = useMemo(() => new Date(), []);
@@ -178,9 +226,6 @@ function CalendarPage() {
         })),
       });
     },
-    onMutate: () => {
-      // optimistic: nothing (we refetch on success)
-    },
     onSuccess: () => {
       toast.success("Запись перемещена");
       qc.invalidateQueries({ queryKey: ["appointments"] });
@@ -188,44 +233,155 @@ function CalendarPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const invalidateShifts = () => {
+    qc.invalidateQueries({ queryKey: ["mechanic-shifts", "all"] });
+    qc.invalidateQueries({ queryKey: ["mechanic-shifts"] });
+  };
+
+  const createShiftMut = useMutation({
+    mutationFn: createMechanicShift,
+    onSuccess: () => {
+      toast.success("Смена добавлена");
+      invalidateShifts();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const updateShiftMut = useMutation({
+    mutationFn: (v: { id: string; starts_at?: string; ends_at?: string; note?: string | null }) =>
+      updateMechanicShift(v.id, {
+        starts_at: v.starts_at,
+        ends_at: v.ends_at,
+        note: v.note,
+      }),
+    onSuccess: () => {
+      toast.success("Смена обновлена");
+      invalidateShifts();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deleteShiftMut = useMutation({
+    mutationFn: deleteMechanicShift,
+    onSuccess: () => {
+      toast.success("Смена удалена");
+      invalidateShifts();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const onEventDrop: withDragAndDropProps["onEventDrop"] = ({ event, start, end }) => {
-    const id = (event as { id: string }).id;
+    const e = event as { id: string; resource?: { kind?: string } };
     const s = start instanceof Date ? start : new Date(start);
-    const e = end instanceof Date ? end : new Date(end);
-    moveMutation.mutate({ id, start: s, end: e });
+    const en = end instanceof Date ? end : new Date(end);
+    if (e.resource?.kind === "shift") {
+      updateShiftMut.mutate({ id: e.id, starts_at: s.toISOString(), ends_at: en.toISOString() });
+    } else {
+      moveMutation.mutate({ id: e.id, start: s, end: en });
+    }
   };
 
   const onEventResize: withDragAndDropProps["onEventResize"] = ({ event, start, end }) => {
-    const id = (event as { id: string }).id;
+    const e = event as { id: string; resource?: { kind?: string } };
     const s = start instanceof Date ? start : new Date(start);
-    const e = end instanceof Date ? end : new Date(end);
-    moveMutation.mutate({ id, start: s, end: e });
+    const en = end instanceof Date ? end : new Date(end);
+    if (e.resource?.kind === "shift") {
+      updateShiftMut.mutate({ id: e.id, starts_at: s.toISOString(), ends_at: en.toISOString() });
+    } else {
+      moveMutation.mutate({ id: e.id, start: s, end: en });
+    }
   };
 
+  const submitShift = () => {
+    if (!shiftDlg.mechanic_id || !shiftDlg.start || !shiftDlg.end) {
+      toast.error("Выберите мастера и время");
+      return;
+    }
+    if (shiftDlg.end.getTime() <= shiftDlg.start.getTime()) {
+      toast.error("Конец смены должен быть позже начала");
+      return;
+    }
+    const payload = {
+      starts_at: shiftDlg.start.toISOString(),
+      ends_at: shiftDlg.end.toISOString(),
+      note: shiftDlg.note.trim() || null,
+    };
+    if (shiftDlg.id) {
+      updateShiftMut.mutate(
+        { id: shiftDlg.id, ...payload },
+        { onSuccess: () => setShiftDlg((d) => ({ ...d, open: false })) },
+      );
+    } else {
+      createShiftMut.mutate(
+        { mechanic_id: shiftDlg.mechanic_id, ...payload },
+        { onSuccess: () => setShiftDlg((d) => ({ ...d, open: false })) },
+      );
+    }
+  };
 
+  const toLocalInput = (d: Date | null) => {
+    if (!d) return "";
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
 
   return (
     <div className="p-3 sm:p-4">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-bold">Календарь записей</h1>
+          <h1 className="text-2xl font-bold">
+            {mode === "appointments" ? "Календарь записей" : "График сотрудников"}
+          </h1>
           <p className="text-sm text-muted-foreground">
-            {appointments.length} записей · клик по свободному слоту создаёт новую
+            {mode === "appointments"
+              ? `${appointments.length} записей · клик по свободному слоту создаёт новую`
+              : "Клик по слоту добавляет смену, перетаскивание и растяжение — меняют её"}
           </p>
-          {hasPrefill && (
+          {hasPrefill && mode === "appointments" && (
             <p className="mt-1 text-sm text-red-600">
               Данные из калькулятора готовы — выберите свободный слот на календаре
             </p>
           )}
         </div>
-        <div className="flex items-center gap-3">
-          <Button onClick={() => openNew(new Date())}>
-            <Plus className="mr-2 h-4 w-4" /> Новая запись
-          </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="inline-flex rounded-md border bg-muted p-0.5">
+            <button
+              type="button"
+              onClick={() => setMode("appointments")}
+              className={`rounded px-3 py-1.5 text-sm font-medium transition ${
+                mode === "appointments" ? "bg-background shadow-sm" : "text-muted-foreground"
+              }`}
+            >
+              Записи
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("shifts")}
+              className={`rounded px-3 py-1.5 text-sm font-medium transition ${
+                mode === "shifts" ? "bg-background shadow-sm" : "text-muted-foreground"
+              }`}
+            >
+              Сотрудники
+            </button>
+          </div>
+          {mode === "appointments" ? (
+            <Button onClick={() => openNew(new Date())}>
+              <Plus className="mr-2 h-4 w-4" /> Новая запись
+            </Button>
+          ) : (
+            <Button
+              onClick={() => {
+                const s = new Date();
+                s.setMinutes(0, 0, 0);
+                const e = new Date(s.getTime() + 8 * 60 * 60 * 1000);
+                openNewShift(s, e);
+              }}
+            >
+              <Plus className="mr-2 h-4 w-4" /> Новая смена
+            </Button>
+          )}
         </div>
-
       </div>
-
 
       <div className="mb-3 flex flex-wrap gap-2 text-xs">
         {mechanics.map((m) => (
@@ -237,7 +393,9 @@ function CalendarPage() {
       </div>
 
       <div className="mb-3 text-xs text-muted-foreground">
-        Записи можно перетаскивать между слотами и растягивать за нижний край
+        {mode === "appointments"
+          ? "Записи можно перетаскивать между слотами и растягивать за нижний край"
+          : "Смены можно перетаскивать и растягивать; клик по смене — редактировать"}
       </div>
 
       <div className="rounded-lg border bg-card" style={{ height: "calc(100dvh - 220px)" }}>
@@ -258,18 +416,47 @@ function CalendarPage() {
           onEventResize={onEventResize}
           getNow={() => new Date()}
           scrollToTime={now}
-          onSelectSlot={(slot) => openNew(slot.start as Date)}
+          onSelectSlot={(slot) => {
+            const s = slot.start as Date;
+            const e = slot.end as Date;
+            if (mode === "shifts") {
+              openNewShift(s, e);
+            } else {
+              openNew(s);
+            }
+          }}
           onSelectEvent={(ev) => {
-            const e = ev as { id: string };
-            setDialog({ open: true, id: e.id, start: null, prefill: null });
+            const e = ev as {
+              id: string;
+              start: Date;
+              end: Date;
+              resource?: { kind?: string; mechanic_id?: string; note?: string };
+            };
+            if (e.resource?.kind === "shift") {
+              setShiftDlg({
+                open: true,
+                id: e.id,
+                mechanic_id: e.resource.mechanic_id ?? "",
+                start: e.start,
+                end: e.end,
+                note: e.resource.note ?? "",
+              });
+            } else {
+              setDialog({ open: true, id: e.id, start: null, prefill: null });
+            }
           }}
           eventPropGetter={(ev) => {
-            const e = ev as { resource?: { color?: string; status?: string } };
+            const e = ev as { resource?: { color?: string; status?: string; kind?: string } };
             return {
               style: {
                 backgroundColor: e.resource?.color ?? "#64748b",
                 border: "none",
-                opacity: e.resource?.status === "cancelled" ? 0.4 : 1,
+                opacity:
+                  e.resource?.kind === "shift"
+                    ? 0.75
+                    : e.resource?.status === "cancelled"
+                      ? 0.4
+                      : 1,
               },
             };
           }}
@@ -286,7 +473,8 @@ function CalendarPage() {
             return isPast ? { style: { backgroundColor: "rgba(0,0,0,0.03)" } } : {};
           }}
           tooltipAccessor={(ev) => {
-            const e = ev as { title: string; resource?: { status?: string } };
+            const e = ev as { title: string; resource?: { status?: string; kind?: string } };
+            if (e.resource?.kind === "shift") return e.title;
             return `${e.title} · ${STATUS_LABELS[e.resource?.status as keyof typeof STATUS_LABELS] ?? ""}`;
           }}
         />
@@ -301,6 +489,108 @@ function CalendarPage() {
         defaultBrandId={dialog.prefill?.brand}
         defaultModelId={dialog.prefill?.model}
       />
+
+      <Dialog
+        open={shiftDlg.open}
+        onOpenChange={(o) => setShiftDlg((d) => ({ ...d, open: o }))}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{shiftDlg.id ? "Смена" : "Новая смена"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>Мастер</Label>
+              <Select
+                value={shiftDlg.mechanic_id}
+                onValueChange={(v) => setShiftDlg((d) => ({ ...d, mechanic_id: v }))}
+                disabled={!!shiftDlg.id}
+              >
+                <SelectTrigger><SelectValue placeholder="Выберите мастера" /></SelectTrigger>
+                <SelectContent>
+                  {mechanics.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      <span className="inline-flex items-center gap-2">
+                        <span className="h-2.5 w-2.5 rounded-full" style={{ background: m.color }} />
+                        {m.full_name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="shift-start">Начало</Label>
+                <Input
+                  id="shift-start"
+                  type="datetime-local"
+                  value={toLocalInput(shiftDlg.start)}
+                  onChange={(e) =>
+                    setShiftDlg((d) => ({
+                      ...d,
+                      start: e.target.value ? new Date(e.target.value) : null,
+                    }))
+                  }
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="shift-end">Конец</Label>
+                <Input
+                  id="shift-end"
+                  type="datetime-local"
+                  value={toLocalInput(shiftDlg.end)}
+                  onChange={(e) =>
+                    setShiftDlg((d) => ({
+                      ...d,
+                      end: e.target.value ? new Date(e.target.value) : null,
+                    }))
+                  }
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="shift-note">Заметка</Label>
+              <Input
+                id="shift-note"
+                value={shiftDlg.note}
+                onChange={(e) => setShiftDlg((d) => ({ ...d, note: e.target.value }))}
+                placeholder="Например: подмена, дежурство"
+              />
+            </div>
+          </div>
+          <DialogFooter className="flex-row justify-between sm:justify-between">
+            <div>
+              {shiftDlg.id && (
+                <Button
+                  variant="destructive"
+                  onClick={() =>
+                    deleteShiftMut.mutate(shiftDlg.id!, {
+                      onSuccess: () => setShiftDlg((d) => ({ ...d, open: false })),
+                    })
+                  }
+                >
+                  Удалить
+                </Button>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShiftDlg((d) => ({ ...d, open: false }))}
+              >
+                Отмена
+              </Button>
+              <Button
+                onClick={submitShift}
+                disabled={createShiftMut.isPending || updateShiftMut.isPending}
+              >
+                Сохранить
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
