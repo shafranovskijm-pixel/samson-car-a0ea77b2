@@ -6,8 +6,10 @@ import {
   Plus, Trash2, Pencil, Search, Car as CarIcon, Phone, Mail, User,
   Bell, History as HistoryIcon, Check, Archive, ArchiveRestore,
   Crown, Sparkles, AlertTriangle, Briefcase, Heart, MessageSquare, ArrowLeft,
+  ChevronDown, Filter,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+
 
 
 import { Button } from "@/components/ui/button";
@@ -21,6 +23,10 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
 import {
   createCar, createClient, createClientComment, createClientReminder, deleteCar, deleteClient,
   deleteClientComment, deleteClientReminder, listAppointmentsByClient, listBrands, listCarModels,
@@ -65,10 +71,12 @@ function ClientsPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<"active" | "archived">("active");
+  const [categoryFilter, setCategoryFilter] = useState<ClientCategory | "all">("all");
 
   const [clientDialog, setClientDialog] = useState<{ open: boolean; editing: Client | null }>({
     open: false, editing: null,
   });
+
   const [clientForm, setClientForm] = useState({
     full_name: "",
     phone: "",
@@ -92,9 +100,14 @@ function ClientsPage() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const byTab = clients.filter((c) =>
+    let byTab = clients.filter((c) =>
       tab === "archived" ? c.is_archived : !c.is_archived,
     );
+    if (categoryFilter !== "all") {
+      byTab = byTab.filter(
+        (c) => normalizeCategory(c.category as string | null | undefined) === categoryFilter,
+      );
+    }
     if (!q) return byTab;
     return byTab.filter(
       (c) =>
@@ -102,7 +115,8 @@ function ClientsPage() {
         (c.phone ?? "").toLowerCase().includes(q) ||
         (c.email ?? "").toLowerCase().includes(q),
     );
-  }, [clients, search, tab]);
+  }, [clients, search, tab, categoryFilter]);
+
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -214,6 +228,16 @@ function ClientsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const categoryM = useMutation({
+    mutationFn: ({ id, category }: { id: string; category: ClientCategory }) =>
+      updateClient(id, { category }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["clients"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+
   return (
     <div className="flex min-h-[calc(100vh-3rem)] flex-col md:h-[calc(100vh-3rem)] md:flex-row">
       {/* LEFT: LIST */}
@@ -255,7 +279,63 @@ function ClientsPage() {
               Архив · {archivedCount}
             </button>
           </div>
+          <div className="mt-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex w-full items-center justify-between rounded-md border bg-background px-2.5 py-1.5 text-xs font-medium shadow-sm transition hover:bg-muted"
+                >
+                  <span className="inline-flex items-center gap-1.5">
+                    <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+                    {categoryFilter === "all" ? (
+                      "Все категории"
+                    ) : (
+                      <>
+                        <span
+                          className={`inline-flex h-4 w-4 items-center justify-center rounded-full text-white ${CLIENT_CATEGORY_COLORS[categoryFilter]}`}
+                        >
+                          {(() => {
+                            const I = CATEGORY_ICONS[categoryFilter];
+                            return <I className="h-2.5 w-2.5" />;
+                          })()}
+                        </span>
+                        {CLIENT_CATEGORY_LABELS[categoryFilter]}
+                      </>
+                    )}
+                  </span>
+                  <ChevronDown className="h-3 w-3 opacity-70" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56">
+                <DropdownMenuItem
+                  onClick={() => { setCategoryFilter("all"); setSelectedId(null); }}
+                  className="gap-2"
+                >
+                  <Check className={`h-3.5 w-3.5 ${categoryFilter === "all" ? "opacity-100" : "opacity-0"}`} />
+                  Все категории
+                </DropdownMenuItem>
+                {CLIENT_CATEGORY_ORDER.map((c) => {
+                  const CIcon = CATEGORY_ICONS[c];
+                  return (
+                    <DropdownMenuItem
+                      key={c}
+                      onClick={() => { setCategoryFilter(c); setSelectedId(null); }}
+                      className="gap-2"
+                    >
+                      <Check className={`h-3.5 w-3.5 ${categoryFilter === c ? "opacity-100" : "opacity-0"}`} />
+                      <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-white ${CLIENT_CATEGORY_COLORS[c]}`}>
+                        <CIcon className="h-3 w-3" />
+                      </span>
+                      {CLIENT_CATEGORY_LABELS[c]}
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
+
         <div className="flex-1 overflow-auto">
           {filtered.length === 0 && (
             <div className="p-6 text-center text-sm text-muted-foreground">
@@ -326,14 +406,43 @@ function ClientsPage() {
                   const Icon = CATEGORY_ICONS[cat];
                   return (
                     <div className="mb-2 flex items-center gap-2">
-                      <span
-                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium text-white ${CLIENT_CATEGORY_COLORS[cat]}`}
-                      >
-                        <Icon className="h-3.5 w-3.5" />
-                        {CLIENT_CATEGORY_LABELS[cat]}
-                      </span>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium text-white shadow-sm transition hover:opacity-90 ${CLIENT_CATEGORY_COLORS[cat]}`}
+                          >
+                            <Icon className="h-3.5 w-3.5" />
+                            {CLIENT_CATEGORY_LABELS[cat]}
+                            <ChevronDown className="h-3 w-3 opacity-80" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start">
+                          {CLIENT_CATEGORY_ORDER.map((c) => {
+                            const CIcon = CATEGORY_ICONS[c];
+                            return (
+                              <DropdownMenuItem
+                                key={c}
+                                onClick={() => categoryM.mutate({ id: selected.id, category: c })}
+                                className="gap-2"
+                              >
+                                <Check
+                                  className={`h-3.5 w-3.5 ${c === cat ? "opacity-100" : "opacity-0"}`}
+                                />
+                                <span
+                                  className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-white ${CLIENT_CATEGORY_COLORS[c]}`}
+                                >
+                                  <CIcon className="h-3 w-3" />
+                                </span>
+                                {CLIENT_CATEGORY_LABELS[c]}
+                              </DropdownMenuItem>
+                            );
+                          })}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   );
+
                 })()}
                 <h1 className="text-2xl font-bold">{selected.full_name}</h1>
 
@@ -516,30 +625,8 @@ function ClientsPage() {
                 onChange={(e) => setClientForm({ ...clientForm, full_name: e.target.value })}
               />
             </div>
-            <div>
-              <Label>Категория</Label>
-              <div className="mt-1 grid grid-cols-3 gap-1.5">
-                {CLIENT_CATEGORY_ORDER.map((cat) => {
-                  const Icon = CATEGORY_ICONS[cat];
-                  const selected = clientForm.category === cat;
-                  return (
-                    <button
-                      key={cat}
-                      type="button"
-                      onClick={() => setClientForm({ ...clientForm, category: cat })}
-                      className={`flex items-center gap-1.5 rounded-md border px-2 py-1.5 text-xs transition ${
-                        selected
-                          ? `${CLIENT_CATEGORY_COLORS[cat]} border-transparent text-white shadow-sm`
-                          : "bg-background hover:bg-muted"
-                      }`}
-                    >
-                      <Icon className="h-3.5 w-3.5" />
-                      <span className="truncate">{CLIENT_CATEGORY_LABELS[cat]}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+
+
 
             <div className="grid grid-cols-2 gap-3">
               <div>
