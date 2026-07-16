@@ -71,10 +71,12 @@ function ClientsPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<"active" | "archived">("active");
+  const [categoryFilter, setCategoryFilter] = useState<ClientCategory | "all">("all");
 
   const [clientDialog, setClientDialog] = useState<{ open: boolean; editing: Client | null }>({
     open: false, editing: null,
   });
+
   const [clientForm, setClientForm] = useState({
     full_name: "",
     phone: "",
