@@ -4,7 +4,6 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
-  useRouterState,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
@@ -67,18 +66,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "CRM для автосервиса" },
+      { title: "Samson Auto — CRM" },
       {
         name: "description",
-        content: "CRM для автосервиса: запись клиентов, календарь, услуги, прайс и мастера.",
+        content: "Внутренняя CRM автосервиса Samson: календарь, клиенты, машины, услуги.",
       },
-      { property: "og:title", content: "CRM для автосервиса" },
-      {
-        property: "og:description",
-        content: "Учёт клиентов, машин и услуг автосервиса с календарём записей.",
-      },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
@@ -109,38 +101,21 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <QueryClientProvider client={queryClient}>
-      <AppShell />
+      <SidebarProvider>
+        <div className="flex min-h-screen w-full">
+          <AppSidebar />
+          <div className="flex flex-1 flex-col">
+            <header className="flex h-12 items-center border-b bg-background px-3">
+              <SidebarTrigger />
+              <div className="ml-3 text-sm font-medium">Samson Auto — CRM</div>
+            </header>
+            <main className="flex-1 overflow-auto">
+              <Outlet />
+            </main>
+          </div>
+        </div>
+      </SidebarProvider>
       <Toaster />
     </QueryClientProvider>
-  );
-}
-
-function AppShell() {
-  const pathname = useRouterState({ select: (r) => r.location.pathname });
-  const isLanding = pathname === "/";
-
-  if (isLanding) {
-    return (
-      <main className="min-h-screen">
-        <Outlet />
-      </main>
-    );
-  }
-
-  return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full">
-        <AppSidebar />
-        <div className="flex flex-1 flex-col">
-          <header className="flex h-12 items-center border-b bg-background px-3">
-            <SidebarTrigger />
-            <div className="ml-3 text-sm font-medium">Samson Auto — CRM</div>
-          </header>
-          <main className="flex-1 overflow-auto">
-            <Outlet />
-          </main>
-        </div>
-      </div>
-    </SidebarProvider>
   );
 }
