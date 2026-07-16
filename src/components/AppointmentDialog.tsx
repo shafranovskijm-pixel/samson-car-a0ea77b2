@@ -126,7 +126,7 @@ export function AppointmentDialog({
       setStatus(existing.status as AppointmentStatus);
       setMileage(existing.mileage?.toString() ?? "");
       setComment(existing.comment ?? "");
-      setSelected(existing.services.map((s) => ({ service_id: s.service_id, price: s.price })));
+      setSelected(existing.services.map((s) => ({ service_id: s.service_id, price: s.price, mechanic_payout: s.mechanic_payout ?? 0 })));
     } else {
       const d = defaultStart ?? new Date();
       // try to auto-select a car matching prefilled brand/model
