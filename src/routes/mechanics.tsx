@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Trash2, Pencil, UserCog, Wallet, CalendarClock } from "lucide-react";
+import { Plus, Trash2, Pencil, UserCog, Wallet, CalendarClock, ArrowLeft } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -95,8 +95,9 @@ function MechanicsPage() {
   const selected = mechanics.find((m) => m.id === selectedId) ?? null;
 
   return (
-    <div className="flex h-[calc(100vh-3rem)]">
-      <aside className="flex w-72 flex-col border-r bg-muted/30">
+    <div className="flex min-h-[calc(100vh-3rem)] flex-col md:h-[calc(100vh-3rem)] md:flex-row">
+      <aside className={`w-full flex-col border-r bg-muted/30 md:flex md:w-72 ${selected ? "hidden md:flex" : "flex"}`}>
+
         <div className="flex items-center justify-between border-b p-3">
           <div className="font-semibold">Мастера</div>
           <Button size="sm" onClick={openNew}>
@@ -133,7 +134,7 @@ function MechanicsPage() {
         </div>
       </aside>
 
-      <section className="flex-1 overflow-auto p-6">
+      <section className={`flex-1 overflow-auto p-4 md:p-6 ${!selected ? "hidden md:block" : "block"}`}>
         {!selected ? (
           <div className="flex h-full items-center justify-center text-muted-foreground">
             <div className="text-center">
@@ -143,23 +144,32 @@ function MechanicsPage() {
           </div>
         ) : (
           <div className="mx-auto max-w-3xl space-y-8">
+            <button
+              type="button"
+              onClick={() => setSelectedId(null)}
+              className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground md:hidden"
+            >
+              <ArrowLeft className="h-4 w-4" /> К списку мастеров
+            </button>
+
             <div
-              className="flex items-start justify-between gap-4 rounded-lg border-l-4 p-4"
+              className="flex flex-col items-start gap-3 rounded-lg border-l-4 p-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4"
               style={{ borderLeftColor: selected.color, background: `${selected.color}10` }}
             >
-              <div>
+              <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <span
-                    className="inline-block h-4 w-4 rounded"
+                    className="inline-block h-4 w-4 shrink-0 rounded"
                     style={{ background: selected.color }}
                   />
-                  <h1 className="text-2xl font-bold">{selected.full_name}</h1>
+                  <h1 className="truncate text-xl font-bold sm:text-2xl">{selected.full_name}</h1>
                 </div>
-                <div className="mt-1 flex items-center gap-3 text-sm text-muted-foreground">
+                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-muted-foreground">
                   <span>{selected.specialization ?? "—"}</span>
                   {selected.phone && <span>· {selected.phone}</span>}
                 </div>
               </div>
+
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={() => openEdit(selected)}>
                   <Pencil className="mr-1 h-4 w-4" />Изменить
@@ -269,13 +279,13 @@ function MechanicSalary({ mechanicId }: { mechanicId: string }) {
 
   return (
     <div>
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Wallet className="h-5 w-5" />
           <h2 className="text-lg font-semibold">Зарплата</h2>
         </div>
         <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
-          <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-32 sm:w-40"><SelectValue /></SelectTrigger>
           <SelectContent>
             {(Object.keys(PERIOD_LABELS) as Period[]).map((p) => (
               <SelectItem key={p} value={p}>{PERIOD_LABELS[p]}</SelectItem>
@@ -283,6 +293,7 @@ function MechanicSalary({ mechanicId }: { mechanicId: string }) {
           </SelectContent>
         </Select>
       </div>
+
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="rounded-lg border bg-card p-4">
           <div className="text-xs text-muted-foreground">Заработано ({PERIOD_LABELS[period].toLowerCase()})</div>

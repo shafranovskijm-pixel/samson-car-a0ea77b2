@@ -5,9 +5,10 @@ import { toast } from "sonner";
 import {
   Plus, Trash2, Pencil, Search, Car as CarIcon, Phone, Mail, User,
   Bell, History as HistoryIcon, Check, Archive, ArchiveRestore,
-  Crown, Sparkles, AlertTriangle, Briefcase, Heart, MessageSquare,
+  Crown, Sparkles, AlertTriangle, Briefcase, Heart, MessageSquare, ArrowLeft,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -104,8 +105,11 @@ function ClientsPage() {
   }, [clients, search, tab]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.matchMedia("(max-width: 767px)").matches) return;
     if (!selectedId && filtered.length > 0) setSelectedId(filtered[0].id);
   }, [selectedId, filtered]);
+
 
   const selected = clients.find((c) => c.id === selectedId) ?? null;
   const selectedCars = useMemo(
@@ -211,9 +215,10 @@ function ClientsPage() {
   });
 
   return (
-    <div className="flex h-[calc(100vh-3rem)]">
+    <div className="flex min-h-[calc(100vh-3rem)] flex-col md:h-[calc(100vh-3rem)] md:flex-row">
       {/* LEFT: LIST */}
-      <aside className="flex w-80 flex-col border-r bg-muted/30">
+      <aside className={`w-full flex-col border-r bg-muted/30 md:flex md:w-80 ${selected ? "hidden md:flex" : "flex"}`}>
+
         <div className="border-b p-3">
           <div className="mb-2 flex items-center justify-between">
             <div className="font-semibold">Клиенты</div>
@@ -295,7 +300,7 @@ function ClientsPage() {
       </aside>
 
       {/* RIGHT: DETAIL */}
-      <section className="flex-1 overflow-auto p-6">
+      <section className={`flex-1 overflow-auto p-4 md:p-6 ${!selected ? "hidden md:block" : "block"}`}>
         {!selected ? (
           <div className="flex h-full items-center justify-center text-muted-foreground">
             <div className="text-center">
@@ -305,6 +310,14 @@ function ClientsPage() {
           </div>
         ) : (
           <div className="mx-auto max-w-3xl">
+            <button
+              type="button"
+              onClick={() => setSelectedId(null)}
+              className="mb-3 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground md:hidden"
+            >
+              <ArrowLeft className="h-4 w-4" /> К списку клиентов
+            </button>
+
             {/* HEADER */}
             <div className="mb-6 flex items-start justify-between gap-4">
               <div className="min-w-0">
