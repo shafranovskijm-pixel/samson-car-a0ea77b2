@@ -460,6 +460,35 @@ function LandingPage() {
                         </SelectContent>
                       </Select>
 
+                      <div className="mt-3 rounded-lg border border-dashed border-white/15 bg-white/[0.03] p-3">
+                        <div className="mb-2 text-xs text-white/60">
+                          Нет вашей модели в списке? Добавьте — сохранится автоматически.
+                        </div>
+                        <div className="flex gap-2">
+                          <Input
+                            value={newModelName}
+                            onChange={(e) => setNewModelName(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && newModelName.trim()) {
+                                e.preventDefault();
+                                addModelMut.mutate(newModelName);
+                              }
+                            }}
+                            placeholder="Например, Camry"
+                            className="h-10 border-white/10 bg-white/5 text-white placeholder:text-white/40"
+                          />
+                          <Button
+                            type="button"
+                            onClick={() => addModelMut.mutate(newModelName)}
+                            disabled={!newModelName.trim() || addModelMut.isPending}
+                            className="bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                          >
+                            <Plus className="mr-1 h-4 w-4" />
+                            Добавить
+                          </Button>
+                        </div>
+                      </div>
+
                       <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
                         <span className="rounded-full bg-red-500/15 px-2 py-1 text-red-300">
                           Класс: {TIER_LABEL[tier]}
