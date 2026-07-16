@@ -18,7 +18,32 @@ import "react-big-calendar/lib/addons/dragAndDrop/styles.css";
 import "@/styles/calendar.css";
 
 import { Button } from "@/components/ui/button";
-import { listAppointments, listMechanics, updateAppointment, getAppointment } from "@/lib/api";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  listAppointments,
+  listMechanics,
+  updateAppointment,
+  getAppointment,
+  listAllMechanicShifts,
+  createMechanicShift,
+  updateMechanicShift,
+  deleteMechanicShift,
+} from "@/lib/api";
 import { STATUS_LABELS } from "@/lib/types";
 import { AppointmentDialog } from "@/components/AppointmentDialog";
 
