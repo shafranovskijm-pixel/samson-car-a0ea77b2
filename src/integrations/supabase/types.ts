@@ -269,6 +269,38 @@ export type Database = {
           },
         ]
       }
+      client_comments: {
+        Row: {
+          body: string
+          client_id: string
+          created_at: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          client_id: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          client_id?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_comments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_reminders: {
         Row: {
           client_id: string
@@ -320,6 +352,7 @@ export type Database = {
         Row: {
           address: string | null
           birthday: string | null
+          category: string
           created_at: string
           custom_fields: Json
           deleted_at: string | null
@@ -335,6 +368,7 @@ export type Database = {
         Insert: {
           address?: string | null
           birthday?: string | null
+          category?: string
           created_at?: string
           custom_fields?: Json
           deleted_at?: string | null
@@ -350,6 +384,7 @@ export type Database = {
         Update: {
           address?: string | null
           birthday?: string | null
+          category?: string
           created_at?: string
           custom_fields?: Json
           deleted_at?: string | null
