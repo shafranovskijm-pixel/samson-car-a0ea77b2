@@ -597,7 +597,7 @@ function LandingPage() {
         </div>
       </footer>
 
-      <AdminStats />
+      
     </div>
   );
 }
