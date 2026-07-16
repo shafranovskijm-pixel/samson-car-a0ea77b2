@@ -216,8 +216,12 @@ function CalendarPage() {
         ))}
       </div>
 
+      <div className="mb-3 text-xs text-muted-foreground">
+        Записи можно перетаскивать между слотами и растягивать за нижний край
+      </div>
+
       <div className="rounded-lg border bg-card" style={{ height: "calc(100vh - 220px)" }}>
-        <BigCalendar
+        <DnDCalendar
           localizer={localizer}
           events={events}
           culture="ru"
