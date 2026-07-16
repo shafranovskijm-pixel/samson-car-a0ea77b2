@@ -113,7 +113,7 @@ function RootComponent() {
       <SidebarProvider>
         <div className="flex min-h-screen w-full">
           <AppSidebar />
-          <div className="flex flex-1 flex-col">
+          <div className="flex min-w-0 flex-1 flex-col">
             <header className="flex h-12 items-center gap-2 border-b bg-background px-2 sm:gap-3 sm:px-3">
               <SidebarTrigger />
               <div className="truncate text-sm font-medium">
@@ -125,10 +125,11 @@ function RootComponent() {
               </div>
             </header>
 
-            <main className="flex-1 overflow-auto">
+            <main className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
               <Outlet />
             </main>
           </div>
+
         </div>
       </SidebarProvider>
       <Toaster />
