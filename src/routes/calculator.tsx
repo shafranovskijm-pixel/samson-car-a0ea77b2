@@ -87,6 +87,23 @@ function LandingPage() {
   const [modelId, setModelId] = useState<string>("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [newModelName, setNewModelName] = useState("");
+  const qc = useQueryClient();
+
+  const addModelMut = useMutation({
+    mutationFn: async (name: string) => {
+      if (!brandId) throw new Error("Сначала выберите марку");
+      return createCarModel({ brand_id: brandId, name: name.trim(), tier: null });
+    },
+    onSuccess: (m) => {
+      qc.invalidateQueries({ queryKey: ["car-models", brandId] });
+      setModelId((m as { id: string }).id);
+      setNewModelName("");
+      toast.success("Модель добавлена");
+    },
+    onError: (e: unknown) =>
+      toast.error(e instanceof Error ? e.message : "Не удалось добавить модель"),
+  });
 
   const { data: brandPrices = {} } = useQuery({
     queryKey: ["brand-prices", brandId],
