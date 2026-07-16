@@ -234,6 +234,19 @@ export const deleteAppointment = async (id: string) => {
   if (error) throw error;
 };
 
+export const updateAppointmentStatus = async (id: string, status: string) => {
+  const { error } = await supabase.from("appointments").update({ status }).eq("id", id);
+  if (error) throw error;
+};
+
+export const updateAppointmentPayment = async (
+  id: string,
+  patch: { payment_status: string; paid_amount: number },
+) => {
+  const { error } = await supabase.from("appointments").update(patch).eq("id", id);
+  if (error) throw error;
+};
+
 // APPOINTMENTS by client (история клиента)
 export const listAppointmentsByClient = async (
   client_id: string,
