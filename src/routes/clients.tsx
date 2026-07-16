@@ -215,9 +215,10 @@ function ClientsPage() {
   });
 
   return (
-    <div className="flex h-[calc(100vh-3rem)]">
+    <div className="flex min-h-[calc(100vh-3rem)] flex-col md:h-[calc(100vh-3rem)] md:flex-row">
       {/* LEFT: LIST */}
-      <aside className="flex w-80 flex-col border-r bg-muted/30">
+      <aside className={`w-full flex-col border-r bg-muted/30 md:flex md:w-80 ${selected ? "hidden md:flex" : "flex"}`}>
+
         <div className="border-b p-3">
           <div className="mb-2 flex items-center justify-between">
             <div className="font-semibold">Клиенты</div>
