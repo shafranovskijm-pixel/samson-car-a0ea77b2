@@ -328,76 +328,116 @@ function CalendarPage() {
 
   return (
     <div className="p-3 sm:p-4">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h1 className="text-2xl font-bold">
-            {mode === "appointments" ? "Календарь записей" : "График сотрудников"}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {mode === "appointments"
-              ? `${appointments.length} записей · клик по свободному слоту создаёт новую`
-              : "Клик по слоту добавляет смену, перетаскивание и растяжение — меняют её"}
-          </p>
-          {hasPrefill && mode === "appointments" && (
-            <p className="mt-1 text-sm text-red-600">
-              Данные из калькулятора готовы — выберите свободный слот на календаре
-            </p>
-          )}
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="inline-flex rounded-md border bg-muted p-0.5">
+          <button
+            type="button"
+            onClick={() => setMode("appointments")}
+            className={`rounded px-3 py-1.5 text-sm font-medium transition ${
+              mode === "appointments" ? "bg-background shadow-sm" : "text-muted-foreground"
+            }`}
+          >
+            Записи
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("shifts")}
+            className={`rounded px-3 py-1.5 text-sm font-medium transition ${
+              mode === "shifts" ? "bg-background shadow-sm" : "text-muted-foreground"
+            }`}
+          >
+            Сотрудники
+          </button>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="inline-flex rounded-md border bg-muted p-0.5">
-            <button
-              type="button"
-              onClick={() => setMode("appointments")}
-              className={`rounded px-3 py-1.5 text-sm font-medium transition ${
-                mode === "appointments" ? "bg-background shadow-sm" : "text-muted-foreground"
-              }`}
-            >
-              Записи
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode("shifts")}
-              className={`rounded px-3 py-1.5 text-sm font-medium transition ${
-                mode === "shifts" ? "bg-background shadow-sm" : "text-muted-foreground"
-              }`}
-            >
-              Сотрудники
-            </button>
-          </div>
-          {mode === "appointments" ? (
-            <Button onClick={() => openNew(new Date())}>
-              <Plus className="mr-2 h-4 w-4" /> Новая запись
-            </Button>
-          ) : (
-            <Button
-              onClick={() => {
-                const s = new Date();
-                s.setMinutes(0, 0, 0);
-                const e = new Date(s.getTime() + 8 * 60 * 60 * 1000);
-                openNewShift(s, e);
-              }}
-            >
-              <Plus className="mr-2 h-4 w-4" /> Новая смена
-            </Button>
-          )}
-        </div>
+        {mode === "appointments" ? (
+          <Button onClick={() => openNew(new Date())}>
+            <Plus className="mr-2 h-4 w-4" /> Новая запись
+          </Button>
+        ) : (
+          <Button
+            onClick={() => {
+              const s = new Date();
+              s.setMinutes(0, 0, 0);
+              const e = new Date(s.getTime() + 8 * 60 * 60 * 1000);
+              openNewShift(s, e);
+            }}
+          >
+            <Plus className="mr-2 h-4 w-4" /> Новая смена
+          </Button>
+        )}
       </div>
 
-      <div className="mb-3 flex flex-wrap gap-2 text-xs">
-        {mechanics.map((m) => (
-          <div key={m.id} className="flex items-center gap-1">
-            <span className="h-3 w-3 rounded" style={{ background: m.color }} />
-            <span>{m.full_name}</span>
-          </div>
-        ))}
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold">
+          {mode === "appointments" ? "Календарь записей" : "График сотрудников"}
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          {mode === "appointments"
+            ? `${appointments.length} записей · клик по свободному слоту создаёт новую`
+            : activeMechanicId
+              ? "Выбран мастер — клик по дню/неделе/слоту сразу закрашивает смену его цветом"
+              : "Выберите мастера ниже, чтобы отмечать смены кликом, или добавьте через «Новая смена»"}
+        </p>
+        {hasPrefill && mode === "appointments" && (
+          <p className="mt-1 text-sm text-red-600">
+            Данные из калькулятора готовы — выберите свободный слот на календаре
+          </p>
+        )}
       </div>
+
+      {mode === "shifts" ? (
+        <div className="mb-3 flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setActiveMechanicId("")}
+            className={`rounded-full border px-2.5 py-1 text-xs font-medium transition ${
+              activeMechanicId === ""
+                ? "border-foreground bg-foreground text-background"
+                : "bg-background text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            Никто
+          </button>
+          {mechanics.map((m) => {
+            const active = activeMechanicId === m.id;
+            return (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => setActiveMechanicId(m.id)}
+                className="rounded-full border px-2.5 py-1 text-xs font-medium transition"
+                style={
+                  active
+                    ? { background: m.color, borderColor: m.color, color: "#fff" }
+                    : { borderColor: m.color, color: m.color }
+                }
+              >
+                <span
+                  className="mr-1 inline-block h-2 w-2 rounded-full align-middle"
+                  style={{ background: m.color }}
+                />
+                {m.full_name}
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="mb-3 flex flex-wrap gap-2 text-xs">
+          {mechanics.map((m) => (
+            <div key={m.id} className="flex items-center gap-1">
+              <span className="h-3 w-3 rounded" style={{ background: m.color }} />
+              <span>{m.full_name}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="mb-3 text-xs text-muted-foreground">
         {mode === "appointments"
           ? "Записи можно перетаскивать между слотами и растягивать за нижний край"
           : "Смены можно перетаскивать и растягивать; клик по смене — редактировать"}
       </div>
+
 
       <div className="rounded-lg border bg-card" style={{ height: "calc(100dvh - 220px)" }}>
         <DnDCalendar
