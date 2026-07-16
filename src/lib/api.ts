@@ -5,6 +5,7 @@ import type {
   Car,
   CarModel,
   Client,
+  ClientComment,
   ClientReminder,
   Mechanic,
   MechanicServiceRate,
@@ -18,6 +19,10 @@ const throwIf = <T,>(x: { data: T | null; error: unknown }): T => {
   if (x.error) throw x.error;
   return x.data as T;
 };
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const anySb = supabase as any;
+
 
 // BRANDS
 export const listBrands = async (): Promise<Brand[]> =>
@@ -263,6 +268,44 @@ export const listAppointmentsByClient = async (
       .order("starts_at", { ascending: false }),
   ) as AppointmentWithRelations[];
 };
+
+// CLIENT COMMENTS
+export const listClientComments = async (client_id: string): Promise<ClientComment[]> => {
+  const { data, error } = await anySb
+    .from("client_comments")
+    .select("*")
+    .eq("client_id", client_id)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as ClientComment[];
+};
+
+export const createClientComment = async (client_id: string, body: string) => {
+  const { data, error } = await anySb
+    .from("client_comments")
+    .insert({ client_id, body })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as ClientComment;
+};
+
+export const updateClientComment = async (id: string, body: string) => {
+  const { data, error } = await anySb
+    .from("client_comments")
+    .update({ body })
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as ClientComment;
+};
+
+export const deleteClientComment = async (id: string) => {
+  const { error } = await anySb.from("client_comments").delete().eq("id", id);
+  if (error) throw error;
+};
+
 
 // CLIENT REMINDERS
 export const listClientReminders = async (client_id: string): Promise<ClientReminder[]> =>

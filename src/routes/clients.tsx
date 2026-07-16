@@ -5,7 +5,9 @@ import { toast } from "sonner";
 import {
   Plus, Trash2, Pencil, Search, Car as CarIcon, Phone, Mail, User,
   Bell, History as HistoryIcon, Check, Archive, ArchiveRestore,
+  Crown, Sparkles, AlertTriangle, Briefcase, Heart, MessageSquare,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,15 +21,33 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  createCar, createClient, createClientReminder, deleteCar, deleteClient,
-  deleteClientReminder, listAppointmentsByClient, listBrands, listCarModels,
-  listCars, listClientReminders, listClients, updateCar, updateClient,
-  updateClientReminder,
+  createCar, createClient, createClientComment, createClientReminder, deleteCar, deleteClient,
+  deleteClientComment, deleteClientReminder, listAppointmentsByClient, listBrands, listCarModels,
+  listCars, listClientComments, listClientReminders, listClients, updateCar, updateClient,
+  updateClientComment, updateClientReminder,
 } from "@/lib/api";
 import type {
-  Car, Client, ClientReminder, ReminderInterval,
+  Car, Client, ClientCategory, ClientComment, ClientReminder, ReminderInterval,
 } from "@/lib/types";
-import { REMINDER_INTERVAL_LABELS, STATUS_LABELS } from "@/lib/types";
+import {
+  CLIENT_CATEGORY_COLORS, CLIENT_CATEGORY_LABELS, CLIENT_CATEGORY_ORDER,
+  REMINDER_INTERVAL_LABELS, STATUS_LABELS,
+} from "@/lib/types";
+
+const CATEGORY_ICONS: Record<ClientCategory, LucideIcon> = {
+  regular: User,
+  vip: Crown,
+  new: Sparkles,
+  problem: AlertTriangle,
+  corporate: Briefcase,
+  friend: Heart,
+};
+
+const normalizeCategory = (raw: string | null | undefined): ClientCategory => {
+  const v = (raw ?? "regular") as ClientCategory;
+  return v in CATEGORY_ICONS ? v : "regular";
+};
+
 
 
 export const Route = createFileRoute("/clients")({
@@ -56,7 +76,9 @@ function ClientsPage() {
     birthday: "",
     telegram: "",
     note: "",
+    category: "regular" as ClientCategory,
   });
+
   const [customFields, setCustomFields] = useState<{ key: string; value: string }[]>([]);
 
 
@@ -107,6 +129,7 @@ function ClientsPage() {
       birthday: "",
       telegram: "",
       note: "",
+      category: "regular",
     });
     setCustomFields([]);
   };
@@ -120,12 +143,14 @@ function ClientsPage() {
       birthday: c.birthday ?? "",
       telegram: c.telegram ?? "",
       note: c.note ?? "",
+      category: normalizeCategory(c.category as string | null | undefined),
     });
     const cf = (c.custom_fields ?? {}) as Record<string, string>;
     setCustomFields(
       Object.entries(cf).map(([key, value]) => ({ key, value: String(value ?? "") })),
     );
   };
+
 
   const saveClientM = useMutation({
     mutationFn: async () => {
@@ -143,7 +168,9 @@ function ClientsPage() {
         telegram: clientForm.telegram.trim() || null,
         note: clientForm.note.trim() || null,
         custom_fields: cf,
+        category: clientForm.category,
       };
+
       if (!payload.full_name) throw new Error("Введите имя клиента");
       if (clientDialog.editing) {
         await updateClient(clientDialog.editing.id, payload);
@@ -233,6 +260,8 @@ function ClientsPage() {
           {filtered.map((c) => {
             const active = c.id === selectedId;
             const cnt = carsCountByClient[c.id] ?? 0;
+            const cat = normalizeCategory(c.category as string | null | undefined);
+            const Icon = CATEGORY_ICONS[cat];
             return (
               <button
                 key={c.id}
@@ -242,9 +271,13 @@ function ClientsPage() {
                   active ? "bg-primary/10" : "hover:bg-muted/60"
                 }`}
               >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-red-600 text-xs font-bold text-white">
-                  {c.full_name.slice(0, 2).toUpperCase()}
+                <div
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white shadow-sm ${CLIENT_CATEGORY_COLORS[cat]}`}
+                  title={CLIENT_CATEGORY_LABELS[cat]}
+                >
+                  <Icon className="h-4 w-4" />
                 </div>
+
                 <div className="min-w-0 flex-1">
                   <div className="truncate font-medium">{c.full_name}</div>
                   <div className="truncate text-xs text-muted-foreground">
@@ -275,7 +308,22 @@ function ClientsPage() {
             {/* HEADER */}
             <div className="mb-6 flex items-start justify-between gap-4">
               <div className="min-w-0">
+                {(() => {
+                  const cat = normalizeCategory(selected.category as string | null | undefined);
+                  const Icon = CATEGORY_ICONS[cat];
+                  return (
+                    <div className="mb-2 flex items-center gap-2">
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium text-white ${CLIENT_CATEGORY_COLORS[cat]}`}
+                      >
+                        <Icon className="h-3.5 w-3.5" />
+                        {CLIENT_CATEGORY_LABELS[cat]}
+                      </span>
+                    </div>
+                  );
+                })()}
                 <h1 className="text-2xl font-bold">{selected.full_name}</h1>
+
                 <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
                   {selected.phone && (
                     <span className="inline-flex items-center gap-1">
@@ -424,11 +472,15 @@ function ClientsPage() {
               </div>
             )}
 
+            {/* COMMENTS */}
+            <ClientComments clientId={selected.id} />
+
             {/* HISTORY */}
             <ClientHistory clientId={selected.id} />
 
             {/* REMINDERS */}
             <ClientReminders clientId={selected.id} />
+
           </div>
         )}
       </section>
@@ -451,6 +503,31 @@ function ClientsPage() {
                 onChange={(e) => setClientForm({ ...clientForm, full_name: e.target.value })}
               />
             </div>
+            <div>
+              <Label>Категория</Label>
+              <div className="mt-1 grid grid-cols-3 gap-1.5">
+                {CLIENT_CATEGORY_ORDER.map((cat) => {
+                  const Icon = CATEGORY_ICONS[cat];
+                  const selected = clientForm.category === cat;
+                  return (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setClientForm({ ...clientForm, category: cat })}
+                      className={`flex items-center gap-1.5 rounded-md border px-2 py-1.5 text-xs transition ${
+                        selected
+                          ? `${CLIENT_CATEGORY_COLORS[cat]} border-transparent text-white shadow-sm`
+                          : "bg-background hover:bg-muted"
+                      }`}
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                      <span className="truncate">{CLIENT_CATEGORY_LABELS[cat]}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Телефон</Label>
@@ -1117,3 +1194,172 @@ function ClientReminders({ clientId }: { clientId: string }) {
     </div>
   );
 }
+
+// ============ COMMENTS ============
+function ClientComments({ clientId }: { clientId: string }) {
+  const qc = useQueryClient();
+  const { data: items = [] } = useQuery({
+    queryKey: ["client-comments", clientId],
+    queryFn: () => listClientComments(clientId),
+  });
+
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState("");
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["client-comments", clientId] });
+
+  const addM = useMutation({
+    mutationFn: async () => {
+      const body = draft.trim();
+      if (!body) throw new Error("Введите текст комментария");
+      await createClientComment(clientId, body);
+    },
+    onSuccess: () => {
+      toast.success("Добавлено");
+      setDraft("");
+      setAdding(false);
+      invalidate();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const updM = useMutation({
+    mutationFn: async (c: ClientComment) => {
+      const body = editDraft.trim();
+      if (!body) throw new Error("Комментарий не может быть пустым");
+      await updateClientComment(c.id, body);
+    },
+    onSuccess: () => {
+      toast.success("Сохранено");
+      setEditingId(null);
+      setEditDraft("");
+      invalidate();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const delM = useMutation({
+    mutationFn: (id: string) => deleteClientComment(id),
+    onSuccess: () => {
+      toast.success("Удалено");
+      invalidate();
+    },
+  });
+
+  return (
+    <div className="mt-8">
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <MessageSquare className="h-5 w-5" />
+          <h2 className="text-lg font-semibold">
+            Комментарии{" "}
+            <span className="text-sm font-normal text-muted-foreground">· {items.length}</span>
+          </h2>
+        </div>
+        {!adding && (
+          <Button size="sm" onClick={() => { setAdding(true); setDraft(""); }}>
+            <Plus className="mr-1 h-4 w-4" />Комментарий
+          </Button>
+        )}
+      </div>
+
+      {adding && (
+        <div className="mb-3 rounded-lg border bg-card p-3">
+          <Textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            rows={3}
+            autoFocus
+            placeholder="Например: клиент любит чтобы позвонили после ТО, предпочитает наличные, машина стоит в дальнем боксе…"
+          />
+          <div className="mt-2 flex justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { setAdding(false); setDraft(""); }}
+            >
+              Отмена
+            </Button>
+            <Button size="sm" onClick={() => addM.mutate()} disabled={addM.isPending}>
+              Сохранить
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {items.length === 0 && !adding ? (
+        <div className="rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
+          Комментариев пока нет
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {items.map((c) => {
+            const isEditing = editingId === c.id;
+            return (
+              <div key={c.id} className="rounded-lg border bg-card p-3 text-sm">
+                {isEditing ? (
+                  <>
+                    <Textarea
+                      value={editDraft}
+                      onChange={(e) => setEditDraft(e.target.value)}
+                      rows={3}
+                      autoFocus
+                    />
+                    <div className="mt-2 flex justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => { setEditingId(null); setEditDraft(""); }}
+                      >
+                        Отмена
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => updM.mutate(c)}
+                        disabled={updM.isPending}
+                      >
+                        Сохранить
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="whitespace-pre-wrap break-words">{c.body}</div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {new Date(c.created_at).toLocaleString("ru-RU", {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })}
+                        {c.updated_at !== c.created_at ? " · изменён" : ""}
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 gap-1">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => { setEditingId(c.id); setEditDraft(c.body); }}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => { if (confirm("Удалить комментарий?")) delM.mutate(c.id); }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+

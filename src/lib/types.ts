@@ -37,6 +37,42 @@ export type Service = {
   base_price: number;
   duration_minutes: number;
 };
+export type ClientCategory =
+  | "regular"
+  | "vip"
+  | "new"
+  | "problem"
+  | "corporate"
+  | "friend";
+
+export const CLIENT_CATEGORY_ORDER: ClientCategory[] = [
+  "regular",
+  "vip",
+  "new",
+  "problem",
+  "corporate",
+  "friend",
+];
+
+export const CLIENT_CATEGORY_LABELS: Record<ClientCategory, string> = {
+  regular: "Обычный",
+  vip: "VIP",
+  new: "Новый",
+  problem: "Проблемный",
+  corporate: "Корпоративный",
+  friend: "Друг / знакомый",
+};
+
+// Tailwind-совместимые классы для аватара категории (bg + border/ring)
+export const CLIENT_CATEGORY_COLORS: Record<ClientCategory, string> = {
+  regular: "bg-slate-500",
+  vip: "bg-amber-500",
+  new: "bg-emerald-500",
+  problem: "bg-red-500",
+  corporate: "bg-blue-600",
+  friend: "bg-pink-500",
+};
+
 export type Client = {
   id: string;
   full_name: string;
@@ -47,9 +83,19 @@ export type Client = {
   telegram?: string | null;
   note?: string | null;
   is_archived?: boolean;
+  category?: ClientCategory | string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   custom_fields?: any;
 };
+
+export type ClientComment = {
+  id: string;
+  client_id: string;
+  body: string;
+  created_at: string;
+  updated_at: string;
+};
+
 
 export type Car = {
   id: string;
