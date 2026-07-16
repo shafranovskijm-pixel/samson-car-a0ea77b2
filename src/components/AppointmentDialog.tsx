@@ -189,6 +189,19 @@ export function AppointmentDialog({
     }
   }, [carId, clientId, cars]);
 
+  // when mechanic changes, refill mechanic_payout from rates for services with 0 payout
+  useEffect(() => {
+    if (!mechanicId || rates.length === 0) return;
+    setSelected((prev) =>
+      prev.map((s) =>
+        s.mechanic_payout === 0
+          ? { ...s, mechanic_payout: rates.find((r) => r.service_id === s.service_id)?.amount ?? 0 }
+          : s,
+      ),
+    );
+  }, [mechanicId, rates]);
+
+
   const total = selected.reduce((s, x) => s + (x.price || 0), 0);
 
   const addService = async () => {
