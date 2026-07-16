@@ -2,15 +2,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Wrench,
   Calendar as CalendarIcon,
-  ShieldCheck,
   Clock,
   Phone,
-  MapPin,
-  Sparkles,
   CheckCircle2,
-  ChevronRight,
   ChevronLeft,
 } from "lucide-react";
 
@@ -28,7 +23,6 @@ import {
 import { listBrands, listCarModels, listServices, listPricesForBrand } from "@/lib/api";
 
 import { TIER_COEFFICIENT, TIER_LABEL, resolveTier, type BrandTier } from "@/lib/types";
-import heroAsset from "@/assets/samson-hero.jpg.asset.json";
 import imgFluids from "@/assets/cat-fluids.jpg";
 import imgEngine from "@/assets/cat-engine.jpg";
 import imgFuel from "@/assets/cat-fuel.jpg";
@@ -38,6 +32,7 @@ import imgBrakes from "@/assets/cat-brakes.jpg";
 import imgAc from "@/assets/cat-ac.jpg";
 import imgTires from "@/assets/cat-tires.jpg";
 import imgElectric from "@/assets/cat-electric.jpg";
+
 
 export const Route = createFileRoute("/calculator")({
   ssr: false,
