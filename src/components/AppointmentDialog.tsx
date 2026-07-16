@@ -25,7 +25,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 
 import {
+  addReminderInterval,
   createAppointment,
+  createClientReminder,
   deleteAppointment,
   getAppointment,
   getPriceForBrand,
@@ -39,7 +41,8 @@ import {
   updateAppointment,
 } from "@/lib/api";
 
-import { STATUS_LABELS, type AppointmentStatus } from "@/lib/types";
+import { STATUS_LABELS, type AppointmentStatus, type ReminderInterval } from "@/lib/types";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type SvcRow = { service_id: string; price: number; mechanic_payout: number };
 
