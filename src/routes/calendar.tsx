@@ -195,6 +195,7 @@ function CalendarPage() {
           onNavigate={setDate}
           views={[Views.MONTH, Views.WEEK, Views.DAY, Views.AGENDA]}
           selectable
+          getNow={() => new Date()}
           onSelectSlot={(slot) => openNew(slot.start as Date)}
           onSelectEvent={(ev) =>
             setDialog({ open: true, id: ev.id as string, start: null, prefill: null })
@@ -206,10 +207,23 @@ function CalendarPage() {
               opacity: ev.resource?.status === "cancelled" ? 0.4 : 1,
             },
           })}
+          slotPropGetter={(slotDate) =>
+            slotDate.getTime() < now.getTime() - 60_000
+              ? { style: { backgroundColor: "rgba(0,0,0,0.04)" } }
+              : {}
+          }
+          dayPropGetter={(day) => {
+            const today = new Date();
+            const isPast =
+              day.getTime() <
+              new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+            return isPast ? { style: { backgroundColor: "rgba(0,0,0,0.03)" } } : {};
+          }}
           tooltipAccessor={(ev) =>
             `${ev.title} · ${STATUS_LABELS[ev.resource?.status as keyof typeof STATUS_LABELS] ?? ""}`
           }
         />
+
       </div>
 
       <AppointmentDialog
