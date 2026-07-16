@@ -2,15 +2,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Wrench,
   Calendar as CalendarIcon,
-  ShieldCheck,
   Clock,
   Phone,
-  MapPin,
-  Sparkles,
   CheckCircle2,
-  ChevronRight,
   ChevronLeft,
 } from "lucide-react";
 
@@ -28,7 +23,6 @@ import {
 import { listBrands, listCarModels, listServices, listPricesForBrand } from "@/lib/api";
 
 import { TIER_COEFFICIENT, TIER_LABEL, resolveTier, type BrandTier } from "@/lib/types";
-import heroAsset from "@/assets/samson-hero.jpg.asset.json";
 import imgFluids from "@/assets/cat-fluids.jpg";
 import imgEngine from "@/assets/cat-engine.jpg";
 import imgFuel from "@/assets/cat-fuel.jpg";
@@ -38,6 +32,7 @@ import imgBrakes from "@/assets/cat-brakes.jpg";
 import imgAc from "@/assets/cat-ac.jpg";
 import imgTires from "@/assets/cat-tires.jpg";
 import imgElectric from "@/assets/cat-electric.jpg";
+
 
 export const Route = createFileRoute("/calculator")({
   ssr: false,
@@ -144,109 +139,9 @@ function LandingPage() {
 
   return (
     <div className="min-h-full bg-[#0a0a0f] text-white">
-      {/* HERO */}
-      <section className="relative overflow-hidden">
-        <img
-          src={heroAsset.url}
-          alt="Samson Auto — премиум автосервис"
-          className="absolute inset-0 h-full w-full object-cover opacity-70"
-          width={1920}
-          height={1080}
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0f] via-[#0a0a0f]/85 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0f] via-transparent to-transparent" />
-        {/* red glow blobs */}
-        <div className="pointer-events-none absolute -top-32 -left-32 h-96 w-96 rounded-full bg-red-600/30 blur-3xl" />
-        <div className="pointer-events-none absolute bottom-0 right-0 h-96 w-96 rounded-full bg-orange-500/20 blur-3xl" />
-
-        <div className="relative mx-auto max-w-7xl px-6 py-24 md:py-32">
-          <Badge className="mb-6 border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20">
-            <Sparkles className="mr-1 h-3 w-3" /> Автосервис нового поколения
-          </Badge>
-          <h1 className="max-w-3xl text-5xl font-black leading-tight tracking-tight md:text-7xl">
-            <Link
-              to="/calendar"
-              className="cursor-pointer bg-transparent p-0 text-left transition hover:opacity-80"
-              title="Открыть CRM"
-            >
-              SAMSON<span className="text-red-500">.</span>
-            </Link>
-            <br />
-            <span className="bg-gradient-to-r from-orange-400 via-red-500 to-red-700 bg-clip-text text-transparent">
-              Сила и точность
-            </span>
-            <br />
-            вашего авто
-          </h1>
-          <p className="mt-6 max-w-xl text-lg text-white/70">
-            Полный цикл обслуживания для любой марки. Рассчитайте стоимость услуг онлайн
-            и запишитесь на удобное время.
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Button
-              size="lg"
-              className="bg-red-600 text-white hover:bg-red-700"
-              asChild
-            >
-              <a href="#calculator">
-                Калькулятор стоимости <ChevronRight className="ml-1 h-4 w-4" />
-              </a>
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="border-white/20 bg-white/5 text-white backdrop-blur hover:bg-white/10"
-              asChild
-            >
-              <Link to="/calendar">
-                <CalendarIcon className="mr-2 h-4 w-4" /> Записаться
-              </Link>
-            </Button>
-          </div>
-
-          <div className="mt-16 grid max-w-2xl grid-cols-2 gap-6 md:grid-cols-4">
-            {[
-              { n: "12+", l: "лет опыта" },
-              { n: "40k", l: "довольных клиентов" },
-              { n: "60+", l: "видов услуг" },
-              { n: "24/7", l: "поддержка" },
-            ].map((s) => (
-              <div key={s.l}>
-                <div className="text-3xl font-bold text-white">{s.n}</div>
-                <div className="text-xs uppercase tracking-wider text-white/50">{s.l}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* FEATURES */}
-      <section className="relative mx-auto max-w-7xl px-6 py-16">
-        <div className="grid gap-4 md:grid-cols-4">
-          {[
-            { icon: ShieldCheck, t: "Гарантия качества", d: "На все работы и запчасти" },
-            { icon: Clock, t: "Быстро и в срок", d: "Соблюдаем оговорённое время" },
-            { icon: Wrench, t: "Оригинальные запчасти", d: "Работаем с проверенными поставщиками" },
-            { icon: Sparkles, t: "Прозрачные цены", d: "Никаких скрытых доплат" },
-          ].map((f) => (
-            <Card
-              key={f.t}
-              className="border-white/10 bg-white/5 backdrop-blur transition hover:border-red-500/40 hover:bg-white/10"
-            >
-              <CardContent className="p-6">
-                <div className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-to-br from-red-500 to-orange-600 text-white">
-                  <f.icon className="h-5 w-5" />
-                </div>
-                <div className="font-semibold text-white">{f.t}</div>
-                <div className="mt-1 text-sm text-white/60">{f.d}</div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
-
       {/* CALCULATOR */}
-      <section id="calculator" className="relative py-20">
+      <section id="calculator" className="relative py-12">
+
         <div
           className="absolute inset-0 opacity-[0.04]"
           style={{
@@ -365,7 +260,7 @@ function LandingPage() {
                   <div className="mb-2 text-lg font-semibold text-white">
                     Выберите категорию услуг
                   </div>
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="grid gap-5 sm:grid-cols-2">
                     {CATEGORIES.map((c) => {
                       const count = byCategory[c.name]?.length ?? 0;
                       const selectedInCat =
@@ -375,7 +270,7 @@ function LandingPage() {
                           key={c.name}
                           type="button"
                           onClick={() => setActiveCategory(c.name)}
-                          className="group relative aspect-[4/3] overflow-hidden rounded-2xl border border-white/10 bg-white/5 text-left transition-all hover:border-red-500/50 hover:shadow-[0_10px_40px_-10px_rgba(239,68,68,0.4)]"
+                          className="group relative aspect-[16/10] overflow-hidden rounded-2xl border border-white/10 bg-white/5 text-left transition-all hover:border-red-500/50 hover:shadow-[0_10px_40px_-10px_rgba(239,68,68,0.4)]"
                         >
                           <img
                             src={c.img}
@@ -385,17 +280,17 @@ function LandingPage() {
                             height={512}
                             className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                           />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/50 to-transparent" />
                           {selectedInCat > 0 && (
-                            <div className="absolute right-3 top-3 flex h-7 min-w-7 items-center justify-center rounded-full bg-red-600 px-2 text-xs font-bold text-white">
+                            <div className="absolute right-4 top-4 flex h-9 min-w-9 items-center justify-center rounded-full bg-red-600 px-2.5 text-sm font-bold text-white shadow-lg">
                               {selectedInCat}
                             </div>
                           )}
-                          <div className="absolute inset-x-0 bottom-0 p-4">
-                            <div className="text-base font-bold leading-tight text-white">
+                          <div className="absolute inset-x-0 bottom-0 p-6">
+                            <div className="text-2xl font-bold leading-tight text-white">
                               {c.name}
                             </div>
-                            <div className="mt-1 text-xs text-white/70">
+                            <div className="mt-2 text-sm text-white/70">
                               {count} услуг · нажмите чтобы открыть
                             </div>
                           </div>
@@ -403,6 +298,7 @@ function LandingPage() {
                       );
                     })}
                   </div>
+
                 </>
               ) : (
                 <div>
@@ -571,10 +467,8 @@ function LandingPage() {
                     <Phone className="h-4 w-4 text-red-400" />
                     <span>+7 (800) 555-35-35</span>
                   </div>
-                  <div className="flex items-center gap-3 text-white/80">
-                    <MapPin className="h-4 w-4 text-red-400" />
-                    <span>Москва, ул. Автозаводская, 23</span>
-                  </div>
+
+
                   <div className="flex items-center gap-3 text-white/80">
                     <Clock className="h-4 w-4 text-red-400" />
                     <span>Ежедневно, 09:00 — 21:00</span>
