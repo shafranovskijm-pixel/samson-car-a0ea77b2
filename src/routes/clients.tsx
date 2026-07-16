@@ -5,7 +5,9 @@ import { toast } from "sonner";
 import {
   Plus, Trash2, Pencil, Search, Car as CarIcon, Phone, Mail, User,
   Bell, History as HistoryIcon, Check, Archive, ArchiveRestore,
+  Crown, Sparkles, AlertTriangle, Briefcase, Heart, MessageSquare,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,15 +21,33 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  createCar, createClient, createClientReminder, deleteCar, deleteClient,
-  deleteClientReminder, listAppointmentsByClient, listBrands, listCarModels,
-  listCars, listClientReminders, listClients, updateCar, updateClient,
-  updateClientReminder,
+  createCar, createClient, createClientComment, createClientReminder, deleteCar, deleteClient,
+  deleteClientComment, deleteClientReminder, listAppointmentsByClient, listBrands, listCarModels,
+  listCars, listClientComments, listClientReminders, listClients, updateCar, updateClient,
+  updateClientComment, updateClientReminder,
 } from "@/lib/api";
 import type {
-  Car, Client, ClientReminder, ReminderInterval,
+  Car, Client, ClientCategory, ClientComment, ClientReminder, ReminderInterval,
 } from "@/lib/types";
-import { REMINDER_INTERVAL_LABELS, STATUS_LABELS } from "@/lib/types";
+import {
+  CLIENT_CATEGORY_COLORS, CLIENT_CATEGORY_LABELS, CLIENT_CATEGORY_ORDER,
+  REMINDER_INTERVAL_LABELS, STATUS_LABELS,
+} from "@/lib/types";
+
+const CATEGORY_ICONS: Record<ClientCategory, LucideIcon> = {
+  regular: User,
+  vip: Crown,
+  new: Sparkles,
+  problem: AlertTriangle,
+  corporate: Briefcase,
+  friend: Heart,
+};
+
+const normalizeCategory = (raw: string | null | undefined): ClientCategory => {
+  const v = (raw ?? "regular") as ClientCategory;
+  return v in CATEGORY_ICONS ? v : "regular";
+};
+
 
 
 export const Route = createFileRoute("/clients")({
