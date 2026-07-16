@@ -83,19 +83,50 @@ function ClientsPage() {
 
   const openNewClient = () => {
     setClientDialog({ open: true, editing: null });
-    setClientForm({ full_name: "", phone: "", email: "" });
+    setClientForm({
+      full_name: "",
+      phone: "",
+      email: "",
+      address: "",
+      birthday: "",
+      telegram: "",
+      note: "",
+    });
+    setCustomFields([]);
   };
   const openEditClient = (c: Client) => {
     setClientDialog({ open: true, editing: c });
-    setClientForm({ full_name: c.full_name, phone: c.phone ?? "", email: c.email ?? "" });
+    setClientForm({
+      full_name: c.full_name,
+      phone: c.phone ?? "",
+      email: c.email ?? "",
+      address: c.address ?? "",
+      birthday: c.birthday ?? "",
+      telegram: c.telegram ?? "",
+      note: c.note ?? "",
+    });
+    const cf = (c.custom_fields ?? {}) as Record<string, string>;
+    setCustomFields(
+      Object.entries(cf).map(([key, value]) => ({ key, value: String(value ?? "") })),
+    );
   };
 
   const saveClientM = useMutation({
     mutationFn: async () => {
+      const cf: Record<string, string> = {};
+      customFields.forEach((f) => {
+        const k = f.key.trim();
+        if (k) cf[k] = f.value.trim();
+      });
       const payload = {
         full_name: clientForm.full_name.trim(),
         phone: clientForm.phone.trim() || null,
         email: clientForm.email.trim() || null,
+        address: clientForm.address.trim() || null,
+        birthday: clientForm.birthday || null,
+        telegram: clientForm.telegram.trim() || null,
+        note: clientForm.note.trim() || null,
+        custom_fields: cf,
       };
       if (!payload.full_name) throw new Error("Введите имя клиента");
       if (clientDialog.editing) {
@@ -113,6 +144,7 @@ function ClientsPage() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   const delClientM = useMutation({
     mutationFn: (id: string) => deleteClient(id),
