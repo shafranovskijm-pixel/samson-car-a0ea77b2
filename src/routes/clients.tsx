@@ -100,9 +100,14 @@ function ClientsPage() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const byTab = clients.filter((c) =>
+    let byTab = clients.filter((c) =>
       tab === "archived" ? c.is_archived : !c.is_archived,
     );
+    if (categoryFilter !== "all") {
+      byTab = byTab.filter(
+        (c) => normalizeCategory(c.category as string | null | undefined) === categoryFilter,
+      );
+    }
     if (!q) return byTab;
     return byTab.filter(
       (c) =>
@@ -110,7 +115,8 @@ function ClientsPage() {
         (c.phone ?? "").toLowerCase().includes(q) ||
         (c.email ?? "").toLowerCase().includes(q),
     );
-  }, [clients, search, tab]);
+  }, [clients, search, tab, categoryFilter]);
+
 
   useEffect(() => {
     if (typeof window === "undefined") return;
