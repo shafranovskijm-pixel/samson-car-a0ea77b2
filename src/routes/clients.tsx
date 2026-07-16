@@ -279,7 +279,63 @@ function ClientsPage() {
               Архив · {archivedCount}
             </button>
           </div>
+          <div className="mt-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex w-full items-center justify-between rounded-md border bg-background px-2.5 py-1.5 text-xs font-medium shadow-sm transition hover:bg-muted"
+                >
+                  <span className="inline-flex items-center gap-1.5">
+                    <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+                    {categoryFilter === "all" ? (
+                      "Все категории"
+                    ) : (
+                      <>
+                        <span
+                          className={`inline-flex h-4 w-4 items-center justify-center rounded-full text-white ${CLIENT_CATEGORY_COLORS[categoryFilter]}`}
+                        >
+                          {(() => {
+                            const I = CATEGORY_ICONS[categoryFilter];
+                            return <I className="h-2.5 w-2.5" />;
+                          })()}
+                        </span>
+                        {CLIENT_CATEGORY_LABELS[categoryFilter]}
+                      </>
+                    )}
+                  </span>
+                  <ChevronDown className="h-3 w-3 opacity-70" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56">
+                <DropdownMenuItem
+                  onClick={() => { setCategoryFilter("all"); setSelectedId(null); }}
+                  className="gap-2"
+                >
+                  <Check className={`h-3.5 w-3.5 ${categoryFilter === "all" ? "opacity-100" : "opacity-0"}`} />
+                  Все категории
+                </DropdownMenuItem>
+                {CLIENT_CATEGORY_ORDER.map((c) => {
+                  const CIcon = CATEGORY_ICONS[c];
+                  return (
+                    <DropdownMenuItem
+                      key={c}
+                      onClick={() => { setCategoryFilter(c); setSelectedId(null); }}
+                      className="gap-2"
+                    >
+                      <Check className={`h-3.5 w-3.5 ${categoryFilter === c ? "opacity-100" : "opacity-0"}`} />
+                      <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-white ${CLIENT_CATEGORY_COLORS[c]}`}>
+                        <CIcon className="h-3 w-3" />
+                      </span>
+                      {CLIENT_CATEGORY_LABELS[c]}
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
+
         <div className="flex-1 overflow-auto">
           {filtered.length === 0 && (
             <div className="p-6 text-center text-sm text-muted-foreground">
