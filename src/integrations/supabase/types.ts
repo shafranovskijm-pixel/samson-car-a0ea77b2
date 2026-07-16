@@ -260,6 +260,53 @@ export type Database = {
           },
         ]
       }
+      client_reminders: {
+        Row: {
+          client_id: string
+          created_at: string
+          done_at: string | null
+          id: string
+          interval_kind: string
+          note: string | null
+          remind_at: string
+          repeat: boolean
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          done_at?: string | null
+          id?: string
+          interval_kind?: string
+          note?: string | null
+          remind_at: string
+          repeat?: boolean
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          done_at?: string | null
+          id?: string
+          interval_kind?: string
+          note?: string | null
+          remind_at?: string
+          repeat?: boolean
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_reminders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           address: string | null
