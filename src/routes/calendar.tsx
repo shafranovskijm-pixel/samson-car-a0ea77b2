@@ -1,20 +1,24 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Calendar as BigCalendar, dateFnsLocalizer, Views, type View } from "react-big-calendar";
+import withDragAndDrop, {
+  type withDragAndDropProps,
+} from "react-big-calendar/lib/addons/dragAndDrop";
 import { format, parse, startOfWeek, getDay } from "date-fns";
 import { ru } from "date-fns/locale";
-import { Plus, Clock } from "lucide-react";
+import { Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { z } from "zod";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 
 import "react-big-calendar/lib/css/react-big-calendar.css";
+import "react-big-calendar/lib/addons/dragAndDrop/styles.css";
 import "@/styles/calendar.css";
 
 import { Button } from "@/components/ui/button";
-import { listAppointments, listMechanics } from "@/lib/api";
+import { listAppointments, listMechanics, updateAppointment, getAppointment } from "@/lib/api";
 import { STATUS_LABELS } from "@/lib/types";
 import { AppointmentDialog } from "@/components/AppointmentDialog";
 
