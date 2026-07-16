@@ -572,7 +572,17 @@ function LandingPage() {
                     size="lg"
                     asChild
                   >
-                    <Link to="/calendar">
+                    <Link
+                      to="/calendar"
+                      search={{
+                        services: services
+                          .filter((s) => selected.has(s.id))
+                          .map((s) => `${s.id}:${priceOf(s.id, s.base_price)}`)
+                          .join(","),
+                        brand: brandId || undefined,
+                        model: modelId || undefined,
+                      }}
+                    >
                       <CalendarIcon className="mr-2 h-4 w-4" /> Записаться на сервис
                     </Link>
                   </Button>
@@ -582,18 +592,6 @@ function LandingPage() {
                 </CardContent>
               </Card>
 
-              <Card className="border-white/10 bg-white/5 backdrop-blur">
-                <CardContent className="space-y-3 p-6 text-sm">
-                  <div className="flex items-center gap-3 text-white/80">
-                    <Phone className="h-4 w-4 text-red-400" />
-                    <span>+7 (800) 555-35-35</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-white/80">
-                    <Clock className="h-4 w-4 text-red-400" />
-                    <span>Ежедневно, 09:00 — 21:00</span>
-                  </div>
-                </CardContent>
-              </Card>
 
               <div>
                 <Button

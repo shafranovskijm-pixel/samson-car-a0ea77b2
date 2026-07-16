@@ -1,10 +1,12 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Calendar as BigCalendar, dateFnsLocalizer, Views, type View } from "react-big-calendar";
 import { format, parse, startOfWeek, getDay } from "date-fns";
 import { ru } from "date-fns/locale";
 import { Plus } from "lucide-react";
+import { z } from "zod";
+import { zodValidator, fallback } from "@tanstack/zod-adapter";
 
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import "@/styles/calendar.css";
@@ -39,17 +41,42 @@ const messages = {
   showMore: (n: number) => `+ ещё ${n}`,
 };
 
+const searchSchema = z.object({
+  services: fallback(z.string(), "").default(""),
+  brand: fallback(z.string(), "").default(""),
+  model: fallback(z.string(), "").default(""),
+});
+
 export const Route = createFileRoute("/calendar")({
   ssr: false,
+  validateSearch: zodValidator(searchSchema),
   component: CalendarPage,
 });
 
+function parseServices(s: string): { service_id: string; price: number }[] {
+  if (!s) return [];
+  return s
+    .split(",")
+    .map((p) => p.split(":"))
+    .filter((a) => a.length === 2 && a[0])
+    .map(([id, price]) => ({ service_id: id, price: Number(price) || 0 }));
+}
+
 function CalendarPage() {
+  const search = Route.useSearch();
+  const navigate = useNavigate({ from: "/calendar" });
   const [view, setView] = useState<View>(Views.WEEK);
   const [date, setDate] = useState(new Date());
-  const [dialog, setDialog] = useState<{ open: boolean; id: string | null; start: Date | null }>(
-    { open: false, id: null, start: null },
-  );
+  const [dialog, setDialog] = useState<{
+    open: boolean;
+    id: string | null;
+    start: Date | null;
+    prefill: {
+      services: { service_id: string; price: number }[];
+      brand: string;
+      model: string;
+    } | null;
+  }>({ open: false, id: null, start: null, prefill: null });
 
   const { data: appointments = [] } = useQuery({
     queryKey: ["appointments"],
@@ -76,6 +103,20 @@ function CalendarPage() {
     [appointments, mechanics],
   );
 
+  const hasPrefill = !!(search.services || search.brand || search.model);
+  const currentPrefill = hasPrefill
+    ? {
+        services: parseServices(search.services),
+        brand: search.brand,
+        model: search.model,
+      }
+    : null;
+
+  const openNew = (start: Date) => {
+    setDialog({ open: true, id: null, start, prefill: currentPrefill });
+    if (hasPrefill) navigate({ search: {}, replace: true });
+  };
+
   return (
     <div className="p-4">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
@@ -84,8 +125,13 @@ function CalendarPage() {
           <p className="text-sm text-muted-foreground">
             {appointments.length} записей · клик по слоту создаёт новую
           </p>
+          {hasPrefill && (
+            <p className="mt-1 text-sm text-red-600">
+              Данные из калькулятора готовы — выберите свободный слот на календаре
+            </p>
+          )}
         </div>
-        <Button onClick={() => setDialog({ open: true, id: null, start: new Date() })}>
+        <Button onClick={() => openNew(new Date())}>
           <Plus className="mr-2 h-4 w-4" /> Новая запись
         </Button>
       </div>
@@ -111,10 +157,10 @@ function CalendarPage() {
           onNavigate={setDate}
           views={[Views.MONTH, Views.WEEK, Views.DAY, Views.AGENDA]}
           selectable
-          onSelectSlot={(slot) =>
-            setDialog({ open: true, id: null, start: slot.start as Date })
+          onSelectSlot={(slot) => openNew(slot.start as Date)}
+          onSelectEvent={(ev) =>
+            setDialog({ open: true, id: ev.id as string, start: null, prefill: null })
           }
-          onSelectEvent={(ev) => setDialog({ open: true, id: ev.id as string, start: null })}
           eventPropGetter={(ev) => ({
             style: {
               backgroundColor: ev.resource?.color ?? "#64748b",
@@ -133,6 +179,9 @@ function CalendarPage() {
         onOpenChange={(o) => setDialog((d) => ({ ...d, open: o }))}
         appointmentId={dialog.id}
         defaultStart={dialog.start}
+        defaultServices={dialog.prefill?.services}
+        defaultBrandId={dialog.prefill?.brand}
+        defaultModelId={dialog.prefill?.model}
       />
     </div>
   );
