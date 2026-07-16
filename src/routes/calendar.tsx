@@ -133,6 +133,56 @@ function CalendarPage() {
 
   const now = useMemo(() => new Date(), []);
 
+  const qc = useQueryClient();
+  const moveMutation = useMutation({
+    mutationFn: async (args: { id: string; start: Date; end: Date }) => {
+      const appt = await getAppointment(args.id);
+      const durationMs = args.end.getTime() - args.start.getTime();
+      const duration_minutes = Math.max(15, Math.round(durationMs / 60000));
+      await updateAppointment(args.id, {
+        car_id: appt.car_id,
+        mechanic_id: appt.mechanic_id,
+        starts_at: args.start.toISOString(),
+        duration_minutes,
+        status: appt.status,
+        mileage: appt.mileage,
+        comment: appt.comment,
+        services: appt.services.map((s) => ({
+          service_id: s.service_id,
+          price: s.price,
+          mechanic_payout: s.mechanic_payout ?? 0,
+        })),
+      });
+    },
+    onMutate: () => {
+      // optimistic: nothing (we refetch on success)
+    },
+    onSuccess: () => {
+      toast.success("Запись перемещена");
+      qc.invalidateQueries({ queryKey: ["appointments"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const onEventDrop: withDragAndDropProps["onEventDrop"] = ({ event, start, end }) => {
+    const id = (event as { id: string }).id;
+    const s = start instanceof Date ? start : new Date(start);
+    const e = end instanceof Date ? end : new Date(end);
+    if (s.getTime() < Date.now() - 60_000) {
+      toast.error("Нельзя переместить на прошедшее время");
+      return;
+    }
+    moveMutation.mutate({ id, start: s, end: e });
+  };
+
+  const onEventResize: withDragAndDropProps["onEventResize"] = ({ event, start, end }) => {
+    const id = (event as { id: string }).id;
+    const s = start instanceof Date ? start : new Date(start);
+    const e = end instanceof Date ? end : new Date(end);
+    moveMutation.mutate({ id, start: s, end: e });
+  };
+
+
 
   return (
     <div className="p-4">
