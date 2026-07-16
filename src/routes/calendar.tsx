@@ -123,25 +123,8 @@ function CalendarPage() {
     if (hasPrefill) navigate({ search: {}, replace: true });
   };
 
-  // Живые часы по Уссурийску (Asia/Vladivostok, UTC+10)
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(t);
-  }, []);
-  const ussuriyskTime = useMemo(
-    () =>
-      new Intl.DateTimeFormat("ru-RU", {
-        timeZone: "Asia/Vladivostok",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        weekday: "short",
-        day: "2-digit",
-        month: "short",
-      }).format(now),
-    [now],
-  );
+  const now = useMemo(() => new Date(), []);
+
 
   return (
     <div className="p-4">
