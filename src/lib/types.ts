@@ -46,7 +46,7 @@ export type Client = {
   birthday?: string | null;
   telegram?: string | null;
   note?: string | null;
-  custom_fields?: Record<string, string> | null;
+  custom_fields?: unknown;
 };
 
 export type Car = {
