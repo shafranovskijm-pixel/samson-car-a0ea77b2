@@ -9,18 +9,17 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as ServicesRouteImport } from './routes/services'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ScheduleRouteImport } from './routes/schedule'
 import { Route as MechanicsRouteImport } from './routes/mechanics'
 import { Route as ClientsRouteImport } from './routes/clients'
-import { Route as CarsRouteImport } from './routes/cars'
 import { Route as CalendarRouteImport } from './routes/calendar'
-import { Route as BrandsRouteImport } from './routes/brands'
+import { Route as CalculatorRouteImport } from './routes/calculator'
 import { Route as IndexRouteImport } from './routes/index'
 
-const ServicesRoute = ServicesRouteImport.update({
-  id: '/services',
-  path: '/services',
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ScheduleRoute = ScheduleRouteImport.update({
@@ -38,19 +37,14 @@ const ClientsRoute = ClientsRouteImport.update({
   path: '/clients',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CarsRoute = CarsRouteImport.update({
-  id: '/cars',
-  path: '/cars',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const CalendarRoute = CalendarRouteImport.update({
   id: '/calendar',
   path: '/calendar',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BrandsRoute = BrandsRouteImport.update({
-  id: '/brands',
-  path: '/brands',
+const CalculatorRoute = CalculatorRouteImport.update({
+  id: '/calculator',
+  path: '/calculator',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -61,86 +55,79 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/brands': typeof BrandsRoute
+  '/calculator': typeof CalculatorRoute
   '/calendar': typeof CalendarRoute
-  '/cars': typeof CarsRoute
   '/clients': typeof ClientsRoute
   '/mechanics': typeof MechanicsRoute
   '/schedule': typeof ScheduleRoute
-  '/services': typeof ServicesRoute
+  '/settings': typeof SettingsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/brands': typeof BrandsRoute
+  '/calculator': typeof CalculatorRoute
   '/calendar': typeof CalendarRoute
-  '/cars': typeof CarsRoute
   '/clients': typeof ClientsRoute
   '/mechanics': typeof MechanicsRoute
   '/schedule': typeof ScheduleRoute
-  '/services': typeof ServicesRoute
+  '/settings': typeof SettingsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/brands': typeof BrandsRoute
+  '/calculator': typeof CalculatorRoute
   '/calendar': typeof CalendarRoute
-  '/cars': typeof CarsRoute
   '/clients': typeof ClientsRoute
   '/mechanics': typeof MechanicsRoute
   '/schedule': typeof ScheduleRoute
-  '/services': typeof ServicesRoute
+  '/settings': typeof SettingsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/brands'
+    | '/calculator'
     | '/calendar'
-    | '/cars'
     | '/clients'
     | '/mechanics'
     | '/schedule'
-    | '/services'
+    | '/settings'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/brands'
+    | '/calculator'
     | '/calendar'
-    | '/cars'
     | '/clients'
     | '/mechanics'
     | '/schedule'
-    | '/services'
+    | '/settings'
   id:
     | '__root__'
     | '/'
-    | '/brands'
+    | '/calculator'
     | '/calendar'
-    | '/cars'
     | '/clients'
     | '/mechanics'
     | '/schedule'
-    | '/services'
+    | '/settings'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  BrandsRoute: typeof BrandsRoute
+  CalculatorRoute: typeof CalculatorRoute
   CalendarRoute: typeof CalendarRoute
-  CarsRoute: typeof CarsRoute
   ClientsRoute: typeof ClientsRoute
   MechanicsRoute: typeof MechanicsRoute
   ScheduleRoute: typeof ScheduleRoute
-  ServicesRoute: typeof ServicesRoute
+  SettingsRoute: typeof SettingsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/services': {
-      id: '/services'
-      path: '/services'
-      fullPath: '/services'
-      preLoaderRoute: typeof ServicesRouteImport
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/schedule': {
@@ -164,13 +151,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/cars': {
-      id: '/cars'
-      path: '/cars'
-      fullPath: '/cars'
-      preLoaderRoute: typeof CarsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/calendar': {
       id: '/calendar'
       path: '/calendar'
@@ -178,11 +158,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CalendarRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/brands': {
-      id: '/brands'
-      path: '/brands'
-      fullPath: '/brands'
-      preLoaderRoute: typeof BrandsRouteImport
+    '/calculator': {
+      id: '/calculator'
+      path: '/calculator'
+      fullPath: '/calculator'
+      preLoaderRoute: typeof CalculatorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -197,13 +177,12 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  BrandsRoute: BrandsRoute,
+  CalculatorRoute: CalculatorRoute,
   CalendarRoute: CalendarRoute,
-  CarsRoute: CarsRoute,
   ClientsRoute: ClientsRoute,
   MechanicsRoute: MechanicsRoute,
   ScheduleRoute: ScheduleRoute,
-  ServicesRoute: ServicesRoute,
+  SettingsRoute: SettingsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

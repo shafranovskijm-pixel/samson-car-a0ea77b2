@@ -3,11 +3,10 @@ import {
   Home,
   Calendar,
   ListChecks,
+  Calculator,
   Users,
-  Car,
-  Wrench,
-  Tags,
   UserCog,
+  Settings,
 } from "lucide-react";
 import {
   Sidebar,
@@ -25,13 +24,11 @@ const items = [
   { title: "Главная", url: "/", icon: Home },
   { title: "Календарь", url: "/calendar", icon: Calendar },
   { title: "Записи по дням", url: "/schedule", icon: ListChecks },
+  { title: "Калькулятор", url: "/calculator", icon: Calculator },
   { title: "Клиенты", url: "/clients", icon: Users },
-  { title: "Машины", url: "/cars", icon: Car },
-  { title: "Услуги и цены", url: "/services", icon: Wrench },
-  { title: "Марки", url: "/brands", icon: Tags },
   { title: "Мастера", url: "/mechanics", icon: UserCog },
-];
-
+  { title: "Настройки калькулятора", url: "/settings", icon: Settings },
+] as const;
 
 export function AppSidebar() {
   const pathname = useRouterState({ select: (r) => r.location.pathname });
