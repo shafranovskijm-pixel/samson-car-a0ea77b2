@@ -247,6 +247,3 @@ function SchedulePage() {
     </div>
   );
 }
-
-// Keep Badge import used to avoid tree-shake warnings; used elsewhere if needed.
-void Badge;
