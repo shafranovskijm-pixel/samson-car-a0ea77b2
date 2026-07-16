@@ -153,7 +153,11 @@ export function AppointmentDialog({
       setStatus("scheduled");
       setMileage("");
       setComment(prefillLabel ? `Из калькулятора: ${prefillLabel}` : "");
-      setSelected(defaultServices && defaultServices.length > 0 ? [...defaultServices] : []);
+      setSelected(
+        defaultServices && defaultServices.length > 0
+          ? defaultServices.map((s) => ({ ...s, mechanic_payout: 0 }))
+          : [],
+      );
     }
     setAddServiceId("");
   }, [
