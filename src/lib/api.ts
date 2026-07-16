@@ -283,3 +283,100 @@ export const deleteClientReminder = async (id: string) => {
   if (error) throw error;
 };
 
+
+// MECHANIC SERVICE RATES
+export const listMechanicServiceRates = async (
+  mechanic_id?: string,
+): Promise<MechanicServiceRate[]> => {
+  let q = supabase.from("mechanic_service_rates").select("*");
+  if (mechanic_id) q = q.eq("mechanic_id", mechanic_id);
+  return throwIf(await q) as MechanicServiceRate[];
+};
+
+export const upsertMechanicServiceRate = async (
+  mechanic_id: string,
+  service_id: string,
+  amount: number,
+) =>
+  throwIf(
+    await supabase
+      .from("mechanic_service_rates")
+      .upsert({ mechanic_id, service_id, amount }, { onConflict: "mechanic_id,service_id" })
+      .select()
+      .single(),
+  ) as MechanicServiceRate;
+
+export const deleteMechanicServiceRate = async (mechanic_id: string, service_id: string) => {
+  const { error } = await supabase
+    .from("mechanic_service_rates")
+    .delete()
+    .eq("mechanic_id", mechanic_id)
+    .eq("service_id", service_id);
+  if (error) throw error;
+};
+
+// MECHANIC SHIFTS
+export const listMechanicShifts = async (mechanic_id: string): Promise<MechanicShift[]> =>
+  throwIf(
+    await supabase
+      .from("mechanic_shifts")
+      .select("*")
+      .eq("mechanic_id", mechanic_id)
+      .order("starts_at", { ascending: false }),
+  ) as MechanicShift[];
+
+export const createMechanicShift = async (input: Omit<MechanicShift, "id">) =>
+  throwIf(await supabase.from("mechanic_shifts").insert(input).select().single()) as MechanicShift;
+
+export const updateMechanicShift = async (
+  id: string,
+  input: Partial<Omit<MechanicShift, "id" | "mechanic_id">>,
+) =>
+  throwIf(
+    await supabase.from("mechanic_shifts").update(input).eq("id", id).select().single(),
+  ) as MechanicShift;
+
+export const deleteMechanicShift = async (id: string) => {
+  const { error } = await supabase.from("mechanic_shifts").delete().eq("id", id);
+  if (error) throw error;
+};
+
+// MECHANIC PAYOUTS (для расчёта ЗП)
+export type MechanicPayoutRow = {
+  appointment_id: string;
+  service_id: string;
+  price: number;
+  mechanic_payout: number;
+  starts_at: string;
+  status: string;
+  service_name: string | null;
+};
+
+export const listMechanicPayouts = async (
+  mechanic_id: string,
+): Promise<MechanicPayoutRow[]> => {
+  const { data, error } = await supabase
+    .from("appointment_services")
+    .select(
+      "appointment_id, service_id, price, mechanic_payout, service:services(name), appointment:appointments!inner(starts_at, status, mechanic_id)",
+    )
+    .eq("appointment.mechanic_id", mechanic_id);
+  if (error) throw error;
+  type Row = {
+    appointment_id: string;
+    service_id: string;
+    price: number;
+    mechanic_payout: number;
+    service: { name: string } | null;
+    appointment: { starts_at: string; status: string } | null;
+  };
+  return ((data ?? []) as unknown as Row[]).map((r) => ({
+    appointment_id: r.appointment_id,
+    service_id: r.service_id,
+    price: Number(r.price),
+    mechanic_payout: Number(r.mechanic_payout),
+    starts_at: r.appointment?.starts_at ?? "",
+    status: r.appointment?.status ?? "",
+    service_name: r.service?.name ?? null,
+  }));
+};
