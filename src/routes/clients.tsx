@@ -321,9 +321,22 @@ function ClientsPage() {
                   )}
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button variant="outline" size="sm" onClick={() => openEditClient(selected)}>
                   <Pencil className="mr-1 h-4 w-4" />Изменить
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    archiveM.mutate({ id: selected.id, is_archived: !selected.is_archived })
+                  }
+                >
+                  {selected.is_archived ? (
+                    <><ArchiveRestore className="mr-1 h-4 w-4" />Восстановить</>
+                  ) : (
+                    <><Archive className="mr-1 h-4 w-4" />В архив</>
+                  )}
                 </Button>
                 <Button
                   variant="outline"
