@@ -66,6 +66,8 @@ export type Database = {
           id: string
           mechanic_id: string | null
           mileage: number | null
+          paid_amount: number
+          payment_status: string
           starts_at: string
           status: string
           total_price: number
@@ -80,6 +82,8 @@ export type Database = {
           id?: string
           mechanic_id?: string | null
           mileage?: number | null
+          paid_amount?: number
+          payment_status?: string
           starts_at: string
           status?: string
           total_price?: number
@@ -94,6 +98,8 @@ export type Database = {
           id?: string
           mechanic_id?: string | null
           mileage?: number | null
+          paid_amount?: number
+          payment_status?: string
           starts_at?: string
           status?: string
           total_price?: number
