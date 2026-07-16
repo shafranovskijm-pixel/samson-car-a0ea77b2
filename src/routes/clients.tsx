@@ -372,9 +372,16 @@ function ClientsPage() {
                 })}
               </div>
             )}
+
+            {/* HISTORY */}
+            <ClientHistory clientId={selected.id} />
+
+            {/* REMINDERS */}
+            <ClientReminders clientId={selected.id} />
           </div>
         )}
       </section>
+
 
       {/* CLIENT DIALOG */}
       <Dialog
