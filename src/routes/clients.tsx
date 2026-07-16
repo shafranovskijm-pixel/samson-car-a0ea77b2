@@ -76,7 +76,9 @@ function ClientsPage() {
     birthday: "",
     telegram: "",
     note: "",
+    category: "regular" as ClientCategory,
   });
+
   const [customFields, setCustomFields] = useState<{ key: string; value: string }[]>([]);
 
 
@@ -127,6 +129,7 @@ function ClientsPage() {
       birthday: "",
       telegram: "",
       note: "",
+      category: "regular",
     });
     setCustomFields([]);
   };
@@ -140,12 +143,14 @@ function ClientsPage() {
       birthday: c.birthday ?? "",
       telegram: c.telegram ?? "",
       note: c.note ?? "",
+      category: normalizeCategory(c.category as string | null | undefined),
     });
     const cf = (c.custom_fields ?? {}) as Record<string, string>;
     setCustomFields(
       Object.entries(cf).map(([key, value]) => ({ key, value: String(value ?? "") })),
     );
   };
+
 
   const saveClientM = useMutation({
     mutationFn: async () => {
