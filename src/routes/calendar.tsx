@@ -232,6 +232,7 @@ function CalendarPage() {
           onEventDrop={onEventDrop}
           onEventResize={onEventResize}
           getNow={() => new Date()}
+          scrollToTime={now}
           onSelectSlot={(slot) => openNew(slot.start as Date)}
           onSelectEvent={(ev) => {
             const e = ev as { id: string };
