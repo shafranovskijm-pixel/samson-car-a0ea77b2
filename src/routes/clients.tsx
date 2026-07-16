@@ -203,6 +203,26 @@ function ClientsPage() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
+          <div className="mt-2 grid grid-cols-2 gap-1 rounded-md bg-muted p-1 text-xs">
+            <button
+              type="button"
+              onClick={() => { setTab("active"); setSelectedId(null); }}
+              className={`rounded px-2 py-1 transition ${
+                tab === "active" ? "bg-background font-medium shadow-sm" : "text-muted-foreground"
+              }`}
+            >
+              Активные · {activeCount}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setTab("archived"); setSelectedId(null); }}
+              className={`rounded px-2 py-1 transition ${
+                tab === "archived" ? "bg-background font-medium shadow-sm" : "text-muted-foreground"
+              }`}
+            >
+              Архив · {archivedCount}
+            </button>
+          </div>
         </div>
         <div className="flex-1 overflow-auto">
           {filtered.length === 0 && (
