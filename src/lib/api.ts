@@ -5,9 +5,11 @@ import type {
   Car,
   CarModel,
   Client,
+  ClientReminder,
   Mechanic,
   Service,
 } from "./types";
+
 
 const throwIf = <T,>(x: { data: T | null; error: unknown }): T => {
   if (x.error) throw x.error;
@@ -221,3 +223,53 @@ export const deleteAppointment = async (id: string) => {
   const { error } = await supabase.from("appointments").delete().eq("id", id);
   if (error) throw error;
 };
+
+// APPOINTMENTS by client (история клиента)
+export const listAppointmentsByClient = async (
+  client_id: string,
+): Promise<AppointmentWithRelations[]> => {
+  const carsRes = await supabase.from("cars").select("id").eq("client_id", client_id);
+  if (carsRes.error) throw carsRes.error;
+  const ids = (carsRes.data ?? []).map((c) => c.id as string);
+  if (ids.length === 0) return [];
+  return throwIf(
+    await supabase
+      .from("appointments")
+      .select(APPT_SELECT)
+      .in("car_id", ids)
+      .order("starts_at", { ascending: false }),
+  ) as AppointmentWithRelations[];
+};
+
+// CLIENT REMINDERS
+export const listClientReminders = async (client_id: string): Promise<ClientReminder[]> =>
+  throwIf(
+    await supabase
+      .from("client_reminders")
+      .select("*")
+      .eq("client_id", client_id)
+      .order("remind_at", { ascending: true }),
+  ) as ClientReminder[];
+
+export const createClientReminder = async (
+  input: Omit<ClientReminder, "id" | "created_at" | "updated_at" | "done_at"> & {
+    done_at?: string | null;
+  },
+) =>
+  throwIf(
+    await supabase.from("client_reminders").insert(input).select().single(),
+  ) as ClientReminder;
+
+export const updateClientReminder = async (
+  id: string,
+  input: Partial<Omit<ClientReminder, "id" | "client_id" | "created_at" | "updated_at">>,
+) =>
+  throwIf(
+    await supabase.from("client_reminders").update(input).eq("id", id).select().single(),
+  ) as ClientReminder;
+
+export const deleteClientReminder = async (id: string) => {
+  const { error } = await supabase.from("client_reminders").delete().eq("id", id);
+  if (error) throw error;
+};
+

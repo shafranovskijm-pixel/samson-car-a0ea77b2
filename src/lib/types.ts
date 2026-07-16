@@ -99,3 +99,26 @@ export const STATUS_COLORS: Record<AppointmentStatus, string> = {
   done: "bg-green-100 text-green-800 border-green-300",
   cancelled: "bg-gray-100 text-gray-600 border-gray-300",
 };
+
+export type ReminderInterval = "day" | "week" | "month" | "half_year" | "year" | "custom";
+export const REMINDER_INTERVAL_LABELS: Record<ReminderInterval, string> = {
+  day: "День",
+  week: "Неделя",
+  month: "Месяц",
+  half_year: "Полгода",
+  year: "Год",
+  custom: "Произвольно",
+};
+export type ClientReminder = {
+  id: string;
+  client_id: string;
+  title: string;
+  note: string | null;
+  remind_at: string;
+  interval_kind: ReminderInterval;
+  repeat: boolean;
+  done_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
