@@ -73,7 +73,7 @@ const CATEGORIES: { name: string; img: string }[] = [
 ];
 
 function LandingPage() {
-  const { openLogin } = useAuth();
+  
   const { data: brands = [] } = useQuery({ queryKey: ["brands"], queryFn: listBrands });
   const { data: services = [] } = useQuery({ queryKey: ["services"], queryFn: listServices });
 
