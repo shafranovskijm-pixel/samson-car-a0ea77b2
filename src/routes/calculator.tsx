@@ -97,7 +97,7 @@ function LandingPage() {
     },
     onSuccess: (m) => {
       qc.invalidateQueries({ queryKey: ["car-models", brandId] });
-      setModelId((m as { id: string }).id);
+      setModelId((m as unknown as { id: string }).id);
       setNewModelName("");
       toast.success("Модель добавлена");
     },
