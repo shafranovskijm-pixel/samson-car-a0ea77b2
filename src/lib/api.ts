@@ -144,14 +144,19 @@ export const deleteMechanic = async (id: string) => {
 export type AppointmentWithRelations = Appointment & {
   car: (Car & { brand: Brand | null; client: Client }) | null;
   mechanic: Mechanic | null;
-  services: { service_id: string; price: number; service: Service | null }[];
+  services: {
+    service_id: string;
+    price: number;
+    mechanic_payout: number;
+    service: Service | null;
+  }[];
 };
 
 const APPT_SELECT = `
   *,
   car:cars(*, brand:brands(*), client:clients(*)),
   mechanic:mechanics(*),
-  services:appointment_services(service_id, price, service:services(*))
+  services:appointment_services(service_id, price, mechanic_payout, service:services(*))
 `;
 
 export const listAppointments = async (
@@ -167,6 +172,8 @@ export const listAppointments = async (
 export const getAppointment = async (id: string): Promise<AppointmentWithRelations> =>
   throwIf(await supabase.from("appointments").select(APPT_SELECT).eq("id", id).single()) as AppointmentWithRelations;
 
+type ApptServiceInput = { service_id: string; price: number; mechanic_payout: number };
+
 export const createAppointment = async (input: {
   car_id: string;
   mechanic_id: string | null;
@@ -175,7 +182,7 @@ export const createAppointment = async (input: {
   status: string;
   mileage: number | null;
   comment: string | null;
-  services: { service_id: string; price: number }[];
+  services: ApptServiceInput[];
 }) => {
   const { services, ...appt } = input;
   const created = throwIf(
@@ -188,7 +195,6 @@ export const createAppointment = async (input: {
     if (error) throw error;
   }
   return created;
-
 };
 
 export const updateAppointment = async (
@@ -201,7 +207,7 @@ export const updateAppointment = async (
     status: string;
     mileage: number | null;
     comment: string | null;
-    services: { service_id: string; price: number }[];
+    services: ApptServiceInput[];
   },
 ) => {
   const { services, ...appt } = input;
@@ -218,6 +224,7 @@ export const updateAppointment = async (
     if (error) throw error;
   }
 };
+
 
 export const deleteAppointment = async (id: string) => {
   const { error } = await supabase.from("appointments").delete().eq("id", id);
