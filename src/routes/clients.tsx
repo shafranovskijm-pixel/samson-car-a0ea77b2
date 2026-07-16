@@ -38,7 +38,17 @@ function ClientsPage() {
   const [clientDialog, setClientDialog] = useState<{ open: boolean; editing: Client | null }>({
     open: false, editing: null,
   });
-  const [clientForm, setClientForm] = useState({ full_name: "", phone: "", email: "" });
+  const [clientForm, setClientForm] = useState({
+    full_name: "",
+    phone: "",
+    email: "",
+    address: "",
+    birthday: "",
+    telegram: "",
+    note: "",
+  });
+  const [customFields, setCustomFields] = useState<{ key: string; value: string }[]>([]);
+
 
   const [carDialog, setCarDialog] = useState<{ open: boolean; editing: Car | null; clientId: string }>({
     open: false, editing: null, clientId: "",
