@@ -1,10 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Calendar as BigCalendar, dateFnsLocalizer, Views, type View } from "react-big-calendar";
 import { format, parse, startOfWeek, getDay } from "date-fns";
 import { ru } from "date-fns/locale";
-import { Plus } from "lucide-react";
+import { Plus, Clock } from "lucide-react";
+import { toast } from "sonner";
+
 import { z } from "zod";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 
@@ -113,9 +115,33 @@ function CalendarPage() {
     : null;
 
   const openNew = (start: Date) => {
+    if (start.getTime() < Date.now() - 60_000) {
+      toast.error("Нельзя записать на прошедшее время");
+      return;
+    }
     setDialog({ open: true, id: null, start, prefill: currentPrefill });
     if (hasPrefill) navigate({ search: {}, replace: true });
   };
+
+  // Живые часы по Уссурийску (Asia/Vladivostok, UTC+10)
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const ussuriyskTime = useMemo(
+    () =>
+      new Intl.DateTimeFormat("ru-RU", {
+        timeZone: "Asia/Vladivostok",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        weekday: "short",
+        day: "2-digit",
+        month: "short",
+      }).format(now),
+    [now],
+  );
 
   return (
     <div className="p-4">
@@ -123,7 +149,7 @@ function CalendarPage() {
         <div>
           <h1 className="text-2xl font-bold">Календарь записей</h1>
           <p className="text-sm text-muted-foreground">
-            {appointments.length} записей · клик по слоту создаёт новую
+            {appointments.length} записей · клик по свободному слоту создаёт новую
           </p>
           {hasPrefill && (
             <p className="mt-1 text-sm text-red-600">
@@ -131,10 +157,22 @@ function CalendarPage() {
             </p>
           )}
         </div>
-        <Button onClick={() => openNew(new Date())}>
-          <Plus className="mr-2 h-4 w-4" /> Новая запись
-        </Button>
+        <div className="flex items-center gap-3">
+          <div className="hidden items-center gap-2 rounded-md border bg-muted/40 px-3 py-2 text-sm sm:flex">
+            <Clock className="h-4 w-4 text-red-600" />
+            <div className="leading-tight">
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Уссурийск
+              </div>
+              <div className="font-mono font-semibold tabular-nums">{ussuriyskTime}</div>
+            </div>
+          </div>
+          <Button onClick={() => openNew(new Date())}>
+            <Plus className="mr-2 h-4 w-4" /> Новая запись
+          </Button>
+        </div>
       </div>
+
 
       <div className="mb-3 flex flex-wrap gap-2 text-xs">
         {mechanics.map((m) => (
@@ -157,6 +195,7 @@ function CalendarPage() {
           onNavigate={setDate}
           views={[Views.MONTH, Views.WEEK, Views.DAY, Views.AGENDA]}
           selectable
+          getNow={() => new Date()}
           onSelectSlot={(slot) => openNew(slot.start as Date)}
           onSelectEvent={(ev) =>
             setDialog({ open: true, id: ev.id as string, start: null, prefill: null })
@@ -168,10 +207,23 @@ function CalendarPage() {
               opacity: ev.resource?.status === "cancelled" ? 0.4 : 1,
             },
           })}
+          slotPropGetter={(slotDate) =>
+            slotDate.getTime() < now.getTime() - 60_000
+              ? { style: { backgroundColor: "rgba(0,0,0,0.04)" } }
+              : {}
+          }
+          dayPropGetter={(day) => {
+            const today = new Date();
+            const isPast =
+              day.getTime() <
+              new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+            return isPast ? { style: { backgroundColor: "rgba(0,0,0,0.03)" } } : {};
+          }}
           tooltipAccessor={(ev) =>
             `${ev.title} · ${STATUS_LABELS[ev.resource?.status as keyof typeof STATUS_LABELS] ?? ""}`
           }
         />
+
       </div>
 
       <AppointmentDialog
