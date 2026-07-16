@@ -69,11 +69,24 @@ export function AppointmentDialog({
   const { data: cars = [] } = useQuery({ queryKey: ["cars"], queryFn: listCars });
   const { data: mechanics = [] } = useQuery({ queryKey: ["mechanics"], queryFn: listMechanics });
   const { data: services = [] } = useQuery({ queryKey: ["services"], queryFn: listServices });
+  const { data: brands = [] } = useQuery({ queryKey: ["brands"], queryFn: listBrands });
+  const { data: allModels = [] } = useQuery({
+    queryKey: ["car-models"],
+    queryFn: () => listCarModels(),
+  });
   const { data: existing } = useQuery({
     queryKey: ["appointment", appointmentId],
     queryFn: () => getAppointment(appointmentId!),
     enabled: !!appointmentId && open,
   });
+
+  const prefillLabel = useMemo(() => {
+    if (!defaultBrandId && !defaultModelId) return "";
+    const b = brands.find((x) => x.id === defaultBrandId)?.name ?? "";
+    const m = allModels.find((x) => x.id === defaultModelId)?.name ?? "";
+    return [b, m].filter(Boolean).join(" ");
+  }, [brands, allModels, defaultBrandId, defaultModelId]);
+
 
   const [clientId, setClientId] = useState<string>("");
   const [carId, setCarId] = useState<string>("");
