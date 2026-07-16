@@ -83,7 +83,7 @@ export type Client = {
   telegram?: string | null;
   note?: string | null;
   is_archived?: boolean;
-  category?: ClientCategory | string | null;
+  category?: ClientCategory | string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   custom_fields?: any;
 };
