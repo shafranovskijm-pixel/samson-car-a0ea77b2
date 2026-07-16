@@ -503,6 +503,31 @@ function ClientsPage() {
                 onChange={(e) => setClientForm({ ...clientForm, full_name: e.target.value })}
               />
             </div>
+            <div>
+              <Label>Категория</Label>
+              <div className="mt-1 grid grid-cols-3 gap-1.5">
+                {CLIENT_CATEGORY_ORDER.map((cat) => {
+                  const Icon = CATEGORY_ICONS[cat];
+                  const selected = clientForm.category === cat;
+                  return (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setClientForm({ ...clientForm, category: cat })}
+                      className={`flex items-center gap-1.5 rounded-md border px-2 py-1.5 text-xs transition ${
+                        selected
+                          ? `${CLIENT_CATEGORY_COLORS[cat]} border-transparent text-white shadow-sm`
+                          : "bg-background hover:bg-muted"
+                      }`}
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                      <span className="truncate">{CLIENT_CATEGORY_LABELS[cat]}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Телефон</Label>
