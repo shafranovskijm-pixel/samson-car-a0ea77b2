@@ -260,7 +260,7 @@ function LandingPage() {
                   <div className="mb-2 text-lg font-semibold text-white">
                     Выберите категорию услуг
                   </div>
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="grid gap-5 sm:grid-cols-2">
                     {CATEGORIES.map((c) => {
                       const count = byCategory[c.name]?.length ?? 0;
                       const selectedInCat =
@@ -270,7 +270,7 @@ function LandingPage() {
                           key={c.name}
                           type="button"
                           onClick={() => setActiveCategory(c.name)}
-                          className="group relative aspect-[4/3] overflow-hidden rounded-2xl border border-white/10 bg-white/5 text-left transition-all hover:border-red-500/50 hover:shadow-[0_10px_40px_-10px_rgba(239,68,68,0.4)]"
+                          className="group relative aspect-[16/10] overflow-hidden rounded-2xl border border-white/10 bg-white/5 text-left transition-all hover:border-red-500/50 hover:shadow-[0_10px_40px_-10px_rgba(239,68,68,0.4)]"
                         >
                           <img
                             src={c.img}
@@ -280,17 +280,17 @@ function LandingPage() {
                             height={512}
                             className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                           />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/50 to-transparent" />
                           {selectedInCat > 0 && (
-                            <div className="absolute right-3 top-3 flex h-7 min-w-7 items-center justify-center rounded-full bg-red-600 px-2 text-xs font-bold text-white">
+                            <div className="absolute right-4 top-4 flex h-9 min-w-9 items-center justify-center rounded-full bg-red-600 px-2.5 text-sm font-bold text-white shadow-lg">
                               {selectedInCat}
                             </div>
                           )}
-                          <div className="absolute inset-x-0 bottom-0 p-4">
-                            <div className="text-base font-bold leading-tight text-white">
+                          <div className="absolute inset-x-0 bottom-0 p-6">
+                            <div className="text-2xl font-bold leading-tight text-white">
                               {c.name}
                             </div>
-                            <div className="mt-1 text-xs text-white/70">
+                            <div className="mt-2 text-sm text-white/70">
                               {count} услуг · нажмите чтобы открыть
                             </div>
                           </div>
@@ -298,6 +298,7 @@ function LandingPage() {
                       );
                     })}
                   </div>
+
                 </>
               ) : (
                 <div>
