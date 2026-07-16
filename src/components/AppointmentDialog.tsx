@@ -29,12 +29,15 @@ import {
   deleteAppointment,
   getAppointment,
   getPriceForBrand,
+  listBrands,
+  listCarModels,
   listCars,
   listClients,
   listMechanics,
   listServices,
   updateAppointment,
 } from "@/lib/api";
+
 import { STATUS_LABELS, type AppointmentStatus } from "@/lib/types";
 
 type Props = {
