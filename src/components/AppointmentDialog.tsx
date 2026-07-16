@@ -361,36 +361,66 @@ export function AppointmentDialog({
               {selected.map((row) => {
                 const svc = services.find((s) => s.id === row.service_id);
                 return (
-                  <div key={row.service_id} className="flex items-center gap-2 rounded border p-2">
-                    <div className="flex-1 text-sm">
-                      <div className="font-medium">{svc?.name}</div>
-                      <div className="text-xs text-muted-foreground">{svc?.category}</div>
+                  <div key={row.service_id} className="rounded border p-2">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 text-sm">
+                        <div className="font-medium">{svc?.name}</div>
+                        <div className="text-xs text-muted-foreground">{svc?.category}</div>
+                      </div>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        type="button"
+                        onClick={() =>
+                          setSelected((prev) => prev.filter((x) => x.service_id !== row.service_id))
+                        }
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
                     </div>
-                    <Input
-                      type="number"
-                      className="w-24"
-                      value={row.price}
-                      onChange={(e) => {
-                        const p = Number(e.target.value);
-                        setSelected((prev) =>
-                          prev.map((x) => (x.service_id === row.service_id ? { ...x, price: p } : x)),
-                        );
-                      }}
-                    />
-                    <span className="text-sm">₽</span>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      type="button"
-                      onClick={() =>
-                        setSelected((prev) => prev.filter((x) => x.service_id !== row.service_id))
-                      }
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
+                    <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
+                      <div className="flex items-center gap-1">
+                        <span className="text-muted-foreground">Клиенту:</span>
+                        <Input
+                          type="number"
+                          className="h-8 w-24"
+                          value={row.price}
+                          onChange={(e) => {
+                            const p = Number(e.target.value);
+                            setSelected((prev) =>
+                              prev.map((x) =>
+                                x.service_id === row.service_id ? { ...x, price: p } : x,
+                              ),
+                            );
+                          }}
+                        />
+                        <span>₽</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-muted-foreground">Мастеру:</span>
+                        <Input
+                          type="number"
+                          className="h-8 w-24"
+                          value={row.mechanic_payout}
+                          disabled={!mechanicId}
+                          onChange={(e) => {
+                            const p = Number(e.target.value);
+                            setSelected((prev) =>
+                              prev.map((x) =>
+                                x.service_id === row.service_id
+                                  ? { ...x, mechanic_payout: p }
+                                  : x,
+                              ),
+                            );
+                          }}
+                        />
+                        <span>₽</span>
+                      </div>
+                    </div>
                   </div>
                 );
               })}
+
             </div>
             <div className="mt-3 flex justify-end">
               <Badge variant="secondary" className="text-base">Итого: {total} ₽</Badge>
