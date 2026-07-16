@@ -26,7 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { listBrands, listCarModels, listServices, listPricesForBrand } from "@/lib/api";
-import { useAuth } from "@/lib/auth";
+
 import { TIER_COEFFICIENT, TIER_LABEL, resolveTier, type BrandTier } from "@/lib/types";
 import heroAsset from "@/assets/samson-hero.jpg.asset.json";
 import imgFluids from "@/assets/cat-fluids.jpg";
@@ -73,7 +73,7 @@ const CATEGORIES: { name: string; img: string }[] = [
 ];
 
 function LandingPage() {
-  const { openLogin } = useAuth();
+  
   const { data: brands = [] } = useQuery({ queryKey: ["brands"], queryFn: listBrands });
   const { data: services = [] } = useQuery({ queryKey: ["services"], queryFn: listServices });
 
@@ -164,14 +164,13 @@ function LandingPage() {
             <Sparkles className="mr-1 h-3 w-3" /> Автосервис нового поколения
           </Badge>
           <h1 className="max-w-3xl text-5xl font-black leading-tight tracking-tight md:text-7xl">
-            <button
-              type="button"
-              onClick={openLogin}
+            <Link
+              to="/calendar"
               className="cursor-pointer bg-transparent p-0 text-left transition hover:opacity-80"
-              title="Вход в CRM"
+              title="Открыть CRM"
             >
               SAMSON<span className="text-red-500">.</span>
-            </button>
+            </Link>
             <br />
             <span className="bg-gradient-to-r from-orange-400 via-red-500 to-red-700 bg-clip-text text-transparent">
               Сила и точность
