@@ -461,7 +461,34 @@ function CalendarPage() {
             const s = slot.start as Date;
             const e = slot.end as Date;
             if (mode === "shifts") {
-              openNewShift(s, e);
+              if (activeMechanicId) {
+                // Month view returns midnight-to-midnight range; treat that
+                // as a working-day 9-18 default so it isn't a 24h block.
+                const sameMidnight =
+                  s.getHours() === 0 && s.getMinutes() === 0 &&
+                  e.getHours() === 0 && e.getMinutes() === 0;
+                let start = s;
+                let end = e;
+                if (sameMidnight) {
+                  const days = Math.max(
+                    1,
+                    Math.round((e.getTime() - s.getTime()) / 86_400_000),
+                  );
+                  start = new Date(s);
+                  start.setHours(9, 0, 0, 0);
+                  end = new Date(s);
+                  end.setDate(end.getDate() + (days - 1));
+                  end.setHours(18, 0, 0, 0);
+                }
+                createShiftMut.mutate({
+                  mechanic_id: activeMechanicId,
+                  starts_at: start.toISOString(),
+                  ends_at: end.toISOString(),
+                  note: null,
+                });
+              } else {
+                openNewShift(s, e);
+              }
             } else {
               openNew(s);
             }
