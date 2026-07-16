@@ -141,19 +141,11 @@ function CalendarPage() {
           )}
         </div>
         <div className="flex items-center gap-3">
-          <div className="hidden items-center gap-2 rounded-md border bg-muted/40 px-3 py-2 text-sm sm:flex">
-            <Clock className="h-4 w-4 text-red-600" />
-            <div className="leading-tight">
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                Уссурийск
-              </div>
-              <div className="font-mono font-semibold tabular-nums">{ussuriyskTime}</div>
-            </div>
-          </div>
           <Button onClick={() => openNew(new Date())}>
             <Plus className="mr-2 h-4 w-4" /> Новая запись
           </Button>
         </div>
+
       </div>
 
 
