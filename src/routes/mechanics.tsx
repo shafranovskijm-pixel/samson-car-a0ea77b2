@@ -153,22 +153,23 @@ function MechanicsPage() {
             </button>
 
             <div
-              className="flex items-start justify-between gap-4 rounded-lg border-l-4 p-4"
+              className="flex flex-col items-start gap-3 rounded-lg border-l-4 p-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4"
               style={{ borderLeftColor: selected.color, background: `${selected.color}10` }}
             >
-              <div>
+              <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <span
-                    className="inline-block h-4 w-4 rounded"
+                    className="inline-block h-4 w-4 shrink-0 rounded"
                     style={{ background: selected.color }}
                   />
-                  <h1 className="text-2xl font-bold">{selected.full_name}</h1>
+                  <h1 className="truncate text-xl font-bold sm:text-2xl">{selected.full_name}</h1>
                 </div>
-                <div className="mt-1 flex items-center gap-3 text-sm text-muted-foreground">
+                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-muted-foreground">
                   <span>{selected.specialization ?? "—"}</span>
                   {selected.phone && <span>· {selected.phone}</span>}
                 </div>
               </div>
+
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={() => openEdit(selected)}>
                   <Pencil className="mr-1 h-4 w-4" />Изменить
