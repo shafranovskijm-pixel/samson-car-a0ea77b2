@@ -316,6 +316,49 @@ function SchedulePage() {
         onOpenChange={(o) => setDialog((d) => ({ ...d, open: o }))}
         appointmentId={dialog.id}
       />
+
+      <Dialog
+        open={prepaidDlg.open}
+        onOpenChange={(o) => setPrepaidDlg((d) => ({ ...d, open: o }))}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Предоплата</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="text-sm text-muted-foreground">
+              Итого по записи: <span className="font-medium text-foreground">{prepaidDlg.total} ₽</span>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="prepaid-amount">Сколько внесли, ₽</Label>
+              <Input
+                id="prepaid-amount"
+                type="number"
+                inputMode="numeric"
+                min={0}
+                max={prepaidDlg.total}
+                value={prepaidDlg.amount}
+                onChange={(e) => setPrepaidDlg((d) => ({ ...d, amount: e.target.value }))}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") submitPrepaid();
+                }}
+                autoFocus
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setPrepaidDlg((d) => ({ ...d, open: false }))}
+            >
+              Отмена
+            </Button>
+            <Button onClick={submitPrepaid} disabled={paymentMut.isPending}>
+              Сохранить
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
