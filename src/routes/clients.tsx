@@ -1194,3 +1194,172 @@ function ClientReminders({ clientId }: { clientId: string }) {
     </div>
   );
 }
+
+// ============ COMMENTS ============
+function ClientComments({ clientId }: { clientId: string }) {
+  const qc = useQueryClient();
+  const { data: items = [] } = useQuery({
+    queryKey: ["client-comments", clientId],
+    queryFn: () => listClientComments(clientId),
+  });
+
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState("");
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["client-comments", clientId] });
+
+  const addM = useMutation({
+    mutationFn: async () => {
+      const body = draft.trim();
+      if (!body) throw new Error("Введите текст комментария");
+      await createClientComment(clientId, body);
+    },
+    onSuccess: () => {
+      toast.success("Добавлено");
+      setDraft("");
+      setAdding(false);
+      invalidate();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const updM = useMutation({
+    mutationFn: async (c: ClientComment) => {
+      const body = editDraft.trim();
+      if (!body) throw new Error("Комментарий не может быть пустым");
+      await updateClientComment(c.id, body);
+    },
+    onSuccess: () => {
+      toast.success("Сохранено");
+      setEditingId(null);
+      setEditDraft("");
+      invalidate();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const delM = useMutation({
+    mutationFn: (id: string) => deleteClientComment(id),
+    onSuccess: () => {
+      toast.success("Удалено");
+      invalidate();
+    },
+  });
+
+  return (
+    <div className="mt-8">
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <MessageSquare className="h-5 w-5" />
+          <h2 className="text-lg font-semibold">
+            Комментарии{" "}
+            <span className="text-sm font-normal text-muted-foreground">· {items.length}</span>
+          </h2>
+        </div>
+        {!adding && (
+          <Button size="sm" onClick={() => { setAdding(true); setDraft(""); }}>
+            <Plus className="mr-1 h-4 w-4" />Комментарий
+          </Button>
+        )}
+      </div>
+
+      {adding && (
+        <div className="mb-3 rounded-lg border bg-card p-3">
+          <Textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            rows={3}
+            autoFocus
+            placeholder="Например: клиент любит чтобы позвонили после ТО, предпочитает наличные, машина стоит в дальнем боксе…"
+          />
+          <div className="mt-2 flex justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { setAdding(false); setDraft(""); }}
+            >
+              Отмена
+            </Button>
+            <Button size="sm" onClick={() => addM.mutate()} disabled={addM.isPending}>
+              Сохранить
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {items.length === 0 && !adding ? (
+        <div className="rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
+          Комментариев пока нет
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {items.map((c) => {
+            const isEditing = editingId === c.id;
+            return (
+              <div key={c.id} className="rounded-lg border bg-card p-3 text-sm">
+                {isEditing ? (
+                  <>
+                    <Textarea
+                      value={editDraft}
+                      onChange={(e) => setEditDraft(e.target.value)}
+                      rows={3}
+                      autoFocus
+                    />
+                    <div className="mt-2 flex justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => { setEditingId(null); setEditDraft(""); }}
+                      >
+                        Отмена
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => updM.mutate(c)}
+                        disabled={updM.isPending}
+                      >
+                        Сохранить
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="whitespace-pre-wrap break-words">{c.body}</div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {new Date(c.created_at).toLocaleString("ru-RU", {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })}
+                        {c.updated_at !== c.created_at ? " · изменён" : ""}
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 gap-1">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => { setEditingId(c.id); setEditDraft(c.body); }}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => { if (confirm("Удалить комментарий?")) delM.mutate(c.id); }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
