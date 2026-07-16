@@ -42,6 +42,7 @@ import imgBrakes from "@/assets/cat-brakes.jpg";
 import imgAc from "@/assets/cat-ac.jpg";
 import imgTires from "@/assets/cat-tires.jpg";
 import imgElectric from "@/assets/cat-electric.jpg";
+import { AdminStats } from "@/components/AdminStats";
 
 
 export const Route = createFileRoute("/calculator")({
@@ -217,7 +218,7 @@ function LandingPage() {
         />
         <div className="pointer-events-none absolute left-1/2 top-0 h-64 w-[600px] -translate-x-1/2 rounded-full bg-red-600/20 blur-3xl" />
 
-        <div className="relative mx-auto max-w-7xl px-6">
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
 
 
 
@@ -595,6 +596,8 @@ function LandingPage() {
           © Samson Auto · Автосервис полного цикла
         </div>
       </footer>
+
+      <AdminStats />
     </div>
   );
 }

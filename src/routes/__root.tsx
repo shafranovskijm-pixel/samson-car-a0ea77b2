@@ -107,9 +107,12 @@ function RootComponent() {
         <div className="flex min-h-screen w-full">
           <AppSidebar />
           <div className="flex flex-1 flex-col">
-            <header className="flex h-12 items-center gap-3 border-b bg-background px-3">
+            <header className="flex h-12 items-center gap-2 border-b bg-background px-2 sm:gap-3 sm:px-3">
               <SidebarTrigger />
-              <div className="text-sm font-medium">Samson Auto — CRM</div>
+              <div className="truncate text-sm font-medium">
+                <span className="sm:hidden">Samson Auto</span>
+                <span className="hidden sm:inline">Samson Auto — CRM</span>
+              </div>
               <div className="ml-auto">
                 <UssuriyskClock />
               </div>

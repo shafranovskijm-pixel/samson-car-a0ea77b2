@@ -75,7 +75,9 @@ function parseServices(s: string): { service_id: string; price: number }[] {
 function CalendarPage() {
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/calendar" });
-  const [view, setView] = useState<View>(Views.WEEK);
+  const [view, setView] = useState<View>(
+    typeof window !== "undefined" && window.innerWidth < 640 ? Views.DAY : Views.WEEK,
+  );
   const [date, setDate] = useState(new Date());
   const [dialog, setDialog] = useState<{
     open: boolean;
@@ -185,7 +187,7 @@ function CalendarPage() {
 
 
   return (
-    <div className="p-4">
+    <div className="p-3 sm:p-4">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="text-2xl font-bold">Календарь записей</h1>
@@ -220,7 +222,7 @@ function CalendarPage() {
         Записи можно перетаскивать между слотами и растягивать за нижний край
       </div>
 
-      <div className="rounded-lg border bg-card" style={{ height: "calc(100vh - 220px)" }}>
+      <div className="rounded-lg border bg-card" style={{ height: "calc(100dvh - 220px)" }}>
         <DnDCalendar
           localizer={localizer}
           events={events}
