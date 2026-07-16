@@ -101,8 +101,17 @@ export function AppointmentDialog({
   const [status, setStatus] = useState<AppointmentStatus>("scheduled");
   const [mileage, setMileage] = useState<string>("");
   const [comment, setComment] = useState<string>("");
-  const [selected, setSelected] = useState<{ service_id: string; price: number }[]>([]);
+  const [selected, setSelected] = useState<SvcRow[]>([]);
   const [addServiceId, setAddServiceId] = useState<string>("");
+
+  const { data: rates = [] } = useQuery({
+    queryKey: ["mechanic-service-rates", mechanicId],
+    queryFn: () => listMechanicServiceRates(mechanicId),
+    enabled: !!mechanicId,
+  });
+  const rateFor = (svc_id: string) =>
+    rates.find((r) => r.service_id === svc_id)?.amount ?? 0;
+
 
   useEffect(() => {
     if (!open) return;
