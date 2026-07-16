@@ -46,7 +46,9 @@ export type Client = {
   birthday?: string | null;
   telegram?: string | null;
   note?: string | null;
-  custom_fields?: unknown;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  custom_fields?: any;
+
 };
 
 export type Car = {
