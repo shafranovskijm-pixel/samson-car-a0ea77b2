@@ -218,14 +218,8 @@ function LandingPage() {
         <div className="pointer-events-none absolute left-1/2 top-0 h-64 w-[600px] -translate-x-1/2 rounded-full bg-red-600/20 blur-3xl" />
 
         <div className="relative mx-auto max-w-7xl px-6">
-          <div className="mb-8 text-center">
-            <h2 className="text-4xl font-bold md:text-5xl">
-              Рассчитайте стоимость{" "}
-              <span className="bg-gradient-to-r from-orange-400 to-red-500 bg-clip-text text-transparent">
-                за минуту
-              </span>
-            </h2>
-          </div>
+
+
 
 
           {/* ШАГ 1 — УСЛУГИ */}
