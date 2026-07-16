@@ -111,8 +111,9 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <SidebarProvider>
-        <div className="flex min-h-screen w-full">
+        <div className="flex min-h-screen w-full overflow-x-hidden">
           <AppSidebar />
+
           <div className="flex min-w-0 flex-1 flex-col">
             <header className="flex h-12 items-center gap-2 border-b bg-background px-2 sm:gap-3 sm:px-3">
               <SidebarTrigger />
