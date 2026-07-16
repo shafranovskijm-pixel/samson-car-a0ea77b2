@@ -472,11 +472,15 @@ function ClientsPage() {
               </div>
             )}
 
+            {/* COMMENTS */}
+            <ClientComments clientId={selected.id} />
+
             {/* HISTORY */}
             <ClientHistory clientId={selected.id} />
 
             {/* REMINDERS */}
             <ClientReminders clientId={selected.id} />
+
           </div>
         )}
       </section>
