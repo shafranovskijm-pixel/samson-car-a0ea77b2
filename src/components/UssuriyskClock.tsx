@@ -2,22 +2,25 @@ import { useEffect, useMemo, useState } from "react";
 import { Clock } from "lucide-react";
 
 export function UssuriyskClock() {
-  const [now, setNow] = useState(() => new Date());
+  const [now, setNow] = useState<Date | null>(null);
   useEffect(() => {
+    setNow(new Date());
     const t = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(t);
   }, []);
   const text = useMemo(
     () =>
-      new Intl.DateTimeFormat("ru-RU", {
-        timeZone: "Asia/Vladivostok",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        weekday: "short",
-        day: "2-digit",
-        month: "short",
-      }).format(now),
+      now
+        ? new Intl.DateTimeFormat("ru-RU", {
+            timeZone: "Asia/Vladivostok",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            weekday: "short",
+            day: "2-digit",
+            month: "short",
+          }).format(now)
+        : "",
     [now],
   );
   return (
@@ -27,7 +30,9 @@ export function UssuriyskClock() {
         <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
           Уссурийск
         </div>
-        <div className="font-mono font-semibold tabular-nums">{text}</div>
+        <div className="font-mono font-semibold tabular-nums min-w-[14ch]">
+          {text || "\u00A0"}
+        </div>
       </div>
     </div>
   );

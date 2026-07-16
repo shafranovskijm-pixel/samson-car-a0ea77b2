@@ -283,6 +283,32 @@ export const deleteClientReminder = async (id: string) => {
   if (error) throw error;
 };
 
+// Добавить к дате интервал (день/неделя/месяц/полгода/год)
+export const addReminderInterval = (
+  base: Date,
+  kind: "day" | "week" | "month" | "half_year" | "year",
+): Date => {
+  const d = new Date(base);
+  switch (kind) {
+    case "day":
+      d.setDate(d.getDate() + 1);
+      break;
+    case "week":
+      d.setDate(d.getDate() + 7);
+      break;
+    case "month":
+      d.setMonth(d.getMonth() + 1);
+      break;
+    case "half_year":
+      d.setMonth(d.getMonth() + 6);
+      break;
+    case "year":
+      d.setFullYear(d.getFullYear() + 1);
+      break;
+  }
+  return d;
+};
+
 
 // MECHANIC SERVICE RATES
 export const listMechanicServiceRates = async (

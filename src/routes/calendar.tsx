@@ -1,20 +1,24 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Calendar as BigCalendar, dateFnsLocalizer, Views, type View } from "react-big-calendar";
+import withDragAndDrop, {
+  type withDragAndDropProps,
+} from "react-big-calendar/lib/addons/dragAndDrop";
 import { format, parse, startOfWeek, getDay } from "date-fns";
 import { ru } from "date-fns/locale";
-import { Plus, Clock } from "lucide-react";
+import { Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { z } from "zod";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 
 import "react-big-calendar/lib/css/react-big-calendar.css";
+import "react-big-calendar/lib/addons/dragAndDrop/styles.css";
 import "@/styles/calendar.css";
 
 import { Button } from "@/components/ui/button";
-import { listAppointments, listMechanics } from "@/lib/api";
+import { listAppointments, listMechanics, updateAppointment, getAppointment } from "@/lib/api";
 import { STATUS_LABELS } from "@/lib/types";
 import { AppointmentDialog } from "@/components/AppointmentDialog";
 
@@ -54,6 +58,10 @@ export const Route = createFileRoute("/calendar")({
   validateSearch: zodValidator(searchSchema),
   component: CalendarPage,
 });
+
+const DnDCalendar = withDragAndDrop(BigCalendar as never) as unknown as React.ComponentType<
+  React.ComponentProps<typeof BigCalendar> & withDragAndDropProps
+>;
 
 function parseServices(s: string): { service_id: string; price: number }[] {
   if (!s) return [];
@@ -125,6 +133,56 @@ function CalendarPage() {
 
   const now = useMemo(() => new Date(), []);
 
+  const qc = useQueryClient();
+  const moveMutation = useMutation({
+    mutationFn: async (args: { id: string; start: Date; end: Date }) => {
+      const appt = await getAppointment(args.id);
+      const durationMs = args.end.getTime() - args.start.getTime();
+      const duration_minutes = Math.max(15, Math.round(durationMs / 60000));
+      await updateAppointment(args.id, {
+        car_id: appt.car_id,
+        mechanic_id: appt.mechanic_id,
+        starts_at: args.start.toISOString(),
+        duration_minutes,
+        status: appt.status,
+        mileage: appt.mileage,
+        comment: appt.comment,
+        services: appt.services.map((s) => ({
+          service_id: s.service_id,
+          price: s.price,
+          mechanic_payout: s.mechanic_payout ?? 0,
+        })),
+      });
+    },
+    onMutate: () => {
+      // optimistic: nothing (we refetch on success)
+    },
+    onSuccess: () => {
+      toast.success("Запись перемещена");
+      qc.invalidateQueries({ queryKey: ["appointments"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const onEventDrop: withDragAndDropProps["onEventDrop"] = ({ event, start, end }) => {
+    const id = (event as { id: string }).id;
+    const s = start instanceof Date ? start : new Date(start);
+    const e = end instanceof Date ? end : new Date(end);
+    if (s.getTime() < Date.now() - 60_000) {
+      toast.error("Нельзя переместить на прошедшее время");
+      return;
+    }
+    moveMutation.mutate({ id, start: s, end: e });
+  };
+
+  const onEventResize: withDragAndDropProps["onEventResize"] = ({ event, start, end }) => {
+    const id = (event as { id: string }).id;
+    const s = start instanceof Date ? start : new Date(start);
+    const e = end instanceof Date ? end : new Date(end);
+    moveMutation.mutate({ id, start: s, end: e });
+  };
+
+
 
   return (
     <div className="p-4">
@@ -158,8 +216,12 @@ function CalendarPage() {
         ))}
       </div>
 
+      <div className="mb-3 text-xs text-muted-foreground">
+        Записи можно перетаскивать между слотами и растягивать за нижний край
+      </div>
+
       <div className="rounded-lg border bg-card" style={{ height: "calc(100vh - 220px)" }}>
-        <BigCalendar
+        <DnDCalendar
           localizer={localizer}
           events={events}
           culture="ru"
@@ -170,18 +232,26 @@ function CalendarPage() {
           onNavigate={setDate}
           views={[Views.MONTH, Views.WEEK, Views.DAY, Views.AGENDA]}
           selectable
+          resizable
+          draggableAccessor={() => true}
+          onEventDrop={onEventDrop}
+          onEventResize={onEventResize}
           getNow={() => new Date()}
           onSelectSlot={(slot) => openNew(slot.start as Date)}
-          onSelectEvent={(ev) =>
-            setDialog({ open: true, id: ev.id as string, start: null, prefill: null })
-          }
-          eventPropGetter={(ev) => ({
-            style: {
-              backgroundColor: ev.resource?.color ?? "#64748b",
-              border: "none",
-              opacity: ev.resource?.status === "cancelled" ? 0.4 : 1,
-            },
-          })}
+          onSelectEvent={(ev) => {
+            const e = ev as { id: string };
+            setDialog({ open: true, id: e.id, start: null, prefill: null });
+          }}
+          eventPropGetter={(ev) => {
+            const e = ev as { resource?: { color?: string; status?: string } };
+            return {
+              style: {
+                backgroundColor: e.resource?.color ?? "#64748b",
+                border: "none",
+                opacity: e.resource?.status === "cancelled" ? 0.4 : 1,
+              },
+            };
+          }}
           slotPropGetter={(slotDate) =>
             slotDate.getTime() < now.getTime() - 60_000
               ? { style: { backgroundColor: "rgba(0,0,0,0.04)" } }
@@ -194,11 +264,11 @@ function CalendarPage() {
               new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
             return isPast ? { style: { backgroundColor: "rgba(0,0,0,0.03)" } } : {};
           }}
-          tooltipAccessor={(ev) =>
-            `${ev.title} · ${STATUS_LABELS[ev.resource?.status as keyof typeof STATUS_LABELS] ?? ""}`
-          }
+          tooltipAccessor={(ev) => {
+            const e = ev as { title: string; resource?: { status?: string } };
+            return `${e.title} · ${STATUS_LABELS[e.resource?.status as keyof typeof STATUS_LABELS] ?? ""}`;
+          }}
         />
-
       </div>
 
       <AppointmentDialog

@@ -25,7 +25,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 
 import {
+  addReminderInterval,
   createAppointment,
+  createClientReminder,
   deleteAppointment,
   getAppointment,
   getPriceForBrand,
@@ -39,7 +41,8 @@ import {
   updateAppointment,
 } from "@/lib/api";
 
-import { STATUS_LABELS, type AppointmentStatus } from "@/lib/types";
+import { STATUS_LABELS, type AppointmentStatus, type ReminderInterval } from "@/lib/types";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type SvcRow = { service_id: string; price: number; mechanic_payout: number };
 
@@ -103,6 +106,9 @@ export function AppointmentDialog({
   const [comment, setComment] = useState<string>("");
   const [selected, setSelected] = useState<SvcRow[]>([]);
   const [addServiceId, setAddServiceId] = useState<string>("");
+  const [reminderOn, setReminderOn] = useState<boolean>(false);
+  const [reminderInterval, setReminderInterval] = useState<ReminderInterval>("half_year");
+  const [reminderTitle, setReminderTitle] = useState<string>("");
 
   const { data: rates = [] } = useQuery({
     queryKey: ["mechanic-service-rates", mechanicId],
@@ -160,6 +166,9 @@ export function AppointmentDialog({
       );
     }
     setAddServiceId("");
+    setReminderOn(false);
+    setReminderInterval("half_year");
+    setReminderTitle("");
   }, [
     open,
     existing,
@@ -243,10 +252,35 @@ export function AppointmentDialog({
       };
       if (isEdit) await updateAppointment(appointmentId!, payload);
       else await createAppointment(payload);
+
+      // Автосоздание напоминания
+      if (reminderOn && clientId && reminderInterval !== "custom") {
+        const remindAt = addReminderInterval(
+          startsDate,
+          reminderInterval as "day" | "week" | "month" | "half_year" | "year",
+        );
+        const client = clients.find((c) => c.id === clientId);
+        const svcNames = selected
+          .map((s) => services.find((sv) => sv.id === s.service_id)?.name)
+          .filter(Boolean)
+          .join(", ");
+        const title =
+          reminderTitle.trim() ||
+          `Напоминание${svcNames ? ` (${svcNames})` : ""}${client ? ` — ${client.full_name}` : ""}`;
+        await createClientReminder({
+          client_id: clientId,
+          title,
+          note: null,
+          remind_at: remindAt.toISOString(),
+          interval_kind: reminderInterval,
+          repeat: false,
+        });
+      }
     },
     onSuccess: () => {
       toast.success(isEdit ? "Запись обновлена" : "Запись создана");
       qc.invalidateQueries({ queryKey: ["appointments"] });
+      qc.invalidateQueries({ queryKey: ["client-reminders"] });
       onOpenChange(false);
     },
     onError: (e: Error) => toast.error(e.message),
@@ -438,6 +472,47 @@ export function AppointmentDialog({
             <div className="mt-3 flex justify-end">
               <Badge variant="secondary" className="text-base">Итого: {total} ₽</Badge>
             </div>
+          </div>
+
+          <div className="rounded-md border p-3">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="reminder-on"
+                checked={reminderOn}
+                onCheckedChange={(v) => setReminderOn(!!v)}
+              />
+              <Label htmlFor="reminder-on" className="cursor-pointer">
+                Создать напоминание клиенту после визита
+              </Label>
+            </div>
+            {reminderOn && (
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">Через</Label>
+                  <Select
+                    value={reminderInterval}
+                    onValueChange={(v) => setReminderInterval(v as ReminderInterval)}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="day">День</SelectItem>
+                      <SelectItem value="week">Неделю</SelectItem>
+                      <SelectItem value="month">Месяц</SelectItem>
+                      <SelectItem value="half_year">Полгода</SelectItem>
+                      <SelectItem value="year">Год</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs">Название (необязательно)</Label>
+                  <Input
+                    value={reminderTitle}
+                    onChange={(e) => setReminderTitle(e.target.value)}
+                    placeholder="Авто: услуги + клиент"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           <div>
