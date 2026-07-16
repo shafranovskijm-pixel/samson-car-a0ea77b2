@@ -59,6 +59,10 @@ export const Route = createFileRoute("/calendar")({
   component: CalendarPage,
 });
 
+const DnDCalendar = withDragAndDrop(BigCalendar as never) as unknown as React.ComponentType<
+  React.ComponentProps<typeof BigCalendar> & withDragAndDropProps
+>;
+
 function parseServices(s: string): { service_id: string; price: number }[] {
   if (!s) return [];
   return s
