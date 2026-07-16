@@ -372,7 +372,7 @@ function ClientsPage() {
         open={clientDialog.open}
         onOpenChange={(o) => setClientDialog((s) => ({ ...s, open: o }))}
       >
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{clientDialog.editing ? "Редактировать клиента" : "Новый клиент"}</DialogTitle>
           </DialogHeader>
@@ -384,28 +384,123 @@ function ClientsPage() {
                 onChange={(e) => setClientForm({ ...clientForm, full_name: e.target.value })}
               />
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Телефон</Label>
+                <Input
+                  value={clientForm.phone}
+                  onChange={(e) => setClientForm({ ...clientForm, phone: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Email</Label>
+                <Input
+                  value={clientForm.email}
+                  onChange={(e) => setClientForm({ ...clientForm, email: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Telegram</Label>
+                <Input
+                  value={clientForm.telegram}
+                  onChange={(e) => setClientForm({ ...clientForm, telegram: e.target.value })}
+                  placeholder="@username"
+                />
+              </div>
+              <div>
+                <Label>Дата рождения</Label>
+                <Input
+                  type="date"
+                  value={clientForm.birthday}
+                  onChange={(e) => setClientForm({ ...clientForm, birthday: e.target.value })}
+                />
+              </div>
+            </div>
             <div>
-              <Label>Телефон</Label>
+              <Label>Адрес</Label>
               <Input
-                value={clientForm.phone}
-                onChange={(e) => setClientForm({ ...clientForm, phone: e.target.value })}
+                value={clientForm.address}
+                onChange={(e) => setClientForm({ ...clientForm, address: e.target.value })}
               />
             </div>
             <div>
-              <Label>Email</Label>
+              <Label>Заметка</Label>
               <Input
-                value={clientForm.email}
-                onChange={(e) => setClientForm({ ...clientForm, email: e.target.value })}
+                value={clientForm.note}
+                onChange={(e) => setClientForm({ ...clientForm, note: e.target.value })}
               />
+            </div>
+
+            <div className="mt-2 rounded-md border p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <Label className="m-0">Свои поля</Label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    setCustomFields((prev) => [...prev, { key: "", value: "" }])
+                  }
+                >
+                  <Plus className="mr-1 h-4 w-4" />
+                  Добавить поле
+                </Button>
+              </div>
+              {customFields.length === 0 && (
+                <div className="text-xs text-muted-foreground">
+                  Например: скидка, соцсеть, реферер
+                </div>
+              )}
+              <div className="grid gap-2">
+                {customFields.map((f, i) => (
+                  <div key={i} className="flex gap-2">
+                    <Input
+                      placeholder="Название"
+                      value={f.key}
+                      maxLength={50}
+                      onChange={(e) =>
+                        setCustomFields((prev) =>
+                          prev.map((x, j) => (j === i ? { ...x, key: e.target.value } : x)),
+                        )
+                      }
+                    />
+                    <Input
+                      placeholder="Значение"
+                      value={f.value}
+                      maxLength={500}
+                      onChange={(e) =>
+                        setCustomFields((prev) =>
+                          prev.map((x, j) => (j === i ? { ...x, value: e.target.value } : x)),
+                        )
+                      }
+                    />
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      onClick={() =>
+                        setCustomFields((prev) => prev.filter((_, j) => j !== i))
+                      }
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setClientDialog({ open: false, editing: null })}>
               Отмена
             </Button>
-            <Button onClick={() => saveClientM.mutate()}>Сохранить</Button>
+            <Button onClick={() => saveClientM.mutate()} disabled={saveClientM.isPending}>
+              Сохранить
+            </Button>
           </DialogFooter>
         </DialogContent>
+
       </Dialog>
 
       {/* CAR DIALOG */}
