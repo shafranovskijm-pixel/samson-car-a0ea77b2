@@ -474,6 +474,47 @@ export function AppointmentDialog({
             </div>
           </div>
 
+          <div className="rounded-md border p-3">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="reminder-on"
+                checked={reminderOn}
+                onCheckedChange={(v) => setReminderOn(!!v)}
+              />
+              <Label htmlFor="reminder-on" className="cursor-pointer">
+                Создать напоминание клиенту после визита
+              </Label>
+            </div>
+            {reminderOn && (
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">Через</Label>
+                  <Select
+                    value={reminderInterval}
+                    onValueChange={(v) => setReminderInterval(v as ReminderInterval)}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="day">День</SelectItem>
+                      <SelectItem value="week">Неделю</SelectItem>
+                      <SelectItem value="month">Месяц</SelectItem>
+                      <SelectItem value="half_year">Полгода</SelectItem>
+                      <SelectItem value="year">Год</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs">Название (необязательно)</Label>
+                  <Input
+                    value={reminderTitle}
+                    onChange={(e) => setReminderTitle(e.target.value)}
+                    placeholder="Авто: услуги + клиент"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
           <div>
             <Label>Комментарий</Label>
             <Textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={3} />
