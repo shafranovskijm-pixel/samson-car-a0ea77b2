@@ -43,6 +43,7 @@ function ClientsPage() {
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [tab, setTab] = useState<"active" | "archived">("active");
 
   const [clientDialog, setClientDialog] = useState<{ open: boolean; editing: Client | null }>({
     open: false, editing: null,
@@ -63,16 +64,22 @@ function ClientsPage() {
     open: false, editing: null, clientId: "",
   });
 
+  const activeCount = useMemo(() => clients.filter((c) => !c.is_archived).length, [clients]);
+  const archivedCount = clients.length - activeCount;
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return clients;
-    return clients.filter(
+    const byTab = clients.filter((c) =>
+      tab === "archived" ? c.is_archived : !c.is_archived,
+    );
+    if (!q) return byTab;
+    return byTab.filter(
       (c) =>
         c.full_name.toLowerCase().includes(q) ||
         (c.phone ?? "").toLowerCase().includes(q) ||
         (c.email ?? "").toLowerCase().includes(q),
     );
-  }, [clients, search]);
+  }, [clients, search, tab]);
 
   useEffect(() => {
     if (!selectedId && filtered.length > 0) setSelectedId(filtered[0].id);
