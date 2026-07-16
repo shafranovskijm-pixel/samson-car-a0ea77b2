@@ -192,7 +192,12 @@ export function AppointmentDialog({
     mutationFn: async () => {
       if (!carId) throw new Error("Выберите машину");
       if (!startDate || !startTime) throw new Error("Укажите дату и время");
-      const starts_at = new Date(`${startDate}T${startTime}:00`).toISOString();
+      const startsDate = new Date(`${startDate}T${startTime}:00`);
+      if (!isEdit && startsDate.getTime() < Date.now() - 60_000) {
+        throw new Error("Нельзя записать на прошедшее время");
+      }
+      const starts_at = startsDate.toISOString();
+
       const payload = {
         car_id: carId,
         mechanic_id: mechanicId || null,
