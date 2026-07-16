@@ -228,6 +228,16 @@ function ClientsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const categoryM = useMutation({
+    mutationFn: ({ id, category }: { id: string; category: ClientCategory }) =>
+      updateClient(id, { category }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["clients"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+
   return (
     <div className="flex min-h-[calc(100vh-3rem)] flex-col md:h-[calc(100vh-3rem)] md:flex-row">
       {/* LEFT: LIST */}
