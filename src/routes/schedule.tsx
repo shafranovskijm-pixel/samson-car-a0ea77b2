@@ -4,10 +4,24 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format, parseISO, startOfDay } from "date-fns";
 import { ru } from "date-fns/locale";
-import { Plus } from "lucide-react";
+import { Check, ChevronDown, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -23,10 +37,8 @@ import {
 } from "@/lib/api";
 import {
   PAYMENT_COLORS,
-  PAYMENT_CYCLE,
   PAYMENT_LABELS,
   STATUS_COLORS,
-  STATUS_CYCLE,
   STATUS_LABELS,
   type AppointmentStatus,
   type PaymentStatus,
@@ -54,6 +66,13 @@ function SchedulePage() {
   });
   const { data: mechanics = [] } = useQuery({ queryKey: ["mechanics"], queryFn: listMechanics });
 
+  const [prepaidDlg, setPrepaidDlg] = useState<{
+    open: boolean;
+    id: string | null;
+    total: number;
+    amount: string;
+  }>({ open: false, id: null, total: 0, amount: "" });
+
   const statusMut = useMutation({
     mutationFn: ({ id, status }: { id: string; status: AppointmentStatus }) =>
       updateAppointmentStatus(id, status),
@@ -71,27 +90,46 @@ function SchedulePage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const cycleStatus = (id: string, current: AppointmentStatus) => {
-    const idx = STATUS_CYCLE.indexOf(current);
-    const next = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
-    statusMut.mutate({ id, status: next });
+  const setStatus = (id: string, status: AppointmentStatus) => {
+    statusMut.mutate({ id, status });
   };
 
-  const cyclePayment = (
+  const setPayment = (
     id: string,
-    current: PaymentStatus,
+    next: PaymentStatus,
     total: number,
     paid: number,
   ) => {
-    const idx = PAYMENT_CYCLE.indexOf(current);
-    const next = PAYMENT_CYCLE[(idx + 1) % PAYMENT_CYCLE.length];
-    let paid_amount = paid;
-    if (next === "paid") paid_amount = total;
-    else if (next === "unpaid") paid_amount = 0;
-    else if (next === "prepaid" && (paid <= 0 || paid >= total))
-      paid_amount = Math.round(total / 2);
+    if (next === "prepaid") {
+      setPrepaidDlg({
+        open: true,
+        id,
+        total,
+        amount: String(paid > 0 && paid < total ? paid : Math.round(total / 2)),
+      });
+      return;
+    }
+    const paid_amount = next === "paid" ? total : 0;
     paymentMut.mutate({ id, payment_status: next, paid_amount });
   };
+
+  const submitPrepaid = () => {
+    if (!prepaidDlg.id) return;
+    const amt = Math.max(0, Math.round(Number(prepaidDlg.amount) || 0));
+    if (amt <= 0) {
+      toast.error("Введите сумму больше 0");
+      return;
+    }
+    if (amt >= prepaidDlg.total) {
+      toast.error("Сумма предоплаты должна быть меньше итоговой");
+      return;
+    }
+    paymentMut.mutate(
+      { id: prepaidDlg.id, payment_status: "prepaid", paid_amount: amt },
+      { onSuccess: () => setPrepaidDlg((d) => ({ ...d, open: false })) },
+    );
+  };
+
 
   const grouped = useMemo(() => {
     const filtered = appointments.filter(
@@ -211,24 +249,58 @@ function SchedulePage() {
                         )}
                       </div>
                       <div className="flex flex-wrap gap-1.5 sm:justify-end">
-                        <button
-                          type="button"
-                          title="Переключить статус работы"
-                          onClick={() => cycleStatus(a.id, status)}
-                          className={`rounded-md border px-2 py-1 text-xs transition hover:opacity-80 ${STATUS_COLORS[status]}`}
-                        >
-                          {STATUS_LABELS[status]}
-                        </button>
-                        <button
-                          type="button"
-                          title="Переключить статус оплаты"
-                          onClick={() =>
-                            cyclePayment(a.id, payment, a.total_price ?? 0, a.paid_amount ?? 0)
-                          }
-                          className={`rounded-md border px-2 py-1 text-xs transition hover:opacity-80 ${PAYMENT_COLORS[payment]}`}
-                        >
-                          {PAYMENT_LABELS[payment]}
-                        </button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              type="button"
+                              className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium shadow-sm transition hover:opacity-90 ${STATUS_COLORS[status]}`}
+                            >
+                              {STATUS_LABELS[status]}
+                              <ChevronDown className="h-3 w-3 opacity-70" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {(Object.keys(STATUS_LABELS) as AppointmentStatus[]).map((s) => (
+                              <DropdownMenuItem
+                                key={s}
+                                onClick={() => setStatus(a.id, s)}
+                                className="gap-2"
+                              >
+                                <Check
+                                  className={`h-3.5 w-3.5 ${s === status ? "opacity-100" : "opacity-0"}`}
+                                />
+                                {STATUS_LABELS[s]}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              type="button"
+                              className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium shadow-sm transition hover:opacity-90 ${PAYMENT_COLORS[payment]}`}
+                            >
+                              {PAYMENT_LABELS[payment]}
+                              <ChevronDown className="h-3 w-3 opacity-70" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {(Object.keys(PAYMENT_LABELS) as PaymentStatus[]).map((p) => (
+                              <DropdownMenuItem
+                                key={p}
+                                onClick={() =>
+                                  setPayment(a.id, p, a.total_price ?? 0, a.paid_amount ?? 0)
+                                }
+                                className="gap-2"
+                              >
+                                <Check
+                                  className={`h-3.5 w-3.5 ${p === payment ? "opacity-100" : "opacity-0"}`}
+                                />
+                                {PAYMENT_LABELS[p]}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
                   </div>
@@ -244,6 +316,49 @@ function SchedulePage() {
         onOpenChange={(o) => setDialog((d) => ({ ...d, open: o }))}
         appointmentId={dialog.id}
       />
+
+      <Dialog
+        open={prepaidDlg.open}
+        onOpenChange={(o) => setPrepaidDlg((d) => ({ ...d, open: o }))}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Предоплата</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="text-sm text-muted-foreground">
+              Итого по записи: <span className="font-medium text-foreground">{prepaidDlg.total} ₽</span>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="prepaid-amount">Сколько внесли, ₽</Label>
+              <Input
+                id="prepaid-amount"
+                type="number"
+                inputMode="numeric"
+                min={0}
+                max={prepaidDlg.total}
+                value={prepaidDlg.amount}
+                onChange={(e) => setPrepaidDlg((d) => ({ ...d, amount: e.target.value }))}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") submitPrepaid();
+                }}
+                autoFocus
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setPrepaidDlg((d) => ({ ...d, open: false }))}
+            >
+              Отмена
+            </Button>
+            <Button onClick={submitPrepaid} disabled={paymentMut.isPending}>
+              Сохранить
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
