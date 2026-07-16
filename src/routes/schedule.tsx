@@ -66,6 +66,13 @@ function SchedulePage() {
   });
   const { data: mechanics = [] } = useQuery({ queryKey: ["mechanics"], queryFn: listMechanics });
 
+  const [prepaidDlg, setPrepaidDlg] = useState<{
+    open: boolean;
+    id: string | null;
+    total: number;
+    amount: string;
+  }>({ open: false, id: null, total: 0, amount: "" });
+
   const statusMut = useMutation({
     mutationFn: ({ id, status }: { id: string; status: AppointmentStatus }) =>
       updateAppointmentStatus(id, status),
@@ -83,27 +90,46 @@ function SchedulePage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const cycleStatus = (id: string, current: AppointmentStatus) => {
-    const idx = STATUS_CYCLE.indexOf(current);
-    const next = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
-    statusMut.mutate({ id, status: next });
+  const setStatus = (id: string, status: AppointmentStatus) => {
+    statusMut.mutate({ id, status });
   };
 
-  const cyclePayment = (
+  const setPayment = (
     id: string,
-    current: PaymentStatus,
+    next: PaymentStatus,
     total: number,
     paid: number,
   ) => {
-    const idx = PAYMENT_CYCLE.indexOf(current);
-    const next = PAYMENT_CYCLE[(idx + 1) % PAYMENT_CYCLE.length];
-    let paid_amount = paid;
-    if (next === "paid") paid_amount = total;
-    else if (next === "unpaid") paid_amount = 0;
-    else if (next === "prepaid" && (paid <= 0 || paid >= total))
-      paid_amount = Math.round(total / 2);
+    if (next === "prepaid") {
+      setPrepaidDlg({
+        open: true,
+        id,
+        total,
+        amount: String(paid > 0 && paid < total ? paid : Math.round(total / 2)),
+      });
+      return;
+    }
+    const paid_amount = next === "paid" ? total : 0;
     paymentMut.mutate({ id, payment_status: next, paid_amount });
   };
+
+  const submitPrepaid = () => {
+    if (!prepaidDlg.id) return;
+    const amt = Math.max(0, Math.round(Number(prepaidDlg.amount) || 0));
+    if (amt <= 0) {
+      toast.error("Введите сумму больше 0");
+      return;
+    }
+    if (amt >= prepaidDlg.total) {
+      toast.error("Сумма предоплаты должна быть меньше итоговой");
+      return;
+    }
+    paymentMut.mutate(
+      { id: prepaidDlg.id, payment_status: "prepaid", paid_amount: amt },
+      { onSuccess: () => setPrepaidDlg((d) => ({ ...d, open: false })) },
+    );
+  };
+
 
   const grouped = useMemo(() => {
     const filtered = appointments.filter(
