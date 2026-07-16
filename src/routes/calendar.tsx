@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Calendar as BigCalendar, dateFnsLocalizer, Views, type View } from "react-big-calendar";
-import withDragAndDrop, {
+import withDragAndDropDefault, {
   type withDragAndDropProps,
 } from "react-big-calendar/lib/addons/dragAndDrop";
 import { format, parse, startOfWeek, getDay } from "date-fns";
@@ -59,6 +59,7 @@ export const Route = createFileRoute("/calendar")({
   component: CalendarPage,
 });
 
+const withDragAndDrop = (withDragAndDropDefault as unknown as { default?: typeof withDragAndDropDefault }).default ?? withDragAndDropDefault;
 const DnDCalendar = withDragAndDrop(BigCalendar as never) as unknown as React.ComponentType<
   React.ComponentProps<typeof BigCalendar> & withDragAndDropProps
 >;
