@@ -166,6 +166,9 @@ export function AppointmentDialog({
       );
     }
     setAddServiceId("");
+    setReminderOn(false);
+    setReminderInterval("half_year");
+    setReminderTitle("");
   }, [
     open,
     existing,
