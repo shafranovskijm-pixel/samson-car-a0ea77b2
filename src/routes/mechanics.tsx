@@ -21,7 +21,13 @@ import {
 import type { Mechanic, MechanicShift } from "@/lib/types";
 import { STATUS_LABELS } from "@/lib/types";
 
-const COLORS = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316"];
+const COLORS = [
+  "#ef4444", "#f97316", "#f59e0b", "#eab308", "#84cc16",
+  "#22c55e", "#10b981", "#14b8a6", "#06b6d4", "#0ea5e9",
+  "#3b82f6", "#6366f1", "#8b5cf6", "#a855f7", "#d946ef",
+  "#ec4899", "#f43f5e", "#78716c", "#0f172a", "#64748b",
+  "#7c2d12", "#166534", "#1e3a8a", "#4a044e",
+];
 
 export const Route = createFileRoute("/mechanics")({
   ssr: false,
