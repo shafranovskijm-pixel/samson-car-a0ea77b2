@@ -134,7 +134,7 @@ function MechanicsPage() {
         </div>
       </aside>
 
-      <section className="flex-1 overflow-auto p-6">
+      <section className={`flex-1 overflow-auto p-4 md:p-6 ${!selected ? "hidden md:block" : "block"}`}>
         {!selected ? (
           <div className="flex h-full items-center justify-center text-muted-foreground">
             <div className="text-center">
@@ -144,6 +144,14 @@ function MechanicsPage() {
           </div>
         ) : (
           <div className="mx-auto max-w-3xl space-y-8">
+            <button
+              type="button"
+              onClick={() => setSelectedId(null)}
+              className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground md:hidden"
+            >
+              <ArrowLeft className="h-4 w-4" /> К списку мастеров
+            </button>
+
             <div
               className="flex items-start justify-between gap-4 rounded-lg border-l-4 p-4"
               style={{ borderLeftColor: selected.color, background: `${selected.color}10` }}
