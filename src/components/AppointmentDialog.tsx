@@ -116,19 +116,46 @@ export function AppointmentDialog({
       setSelected(existing.services.map((s) => ({ service_id: s.service_id, price: s.price })));
     } else {
       const d = defaultStart ?? new Date();
-      setClientId("");
-      setCarId(defaultCarId ?? "");
+      // try to auto-select a car matching prefilled brand/model
+      let autoCarId = defaultCarId ?? "";
+      let autoClientId = "";
+      if (!autoCarId && (defaultBrandId || defaultModelId)) {
+        const modelName = allModels.find((m) => m.id === defaultModelId)?.name;
+        const match = cars.find(
+          (c) =>
+            (!defaultBrandId || c.brand_id === defaultBrandId) &&
+            (!modelName || c.model?.toLowerCase() === modelName.toLowerCase()),
+        );
+        if (match) {
+          autoCarId = match.id;
+          autoClientId = match.client_id;
+        }
+      }
+      setClientId(autoClientId);
+      setCarId(autoCarId);
       setMechanicId("");
       setStartDate(format(d, "yyyy-MM-dd"));
       setStartTime(format(d, "HH:mm"));
       setDuration(60);
       setStatus("scheduled");
       setMileage("");
-      setComment("");
-      setSelected([]);
+      setComment(prefillLabel ? `Из калькулятора: ${prefillLabel}` : "");
+      setSelected(defaultServices && defaultServices.length > 0 ? [...defaultServices] : []);
     }
     setAddServiceId("");
-  }, [open, existing, defaultStart, defaultCarId]);
+  }, [
+    open,
+    existing,
+    defaultStart,
+    defaultCarId,
+    defaultServices,
+    defaultBrandId,
+    defaultModelId,
+    prefillLabel,
+    allModels,
+    cars,
+  ]);
+
 
   // filter cars by chosen client
   const carsForClient = useMemo(
