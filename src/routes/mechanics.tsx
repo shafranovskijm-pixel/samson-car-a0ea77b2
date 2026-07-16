@@ -143,11 +143,19 @@ function MechanicsPage() {
           </div>
         ) : (
           <div className="mx-auto max-w-3xl space-y-8">
-            <div className="flex items-start justify-between gap-4">
+            <div
+              className="flex items-start justify-between gap-4 rounded-lg border-l-4 p-4"
+              style={{ borderLeftColor: selected.color, background: `${selected.color}10` }}
+            >
               <div>
-                <h1 className="text-2xl font-bold">{selected.full_name}</h1>
+                <div className="flex items-center gap-2">
+                  <span
+                    className="inline-block h-4 w-4 rounded"
+                    style={{ background: selected.color }}
+                  />
+                  <h1 className="text-2xl font-bold">{selected.full_name}</h1>
+                </div>
                 <div className="mt-1 flex items-center gap-3 text-sm text-muted-foreground">
-                  <span className="inline-block h-3 w-3 rounded" style={{ background: selected.color }} />
                   <span>{selected.specialization ?? "—"}</span>
                   {selected.phone && <span>· {selected.phone}</span>}
                 </div>
@@ -170,7 +178,7 @@ function MechanicsPage() {
 
             <MechanicSalary mechanicId={selected.id} />
             <MechanicRates mechanicId={selected.id} />
-            <MechanicShifts mechanicId={selected.id} />
+            <MechanicShifts mechanicId={selected.id} color={selected.color} />
           </div>
         )}
       </section>
