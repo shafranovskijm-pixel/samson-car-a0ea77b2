@@ -7,6 +7,7 @@ import {
   Phone,
   CheckCircle2,
   ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -54,7 +55,6 @@ export const Route = createFileRoute("/calculator")({
   component: LandingPage,
 });
 
-// 9 канонических категорий как у крупных автосервисов
 const CATEGORIES: { name: string; img: string }[] = [
   { name: "Жидкости и фильтры", img: imgFluids },
   { name: "Двигатель и навесное оборудование", img: imgEngine },
@@ -67,11 +67,13 @@ const CATEGORIES: { name: string; img: string }[] = [
   { name: "Электрика и электроника", img: imgElectric },
 ];
 
+type Step = 1 | 2 | 3;
+
 function LandingPage() {
-  
   const { data: brands = [] } = useQuery({ queryKey: ["brands"], queryFn: listBrands });
   const { data: services = [] } = useQuery({ queryKey: ["services"], queryFn: listServices });
 
+  const [step, setStep] = useState<Step>(1);
   const [brandId, setBrandId] = useState<string>("");
   const [modelId, setModelId] = useState<string>("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -94,10 +96,9 @@ function LandingPage() {
   const tier: BrandTier = resolveTier(currentBrand, currentModel);
   const coeff = TIER_COEFFICIENT[tier];
 
-  // Итоговая цена: приоритет — ручное переопределение по марке, иначе базовая × коэффициент класса
   const priceOf = (id: string, base: number) => {
     if (brandId && brandPrices[id] != null) return brandPrices[id];
-    if (brandId) return Math.round((base * coeff) / 50) * 50; // округление до 50 ₽
+    if (brandId) return Math.round((base * coeff) / 50) * 50;
     return base;
   };
 
@@ -119,6 +120,7 @@ function LandingPage() {
       }
     });
     return { sum, mins };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected, services, brandPrices, brandId, coeff]);
 
   const toggle = (id: string) => {
@@ -137,11 +139,48 @@ function LandingPage() {
     return r ? `${h} ч ${r} мин` : `${h} ч`;
   };
 
+  const goStep = (s: Step) => {
+    // разрешаем переход только на пройденный или следующий доступный шаг
+    if (s === 1) setStep(1);
+    if (s === 2 && selected.size > 0) setStep(2);
+    if (s === 3 && selected.size > 0 && brandId) setStep(3);
+  };
+
+  const StepBadge = ({ n, label }: { n: Step; label: string }) => {
+    const active = step === n;
+    const done =
+      (n === 1 && step > 1) ||
+      (n === 2 && step > 2);
+    const reachable =
+      n === 1 || (n === 2 && selected.size > 0) || (n === 3 && selected.size > 0 && brandId);
+    return (
+      <button
+        type="button"
+        disabled={!reachable}
+        onClick={() => goStep(n)}
+        className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-sm transition ${
+          active
+            ? "bg-red-600 text-white"
+            : done
+            ? "bg-white/10 text-white hover:bg-white/15"
+            : "bg-white/5 text-white/50"
+        } ${!reachable ? "cursor-not-allowed opacity-60" : ""}`}
+      >
+        <span
+          className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
+            active ? "bg-white/20" : done ? "bg-red-600 text-white" : "bg-white/10"
+          }`}
+        >
+          {n}
+        </span>
+        <span className="hidden sm:inline">{label}</span>
+      </button>
+    );
+  };
+
   return (
     <div className="min-h-full bg-[#0a0a0f] text-white">
-      {/* CALCULATOR */}
       <section id="calculator" className="relative py-12">
-
         <div
           className="absolute inset-0 opacity-[0.04]"
           style={{
@@ -153,7 +192,7 @@ function LandingPage() {
         <div className="pointer-events-none absolute left-1/2 top-0 h-64 w-[600px] -translate-x-1/2 rounded-full bg-red-600/20 blur-3xl" />
 
         <div className="relative mx-auto max-w-7xl px-6">
-          <div className="mb-10 text-center">
+          <div className="mb-8 text-center">
             <Badge className="mb-3 border-orange-500/40 bg-orange-500/10 text-orange-300">
               Калькулятор
             </Badge>
@@ -163,98 +202,20 @@ function LandingPage() {
                 за минуту
               </span>
             </h2>
-            <p className="mx-auto mt-3 max-w-2xl text-white/60">
-              Выберите марку авто и нужные услуги — итоговая цена и время работ обновятся мгновенно.
-            </p>
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-            {/* SERVICES */}
+          {/* Индикатор шагов */}
+          <div className="mb-8 flex items-center justify-center gap-2">
+            <StepBadge n={1} label="Услуги" />
+            <ChevronRight className="h-4 w-4 text-white/30" />
+            <StepBadge n={2} label="Авто" />
+            <ChevronRight className="h-4 w-4 text-white/30" />
+            <StepBadge n={3} label="Итог" />
+          </div>
+
+          {/* ШАГ 1 — УСЛУГИ */}
+          {step === 1 && (
             <div className="space-y-6">
-              <Card className="border-white/10 bg-white/5 backdrop-blur">
-                <CardContent className="p-6">
-                  <label className="mb-2 block text-xs font-medium uppercase tracking-wider text-white/50">
-                    Марка автомобиля
-                  </label>
-                  <Select
-                    value={brandId}
-                    onValueChange={(v) => {
-                      setBrandId(v);
-                      setModelId("");
-                    }}
-                  >
-                    <SelectTrigger className="h-12 border-white/10 bg-white/5 text-white">
-                      <SelectValue placeholder="Выберите марку — например, Toyota" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-80">
-                      {brands.map((b) => (
-                        <SelectItem key={b.id} value={b.id}>
-                          {b.name}
-                          {b.tier ? (
-                            <span className="ml-2 text-xs text-white/50">
-                              · {TIER_LABEL[b.tier as BrandTier] ?? ""}
-                            </span>
-                          ) : null}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  {brandId && (
-                    <>
-                      <label className="mb-2 mt-4 block text-xs font-medium uppercase tracking-wider text-white/50">
-                        Модель {models.length > 0 && (
-                          <span className="ml-1 normal-case text-white/40">
-                            ({models.length} в справочнике)
-                          </span>
-                        )}
-                      </label>
-                      <Select value={modelId} onValueChange={setModelId}>
-                        <SelectTrigger className="h-12 border-white/10 bg-white/5 text-white">
-                          <SelectValue
-                            placeholder={
-                              models.length
-                                ? "Выберите модель для точного расчёта"
-                                : "У этой марки пока нет моделей в справочнике"
-                            }
-                          />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-80">
-                          {models.map((m) => {
-                            const mt = (m.tier ?? currentBrand?.tier) as BrandTier | undefined;
-                            return (
-                              <SelectItem key={m.id} value={m.id}>
-                                {m.name}
-                                {mt ? (
-                                  <span className="ml-2 text-xs text-white/50">
-                                    · {TIER_LABEL[mt] ?? ""}
-                                  </span>
-                                ) : null}
-                              </SelectItem>
-                            );
-                          })}
-                        </SelectContent>
-                      </Select>
-
-                      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-                        <span className="rounded-full bg-red-500/15 px-2 py-1 text-red-300">
-                          Класс: {TIER_LABEL[tier]}
-                        </span>
-                        <span className="text-white/50">
-                          Коэффициент × {coeff.toFixed(2)}
-                        </span>
-                        {currentModel && currentModel.tier && currentBrand?.tier && currentModel.tier !== currentBrand.tier && (
-                          <span className="rounded bg-orange-500/15 px-2 py-1 text-orange-300">
-                            Класс модели отличается от марки
-                          </span>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* CATEGORY GRID or SERVICES LIST */}
               {!activeCategory ? (
                 <>
                   <div className="mb-2 text-lg font-semibold text-white">
@@ -298,7 +259,6 @@ function LandingPage() {
                       );
                     })}
                   </div>
-
                 </>
               ) : (
                 <div>
@@ -328,8 +288,6 @@ function LandingPage() {
                     {(byCategory[activeCategory] ?? []).map((s) => {
                       const active = selected.has(s.id);
                       const price = priceOf(s.id, s.base_price);
-                      const overridden = brandId && brandPrices[s.id] != null;
-                      const scaled = brandId && !overridden && coeff !== 1;
                       return (
                         <button
                           key={s.id}
@@ -353,26 +311,9 @@ function LandingPage() {
                                   <Clock className="h-3 w-3" />
                                   {fmtDur(s.duration_minutes)}
                                 </span>
-                                {overridden && (
-                                  <span className="rounded bg-orange-500/20 px-1.5 py-0.5 text-[10px] uppercase text-orange-300">
-                                    цена по марке
-                                  </span>
-                                )}
-                                {scaled && (
-                                  <span className="rounded bg-red-500/20 px-1.5 py-0.5 text-[10px] uppercase text-red-300">
-                                    ×{coeff.toFixed(2)} · {TIER_LABEL[tier]}
-                                  </span>
-                                )}
                               </div>
                               <div className="mt-3 flex items-baseline gap-2">
-                                <div className="text-lg font-bold text-white">
-                                  {fmt(price)}
-                                </div>
-                                {brandId && price !== s.base_price && (
-                                  <div className="text-xs text-white/40 line-through">
-                                    {fmt(s.base_price)}
-                                  </div>
-                                )}
+                                <div className="text-lg font-bold text-white">{fmt(price)}</div>
                               </div>
                             </div>
                           </div>
@@ -398,16 +339,141 @@ function LandingPage() {
                   </CardContent>
                 </Card>
               )}
-            </div>
 
-            {/* TOTAL */}
-            <div className="lg:sticky lg:top-4 lg:self-start">
-              <Card className="overflow-hidden border-white/10 bg-gradient-to-br from-white/10 to-white/[0.02] backdrop-blur">
-                <div className="bg-gradient-to-r from-red-600 to-orange-500 px-6 py-4">
-                  <div className="text-xs uppercase tracking-wider text-white/80">
-                    Ваш заказ
+              {/* Липкий футер с итогом и «Далее» */}
+              <div className="sticky bottom-4 z-20 mt-8">
+                <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 rounded-2xl border border-white/10 bg-black/80 p-4 shadow-2xl backdrop-blur">
+                  <div className="text-sm">
+                    <div className="text-white/60">Выбрано услуг</div>
+                    <div className="text-lg font-bold text-white">
+                      {selected.size}{" "}
+                      <span className="text-sm font-normal text-white/60">
+                        · примерно {fmtDur(totals.mins || 0)}
+                      </span>
+                    </div>
                   </div>
-                  <div className="mt-1 text-3xl font-bold text-white">{fmt(totals.sum)}</div>
+                  <Button
+                    size="lg"
+                    disabled={selected.size === 0}
+                    onClick={() => setStep(2)}
+                    className="bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                  >
+                    Далее — выбрать авто <ChevronRight className="ml-1 h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ШАГ 2 — АВТО */}
+          {step === 2 && (
+            <div className="mx-auto max-w-2xl space-y-6">
+              <Card className="border-white/10 bg-white/5 backdrop-blur">
+                <CardContent className="p-6">
+                  <label className="mb-2 block text-xs font-medium uppercase tracking-wider text-white/50">
+                    Марка автомобиля
+                  </label>
+                  <Select
+                    value={brandId}
+                    onValueChange={(v) => {
+                      setBrandId(v);
+                      setModelId("");
+                    }}
+                  >
+                    <SelectTrigger className="h-12 border-white/10 bg-white/5 text-white">
+                      <SelectValue placeholder="Выберите марку — например, Toyota" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-80">
+                      {brands.map((b) => (
+                        <SelectItem key={b.id} value={b.id}>
+                          {b.name}
+                          {b.tier ? (
+                            <span className="ml-2 text-xs text-white/50">
+                              · {TIER_LABEL[b.tier as BrandTier] ?? ""}
+                            </span>
+                          ) : null}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  {brandId && (
+                    <>
+                      <label className="mb-2 mt-4 block text-xs font-medium uppercase tracking-wider text-white/50">
+                        Модель{" "}
+                        {models.length > 0 && (
+                          <span className="ml-1 normal-case text-white/40">
+                            ({models.length} в справочнике)
+                          </span>
+                        )}
+                      </label>
+                      <Select value={modelId} onValueChange={setModelId}>
+                        <SelectTrigger className="h-12 border-white/10 bg-white/5 text-white">
+                          <SelectValue
+                            placeholder={
+                              models.length
+                                ? "Выберите модель для точного расчёта"
+                                : "У этой марки пока нет моделей в справочнике"
+                            }
+                          />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-80">
+                          {models.map((m) => {
+                            const mt = (m.tier ?? currentBrand?.tier) as BrandTier | undefined;
+                            return (
+                              <SelectItem key={m.id} value={m.id}>
+                                {m.name}
+                                {mt ? (
+                                  <span className="ml-2 text-xs text-white/50">
+                                    · {TIER_LABEL[mt] ?? ""}
+                                  </span>
+                                ) : null}
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectContent>
+                      </Select>
+
+                      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                        <span className="rounded-full bg-red-500/15 px-2 py-1 text-red-300">
+                          Класс: {TIER_LABEL[tier]}
+                        </span>
+                        <span className="text-white/50">
+                          Коэффициент × {coeff.toFixed(2)}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+
+              <div className="flex items-center justify-between">
+                <Button
+                  variant="outline"
+                  onClick={() => setStep(1)}
+                  className="border-white/20 bg-white/5 text-white hover:bg-white/10"
+                >
+                  <ChevronLeft className="mr-1 h-4 w-4" /> Назад
+                </Button>
+                <Button
+                  size="lg"
+                  disabled={!brandId}
+                  onClick={() => setStep(3)}
+                  className="bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                >
+                  Далее — итог <ChevronRight className="ml-1 h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* ШАГ 3 — ИТОГ */}
+          {step === 3 && (
+            <div className="mx-auto max-w-2xl space-y-4">
+              <Card className="overflow-hidden border-white/10 bg-gradient-to-br from-white/10 to-white/[0.02] backdrop-blur">
+                <div className="bg-gradient-to-r from-red-600 to-orange-500 px-6 py-5">
+                  <div className="text-xs uppercase tracking-wider text-white/80">Ваш заказ</div>
+                  <div className="mt-1 text-4xl font-bold text-white">{fmt(totals.sum)}</div>
                   <div className="mt-1 text-sm text-white/80">
                     Ориентировочно {fmtDur(totals.mins || 0)}
                   </div>
@@ -420,23 +486,23 @@ function LandingPage() {
                     </div>
                     <div className="flex justify-between text-white/70">
                       <span>Авто</span>
-                      <span className="font-medium text-white text-right">
+                      <span className="text-right font-medium text-white">
                         {currentBrand?.name ?? "—"}
                         {currentModel ? ` ${currentModel.name}` : ""}
                       </span>
                     </div>
-                    {brandId && (
-                      <div className="flex justify-between text-white/70">
-                        <span>Класс авто</span>
-                        <span className="font-medium text-white">
-                          {TIER_LABEL[tier]} (×{coeff.toFixed(2)})
-                        </span>
-                      </div>
-                    )}
+                    <div className="flex justify-between text-white/70">
+                      <span>Класс авто</span>
+                      <span className="font-medium text-white">
+                        {TIER_LABEL[tier]} (×{coeff.toFixed(2)})
+                      </span>
+                    </div>
                   </div>
-                  {selected.size > 0 && (
-                    <div className="max-h-40 space-y-1.5 overflow-auto border-t border-white/10 pt-3 text-xs">
-                      {services.filter((s) => selected.has(s.id)).map((s) => (
+
+                  <div className="max-h-60 space-y-1.5 overflow-auto border-t border-white/10 pt-3 text-sm">
+                    {services
+                      .filter((s) => selected.has(s.id))
+                      .map((s) => (
                         <div key={s.id} className="flex justify-between gap-2 text-white/70">
                           <span className="truncate">{s.name}</span>
                           <span className="whitespace-nowrap font-medium text-white">
@@ -444,8 +510,8 @@ function LandingPage() {
                           </span>
                         </div>
                       ))}
-                    </div>
-                  )}
+                  </div>
+
                   <Button
                     className="w-full bg-red-600 text-white hover:bg-red-700"
                     size="lg"
@@ -461,26 +527,33 @@ function LandingPage() {
                 </CardContent>
               </Card>
 
-              <Card className="mt-4 border-white/10 bg-white/5 backdrop-blur">
+              <Card className="border-white/10 bg-white/5 backdrop-blur">
                 <CardContent className="space-y-3 p-6 text-sm">
                   <div className="flex items-center gap-3 text-white/80">
                     <Phone className="h-4 w-4 text-red-400" />
                     <span>+7 (800) 555-35-35</span>
                   </div>
-
-
                   <div className="flex items-center gap-3 text-white/80">
                     <Clock className="h-4 w-4 text-red-400" />
                     <span>Ежедневно, 09:00 — 21:00</span>
                   </div>
                 </CardContent>
               </Card>
+
+              <div>
+                <Button
+                  variant="outline"
+                  onClick={() => setStep(2)}
+                  className="border-white/20 bg-white/5 text-white hover:bg-white/10"
+                >
+                  <ChevronLeft className="mr-1 h-4 w-4" /> Назад
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </section>
 
-      {/* FOOTER */}
       <footer className="border-t border-white/10 bg-black/40 py-8">
         <div className="mx-auto max-w-7xl px-6 text-center text-sm text-white/50">
           © Samson Auto · Автосервис полного цикла
