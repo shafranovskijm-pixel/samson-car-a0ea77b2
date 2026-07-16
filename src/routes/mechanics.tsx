@@ -21,7 +21,13 @@ import {
 import type { Mechanic, MechanicShift } from "@/lib/types";
 import { STATUS_LABELS } from "@/lib/types";
 
-const COLORS = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316"];
+const COLORS = [
+  "#ef4444", "#f97316", "#f59e0b", "#eab308", "#84cc16",
+  "#22c55e", "#10b981", "#14b8a6", "#06b6d4", "#0ea5e9",
+  "#3b82f6", "#6366f1", "#8b5cf6", "#a855f7", "#d946ef",
+  "#ec4899", "#f43f5e", "#78716c", "#0f172a", "#64748b",
+  "#7c2d12", "#166534", "#1e3a8a", "#4a044e",
+];
 
 export const Route = createFileRoute("/mechanics")({
   ssr: false,
@@ -108,9 +114,11 @@ function MechanicsPage() {
                 key={m.id}
                 type="button"
                 onClick={() => setSelectedId(m.id)}
-                className={`flex w-full items-center gap-3 border-b px-3 py-2.5 text-left text-sm transition ${
-                  active ? "bg-primary/10" : "hover:bg-muted/60"
-                }`}
+                className="flex w-full items-center gap-3 border-b border-l-4 px-3 py-2.5 text-left text-sm transition hover:bg-muted/60"
+                style={{
+                  borderLeftColor: m.color,
+                  background: active ? `${m.color}22` : undefined,
+                }}
               >
                 <span className="h-4 w-4 shrink-0 rounded" style={{ background: m.color }} />
                 <div className="min-w-0 flex-1">
@@ -135,11 +143,19 @@ function MechanicsPage() {
           </div>
         ) : (
           <div className="mx-auto max-w-3xl space-y-8">
-            <div className="flex items-start justify-between gap-4">
+            <div
+              className="flex items-start justify-between gap-4 rounded-lg border-l-4 p-4"
+              style={{ borderLeftColor: selected.color, background: `${selected.color}10` }}
+            >
               <div>
-                <h1 className="text-2xl font-bold">{selected.full_name}</h1>
+                <div className="flex items-center gap-2">
+                  <span
+                    className="inline-block h-4 w-4 rounded"
+                    style={{ background: selected.color }}
+                  />
+                  <h1 className="text-2xl font-bold">{selected.full_name}</h1>
+                </div>
                 <div className="mt-1 flex items-center gap-3 text-sm text-muted-foreground">
-                  <span className="inline-block h-3 w-3 rounded" style={{ background: selected.color }} />
                   <span>{selected.specialization ?? "—"}</span>
                   {selected.phone && <span>· {selected.phone}</span>}
                 </div>
@@ -162,7 +178,7 @@ function MechanicsPage() {
 
             <MechanicSalary mechanicId={selected.id} />
             <MechanicRates mechanicId={selected.id} />
-            <MechanicShifts mechanicId={selected.id} />
+            <MechanicShifts mechanicId={selected.id} color={selected.color} />
           </div>
         )}
       </section>
@@ -187,7 +203,7 @@ function MechanicsPage() {
             </div>
             <div>
               <Label>Цвет в календаре</Label>
-              <div className="mt-2 flex gap-2">
+              <div className="mt-2 grid grid-cols-8 gap-2">
                 {COLORS.map((c) => (
                   <button
                     key={c}
@@ -372,12 +388,28 @@ function MechanicRates({ mechanicId }: { mechanicId: string }) {
 }
 
 // ================= SHIFTS =================
-function MechanicShifts({ mechanicId }: { mechanicId: string }) {
+function MechanicShifts({ mechanicId, color = "#64748b" }: { mechanicId: string; color?: string }) {
   const qc = useQueryClient();
   const { data: shifts = [] } = useQuery({
     queryKey: ["mechanic-shifts", mechanicId],
     queryFn: () => listMechanicShifts(mechanicId),
   });
+
+  const grouped = useMemo(() => {
+    const map = new Map<string, MechanicShift[]>();
+    for (const s of shifts) {
+      const d = new Date(s.starts_at);
+      const day = d.getDay(); // 0=Sun
+      const monOffset = (day + 6) % 7; // shift so Monday=0
+      const monday = new Date(d);
+      monday.setHours(0, 0, 0, 0);
+      monday.setDate(monday.getDate() - monOffset);
+      const key = monday.toISOString().slice(0, 10);
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(s);
+    }
+    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
+  }, [shifts]);
 
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<MechanicShift | null>(null);
@@ -441,39 +473,108 @@ function MechanicShifts({ mechanicId }: { mechanicId: string }) {
           <Plus className="mr-1 h-4 w-4" />Смена
         </Button>
       </div>
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <CalendarClock className="h-5 w-5" />
+          <h2 className="text-lg font-semibold">
+            График работы{" "}
+            <span className="text-sm font-normal text-muted-foreground">· {shifts.length}</span>
+          </h2>
+        </div>
+        <Button size="sm" onClick={openNew}>
+          <Plus className="mr-1 h-4 w-4" />Смена
+        </Button>
+      </div>
       {shifts.length === 0 ? (
         <div className="rounded-lg border border-dashed py-6 text-center text-sm text-muted-foreground">
           Смен пока нет
         </div>
       ) : (
-        <div className="space-y-2">
-          {shifts.map((s) => {
-            const start = new Date(s.starts_at);
-            const end = new Date(s.ends_at);
-            const past = end.getTime() < Date.now();
+        <div className="space-y-5">
+          {grouped.map(([weekKey, weekShifts]) => {
+            const weekStart = new Date(weekKey);
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekEnd.getDate() + 6);
+            const totalMin = weekShifts.reduce(
+              (s, sh) =>
+                s +
+                Math.round(
+                  (new Date(sh.ends_at).getTime() - new Date(sh.starts_at).getTime()) / 60000,
+                ),
+              0,
+            );
+            const totalH = Math.round((totalMin / 60) * 10) / 10;
             return (
-              <div key={s.id} className={`flex items-center justify-between rounded-lg border bg-card p-3 text-sm ${past ? "opacity-60" : ""}`}>
-                <div>
-                  <div className="font-medium">
-                    {start.toLocaleDateString("ru-RU", { weekday: "short", day: "2-digit", month: "short" })}
-                    {" · "}
-                    {start.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}
+              <div key={weekKey}>
+                <div className="mb-2 flex items-center justify-between text-xs uppercase tracking-wider text-muted-foreground">
+                  <span>
+                    Неделя с{" "}
+                    {weekStart.toLocaleDateString("ru-RU", { day: "2-digit", month: "short" })}
                     {" – "}
-                    {end.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}
-                  </div>
-                  {s.note && <div className="text-xs text-muted-foreground">{s.note}</div>}
+                    {weekEnd.toLocaleDateString("ru-RU", { day: "2-digit", month: "short" })}
+                  </span>
+                  <span>Всего: {totalH} ч</span>
                 </div>
-                <div className="flex gap-1">
-                  <Button size="icon" variant="ghost" onClick={() => openEdit(s)}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => { if (confirm("Удалить смену?")) delM.mutate(s.id); }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                <div className="space-y-2">
+                  {weekShifts.map((s) => {
+                    const start = new Date(s.starts_at);
+                    const end = new Date(s.ends_at);
+                    const past = end.getTime() < Date.now();
+                    const durH =
+                      Math.round(((end.getTime() - start.getTime()) / 3600000) * 10) / 10;
+                    return (
+                      <div
+                        key={s.id}
+                        className={`flex items-center justify-between rounded-lg border border-l-4 bg-card p-3 text-sm ${
+                          past ? "opacity-60" : ""
+                        }`}
+                        style={{
+                          borderLeftColor: color,
+                          background: past ? undefined : `${color}0d`,
+                        }}
+                      >
+                        <div>
+                          <div className="font-medium">
+                            {start.toLocaleDateString("ru-RU", {
+                              weekday: "short",
+                              day: "2-digit",
+                              month: "short",
+                            })}
+                            {" · "}
+                            {start.toLocaleTimeString("ru-RU", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                            {" – "}
+                            {end.toLocaleTimeString("ru-RU", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                            <span className="ml-2 text-xs font-normal text-muted-foreground">
+                              {durH} ч
+                            </span>
+                          </div>
+                          {s.note && (
+                            <div className="text-xs text-muted-foreground">{s.note}</div>
+                          )}
+                        </div>
+                        <div className="flex gap-1">
+                          <Button size="icon" variant="ghost" onClick={() => openEdit(s)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => {
+                              if (confirm("Удалить смену?")) delM.mutate(s.id);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );

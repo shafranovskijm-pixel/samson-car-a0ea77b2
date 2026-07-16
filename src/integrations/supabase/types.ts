@@ -326,6 +326,7 @@ export type Database = {
           email: string | null
           full_name: string
           id: string
+          is_archived: boolean
           note: string | null
           phone: string | null
           telegram: string | null
@@ -340,6 +341,7 @@ export type Database = {
           email?: string | null
           full_name: string
           id?: string
+          is_archived?: boolean
           note?: string | null
           phone?: string | null
           telegram?: string | null
@@ -354,6 +356,7 @@ export type Database = {
           email?: string | null
           full_name?: string
           id?: string
+          is_archived?: boolean
           note?: string | null
           phone?: string | null
           telegram?: string | null

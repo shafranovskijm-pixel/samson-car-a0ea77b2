@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   Plus, Trash2, Pencil, Search, Car as CarIcon, Phone, Mail, User,
-  Bell, History as HistoryIcon, Check,
+  Bell, History as HistoryIcon, Check, Archive, ArchiveRestore,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,7 @@ function ClientsPage() {
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [tab, setTab] = useState<"active" | "archived">("active");
 
   const [clientDialog, setClientDialog] = useState<{ open: boolean; editing: Client | null }>({
     open: false, editing: null,
@@ -63,16 +64,22 @@ function ClientsPage() {
     open: false, editing: null, clientId: "",
   });
 
+  const activeCount = useMemo(() => clients.filter((c) => !c.is_archived).length, [clients]);
+  const archivedCount = clients.length - activeCount;
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return clients;
-    return clients.filter(
+    const byTab = clients.filter((c) =>
+      tab === "archived" ? c.is_archived : !c.is_archived,
+    );
+    if (!q) return byTab;
+    return byTab.filter(
       (c) =>
         c.full_name.toLowerCase().includes(q) ||
         (c.phone ?? "").toLowerCase().includes(q) ||
         (c.email ?? "").toLowerCase().includes(q),
     );
-  }, [clients, search]);
+  }, [clients, search, tab]);
 
   useEffect(() => {
     if (!selectedId && filtered.length > 0) setSelectedId(filtered[0].id);
@@ -165,6 +172,17 @@ function ClientsPage() {
     },
   });
 
+  const archiveM = useMutation({
+    mutationFn: ({ id, is_archived }: { id: string; is_archived: boolean }) =>
+      updateClient(id, { is_archived }),
+    onSuccess: (_d, v) => {
+      toast.success(v.is_archived ? "В архиве" : "Восстановлен");
+      qc.invalidateQueries({ queryKey: ["clients"] });
+      setSelectedId(null);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   return (
     <div className="flex h-[calc(100vh-3rem)]">
       {/* LEFT: LIST */}
@@ -184,6 +202,26 @@ function ClientsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
+          </div>
+          <div className="mt-2 grid grid-cols-2 gap-1 rounded-md bg-muted p-1 text-xs">
+            <button
+              type="button"
+              onClick={() => { setTab("active"); setSelectedId(null); }}
+              className={`rounded px-2 py-1 transition ${
+                tab === "active" ? "bg-background font-medium shadow-sm" : "text-muted-foreground"
+              }`}
+            >
+              Активные · {activeCount}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setTab("archived"); setSelectedId(null); }}
+              className={`rounded px-2 py-1 transition ${
+                tab === "archived" ? "bg-background font-medium shadow-sm" : "text-muted-foreground"
+              }`}
+            >
+              Архив · {archivedCount}
+            </button>
           </div>
         </div>
         <div className="flex-1 overflow-auto">
@@ -283,9 +321,22 @@ function ClientsPage() {
                   )}
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button variant="outline" size="sm" onClick={() => openEditClient(selected)}>
                   <Pencil className="mr-1 h-4 w-4" />Изменить
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    archiveM.mutate({ id: selected.id, is_archived: !selected.is_archived })
+                  }
+                >
+                  {selected.is_archived ? (
+                    <><ArchiveRestore className="mr-1 h-4 w-4" />Восстановить</>
+                  ) : (
+                    <><Archive className="mr-1 h-4 w-4" />В архив</>
+                  )}
                 </Button>
                 <Button
                   variant="outline"
@@ -716,25 +767,65 @@ function ClientHistory({ clientId }: { clientId: string }) {
     queryKey: ["client-history", clientId],
     queryFn: () => listAppointmentsByClient(clientId),
   });
+  const [q, setQ] = useState("");
+
+  const filtered = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    if (!s) return items;
+    return items.filter((a) => {
+      const dateStr = new Date(a.starts_at).toLocaleString("ru-RU", {
+        dateStyle: "short",
+        timeStyle: "short",
+      });
+      const parts = [
+        dateStr,
+        a.car?.brand?.name ?? "",
+        a.car?.model ?? "",
+        a.car?.license_plate ?? "",
+        a.comment ?? "",
+        STATUS_LABELS[a.status] ?? a.status,
+        ...a.services.map((sv) => sv.service?.name ?? ""),
+      ]
+        .join(" ")
+        .toLowerCase();
+      return parts.includes(s);
+    });
+  }, [items, q]);
 
   return (
     <div className="mt-8">
-      <div className="mb-3 flex items-center gap-2">
-        <HistoryIcon className="h-5 w-5" />
-        <h2 className="text-lg font-semibold">
-          История{" "}
-          <span className="text-sm font-normal text-muted-foreground">· {items.length}</span>
-        </h2>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <HistoryIcon className="h-5 w-5" />
+          <h2 className="text-lg font-semibold">
+            История{" "}
+            <span className="text-sm font-normal text-muted-foreground">
+              · {filtered.length}
+              {q && items.length !== filtered.length ? ` из ${items.length}` : ""}
+            </span>
+          </h2>
+        </div>
+        {items.length > 0 && (
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Поиск по услугам, авто, дате…"
+              className="h-9 pl-8"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+          </div>
+        )}
       </div>
       {isLoading ? (
         <div className="text-sm text-muted-foreground">Загрузка…</div>
-      ) : items.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <div className="rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
-          Записей пока нет
+          {items.length === 0 ? "Записей пока нет" : "Ничего не найдено"}
         </div>
       ) : (
         <div className="space-y-2">
-          {items.map((a) => {
+          {filtered.map((a) => {
             const brand = a.car?.brand?.name ?? "";
             const model = a.car?.model ?? "";
             const plate = a.car?.license_plate ? ` · ${a.car.license_plate}` : "";
