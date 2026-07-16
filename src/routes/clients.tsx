@@ -308,7 +308,22 @@ function ClientsPage() {
             {/* HEADER */}
             <div className="mb-6 flex items-start justify-between gap-4">
               <div className="min-w-0">
+                {(() => {
+                  const cat = normalizeCategory(selected.category as string | null | undefined);
+                  const Icon = CATEGORY_ICONS[cat];
+                  return (
+                    <div className="mb-2 flex items-center gap-2">
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium text-white ${CLIENT_CATEGORY_COLORS[cat]}`}
+                      >
+                        <Icon className="h-3.5 w-3.5" />
+                        {CLIENT_CATEGORY_LABELS[cat]}
+                      </span>
+                    </div>
+                  );
+                })()}
                 <h1 className="text-2xl font-bold">{selected.full_name}</h1>
+
                 <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
                   {selected.phone && (
                     <span className="inline-flex items-center gap-1">
