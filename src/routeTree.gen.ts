@@ -9,20 +9,12 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as ServicesRouteImport } from './routes/services'
 import { Route as ScheduleRouteImport } from './routes/schedule'
 import { Route as MechanicsRouteImport } from './routes/mechanics'
 import { Route as ClientsRouteImport } from './routes/clients'
-import { Route as CarsRouteImport } from './routes/cars'
 import { Route as CalendarRouteImport } from './routes/calendar'
-import { Route as BrandsRouteImport } from './routes/brands'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as CalculatorRouteImport } from './routes/calculator'
 
-const ServicesRoute = ServicesRouteImport.update({
-  id: '/services',
-  path: '/services',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ScheduleRoute = ScheduleRouteImport.update({
   id: '/schedule',
   path: '/schedule',
@@ -38,111 +30,68 @@ const ClientsRoute = ClientsRouteImport.update({
   path: '/clients',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CarsRoute = CarsRouteImport.update({
-  id: '/cars',
-  path: '/cars',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const CalendarRoute = CalendarRouteImport.update({
   id: '/calendar',
   path: '/calendar',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BrandsRoute = BrandsRouteImport.update({
-  id: '/brands',
-  path: '/brands',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const CalculatorRoute = CalculatorRouteImport.update({
+  id: '/calculator',
+  path: '/calculator',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/brands': typeof BrandsRoute
+  '/calculator': typeof CalculatorRoute
   '/calendar': typeof CalendarRoute
-  '/cars': typeof CarsRoute
   '/clients': typeof ClientsRoute
   '/mechanics': typeof MechanicsRoute
   '/schedule': typeof ScheduleRoute
-  '/services': typeof ServicesRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/brands': typeof BrandsRoute
+  '/calculator': typeof CalculatorRoute
   '/calendar': typeof CalendarRoute
-  '/cars': typeof CarsRoute
   '/clients': typeof ClientsRoute
   '/mechanics': typeof MechanicsRoute
   '/schedule': typeof ScheduleRoute
-  '/services': typeof ServicesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/brands': typeof BrandsRoute
+  '/calculator': typeof CalculatorRoute
   '/calendar': typeof CalendarRoute
-  '/cars': typeof CarsRoute
   '/clients': typeof ClientsRoute
   '/mechanics': typeof MechanicsRoute
   '/schedule': typeof ScheduleRoute
-  '/services': typeof ServicesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
-    | '/brands'
+    | '/calculator'
     | '/calendar'
-    | '/cars'
     | '/clients'
     | '/mechanics'
     | '/schedule'
-    | '/services'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/brands'
-    | '/calendar'
-    | '/cars'
-    | '/clients'
-    | '/mechanics'
-    | '/schedule'
-    | '/services'
+  to: '/calculator' | '/calendar' | '/clients' | '/mechanics' | '/schedule'
   id:
     | '__root__'
-    | '/'
-    | '/brands'
+    | '/calculator'
     | '/calendar'
-    | '/cars'
     | '/clients'
     | '/mechanics'
     | '/schedule'
-    | '/services'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  BrandsRoute: typeof BrandsRoute
+  CalculatorRoute: typeof CalculatorRoute
   CalendarRoute: typeof CalendarRoute
-  CarsRoute: typeof CarsRoute
   ClientsRoute: typeof ClientsRoute
   MechanicsRoute: typeof MechanicsRoute
   ScheduleRoute: typeof ScheduleRoute
-  ServicesRoute: typeof ServicesRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/services': {
-      id: '/services'
-      path: '/services'
-      fullPath: '/services'
-      preLoaderRoute: typeof ServicesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/schedule': {
       id: '/schedule'
       path: '/schedule'
@@ -164,13 +113,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/cars': {
-      id: '/cars'
-      path: '/cars'
-      fullPath: '/cars'
-      preLoaderRoute: typeof CarsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/calendar': {
       id: '/calendar'
       path: '/calendar'
@@ -178,32 +120,22 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CalendarRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/brands': {
-      id: '/brands'
-      path: '/brands'
-      fullPath: '/brands'
-      preLoaderRoute: typeof BrandsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/calculator': {
+      id: '/calculator'
+      path: '/calculator'
+      fullPath: '/calculator'
+      preLoaderRoute: typeof CalculatorRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  BrandsRoute: BrandsRoute,
+  CalculatorRoute: CalculatorRoute,
   CalendarRoute: CalendarRoute,
-  CarsRoute: CarsRoute,
   ClientsRoute: ClientsRoute,
   MechanicsRoute: MechanicsRoute,
   ScheduleRoute: ScheduleRoute,
-  ServicesRoute: ServicesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

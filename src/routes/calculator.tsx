@@ -39,7 +39,7 @@ import imgAc from "@/assets/cat-ac.jpg";
 import imgTires from "@/assets/cat-tires.jpg";
 import imgElectric from "@/assets/cat-electric.jpg";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/calculator")({
   ssr: false,
   head: () => ({
     meta: [
