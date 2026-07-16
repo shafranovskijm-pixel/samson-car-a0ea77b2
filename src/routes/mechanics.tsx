@@ -114,9 +114,11 @@ function MechanicsPage() {
                 key={m.id}
                 type="button"
                 onClick={() => setSelectedId(m.id)}
-                className={`flex w-full items-center gap-3 border-b px-3 py-2.5 text-left text-sm transition ${
-                  active ? "bg-primary/10" : "hover:bg-muted/60"
-                }`}
+                className="flex w-full items-center gap-3 border-b border-l-4 px-3 py-2.5 text-left text-sm transition hover:bg-muted/60"
+                style={{
+                  borderLeftColor: m.color,
+                  background: active ? `${m.color}22` : undefined,
+                }}
               >
                 <span className="h-4 w-4 shrink-0 rounded" style={{ background: m.color }} />
                 <div className="min-w-0 flex-1">
