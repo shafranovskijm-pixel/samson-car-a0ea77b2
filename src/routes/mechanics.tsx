@@ -95,8 +95,9 @@ function MechanicsPage() {
   const selected = mechanics.find((m) => m.id === selectedId) ?? null;
 
   return (
-    <div className="flex h-[calc(100vh-3rem)]">
-      <aside className="flex w-72 flex-col border-r bg-muted/30">
+    <div className="flex min-h-[calc(100vh-3rem)] flex-col md:h-[calc(100vh-3rem)] md:flex-row">
+      <aside className={`w-full flex-col border-r bg-muted/30 md:flex md:w-72 ${selected ? "hidden md:flex" : "flex"}`}>
+
         <div className="flex items-center justify-between border-b p-3">
           <div className="font-semibold">Мастера</div>
           <Button size="sm" onClick={openNew}>
