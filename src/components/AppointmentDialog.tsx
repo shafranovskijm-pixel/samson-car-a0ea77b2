@@ -33,12 +33,15 @@ import {
   listCarModels,
   listCars,
   listClients,
+  listMechanicServiceRates,
   listMechanics,
   listServices,
   updateAppointment,
 } from "@/lib/api";
 
 import { STATUS_LABELS, type AppointmentStatus } from "@/lib/types";
+
+type SvcRow = { service_id: string; price: number; mechanic_payout: number };
 
 type Props = {
   open: boolean;
@@ -50,6 +53,7 @@ type Props = {
   defaultBrandId?: string | null;
   defaultModelId?: string | null;
 };
+
 
 export function AppointmentDialog({
   open,
