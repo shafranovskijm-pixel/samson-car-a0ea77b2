@@ -5,6 +5,7 @@ import type {
   Car,
   CarModel,
   Client,
+  ClientComment,
   ClientReminder,
   Mechanic,
   MechanicServiceRate,
@@ -18,6 +19,10 @@ const throwIf = <T,>(x: { data: T | null; error: unknown }): T => {
   if (x.error) throw x.error;
   return x.data as T;
 };
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const anySb = supabase as any;
+
 
 // BRANDS
 export const listBrands = async (): Promise<Brand[]> =>
