@@ -92,7 +92,7 @@ function ClientsPage() {
         await updateClient(clientDialog.editing.id, payload);
         return clientDialog.editing.id;
       }
-      const created = (await createClient(payload)) as { id: string };
+      const created = (await createClient(payload)) as unknown as { id: string };
       return created.id;
     },
     onSuccess: (id) => {

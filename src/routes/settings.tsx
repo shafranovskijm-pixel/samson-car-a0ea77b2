@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { fallback, zodValidator } from "@tanstack/zod-adapter";
-import { z } from "zod";
+import { useMemo, useState } from "react";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -30,13 +29,11 @@ import {
   TIER_LABEL, TIER_OPTIONS, type Brand, type BrandTier,
 } from "@/lib/types";
 
-const searchSchema = z.object({
-  tab: fallback(z.string(), "brands").default("brands"),
-});
-
 export const Route = createFileRoute("/settings")({
   ssr: false,
-  validateSearch: zodValidator(searchSchema),
+  validateSearch: (input: Record<string, unknown>) => ({
+    tab: typeof input.tab === "string" ? input.tab : "brands",
+  }),
   component: SettingsPage,
 });
 

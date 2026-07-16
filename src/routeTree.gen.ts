@@ -9,12 +9,19 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ScheduleRouteImport } from './routes/schedule'
 import { Route as MechanicsRouteImport } from './routes/mechanics'
 import { Route as ClientsRouteImport } from './routes/clients'
 import { Route as CalendarRouteImport } from './routes/calendar'
 import { Route as CalculatorRouteImport } from './routes/calculator'
+import { Route as IndexRouteImport } from './routes/index'
 
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ScheduleRoute = ScheduleRouteImport.update({
   id: '/schedule',
   path: '/schedule',
@@ -40,58 +47,89 @@ const CalculatorRoute = CalculatorRouteImport.update({
   path: '/calculator',
   getParentRoute: () => rootRouteImport,
 } as any)
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
+  '/': typeof IndexRoute
   '/calculator': typeof CalculatorRoute
   '/calendar': typeof CalendarRoute
   '/clients': typeof ClientsRoute
   '/mechanics': typeof MechanicsRoute
   '/schedule': typeof ScheduleRoute
+  '/settings': typeof SettingsRoute
 }
 export interface FileRoutesByTo {
+  '/': typeof IndexRoute
   '/calculator': typeof CalculatorRoute
   '/calendar': typeof CalendarRoute
   '/clients': typeof ClientsRoute
   '/mechanics': typeof MechanicsRoute
   '/schedule': typeof ScheduleRoute
+  '/settings': typeof SettingsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
   '/calculator': typeof CalculatorRoute
   '/calendar': typeof CalendarRoute
   '/clients': typeof ClientsRoute
   '/mechanics': typeof MechanicsRoute
   '/schedule': typeof ScheduleRoute
+  '/settings': typeof SettingsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/'
     | '/calculator'
     | '/calendar'
     | '/clients'
     | '/mechanics'
     | '/schedule'
+    | '/settings'
   fileRoutesByTo: FileRoutesByTo
-  to: '/calculator' | '/calendar' | '/clients' | '/mechanics' | '/schedule'
+  to:
+    | '/'
+    | '/calculator'
+    | '/calendar'
+    | '/clients'
+    | '/mechanics'
+    | '/schedule'
+    | '/settings'
   id:
     | '__root__'
+    | '/'
     | '/calculator'
     | '/calendar'
     | '/clients'
     | '/mechanics'
     | '/schedule'
+    | '/settings'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  IndexRoute: typeof IndexRoute
   CalculatorRoute: typeof CalculatorRoute
   CalendarRoute: typeof CalendarRoute
   ClientsRoute: typeof ClientsRoute
   MechanicsRoute: typeof MechanicsRoute
   ScheduleRoute: typeof ScheduleRoute
+  SettingsRoute: typeof SettingsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/schedule': {
       id: '/schedule'
       path: '/schedule'
@@ -127,15 +165,24 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CalculatorRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
   CalculatorRoute: CalculatorRoute,
   CalendarRoute: CalendarRoute,
   ClientsRoute: ClientsRoute,
   MechanicsRoute: MechanicsRoute,
   ScheduleRoute: ScheduleRoute,
+  SettingsRoute: SettingsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
