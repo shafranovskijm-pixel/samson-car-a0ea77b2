@@ -364,6 +364,11 @@ export const listMechanicShifts = async (mechanic_id: string): Promise<MechanicS
       .order("starts_at", { ascending: false }),
   ) as MechanicShift[];
 
+export const listAllMechanicShifts = async (): Promise<MechanicShift[]> =>
+  throwIf(
+    await supabase.from("mechanic_shifts").select("*").order("starts_at", { ascending: true }),
+  ) as MechanicShift[];
+
 export const createMechanicShift = async (input: Omit<MechanicShift, "id">) =>
   throwIf(await supabase.from("mechanic_shifts").insert(input).select().single()) as MechanicShift;
 
