@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
   Calendar as CalendarIcon,
   Clock,
@@ -8,12 +9,14 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Plus,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -21,7 +24,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { listBrands, listCarModels, listServices, listPricesForBrand } from "@/lib/api";
+import {
+  listBrands,
+  listCarModels,
+  listServices,
+  listPricesForBrand,
+  createCarModel,
+} from "@/lib/api";
 
 import { TIER_COEFFICIENT, TIER_LABEL, resolveTier, type BrandTier } from "@/lib/types";
 import imgFluids from "@/assets/cat-fluids.jpg";
