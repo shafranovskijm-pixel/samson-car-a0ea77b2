@@ -73,6 +73,19 @@ export type Mechanic = {
   phone: string | null;
   color: string;
 };
+export type MechanicServiceRate = {
+  id: string;
+  mechanic_id: string;
+  service_id: string;
+  amount: number;
+};
+export type MechanicShift = {
+  id: string;
+  mechanic_id: string;
+  starts_at: string;
+  ends_at: string;
+  note: string | null;
+};
 export type AppointmentStatus = "scheduled" | "in_progress" | "done" | "cancelled";
 export type Appointment = {
   id: string;
