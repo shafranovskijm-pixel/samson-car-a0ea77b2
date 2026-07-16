@@ -1,10 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Calendar as BigCalendar, dateFnsLocalizer, Views, type View } from "react-big-calendar";
 import { format, parse, startOfWeek, getDay } from "date-fns";
 import { ru } from "date-fns/locale";
-import { Plus } from "lucide-react";
+import { Plus, Clock } from "lucide-react";
+import { toast } from "sonner";
+
 import { z } from "zod";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 
