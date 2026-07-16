@@ -7,7 +7,7 @@ import { ru } from "date-fns/locale";
 import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+
 import {
   Select,
   SelectContent,
