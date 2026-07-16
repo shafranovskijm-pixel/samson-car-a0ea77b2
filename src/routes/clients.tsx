@@ -260,6 +260,8 @@ function ClientsPage() {
           {filtered.map((c) => {
             const active = c.id === selectedId;
             const cnt = carsCountByClient[c.id] ?? 0;
+            const cat = normalizeCategory(c.category as string | null | undefined);
+            const Icon = CATEGORY_ICONS[cat];
             return (
               <button
                 key={c.id}
@@ -269,9 +271,13 @@ function ClientsPage() {
                   active ? "bg-primary/10" : "hover:bg-muted/60"
                 }`}
               >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-red-600 text-xs font-bold text-white">
-                  {c.full_name.slice(0, 2).toUpperCase()}
+                <div
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white shadow-sm ${CLIENT_CATEGORY_COLORS[cat]}`}
+                  title={CLIENT_CATEGORY_LABELS[cat]}
+                >
+                  <Icon className="h-4 w-4" />
                 </div>
+
                 <div className="min-w-0 flex-1">
                   <div className="truncate font-medium">{c.full_name}</div>
                   <div className="truncate text-xs text-muted-foreground">
