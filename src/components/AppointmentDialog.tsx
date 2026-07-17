@@ -39,7 +39,10 @@ import {
   listMechanics,
   listServices,
   updateAppointment,
+  upsertServiceByCategoryName,
 } from "@/lib/api";
+import { useCarCustomServices } from "@/hooks/useCarCustomServices";
+import { useServiceUsage } from "@/hooks/useServiceUsage";
 
 import { STATUS_LABELS, type AppointmentStatus, type ReminderInterval } from "@/lib/types";
 import { Checkbox } from "@/components/ui/checkbox";
