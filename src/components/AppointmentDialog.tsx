@@ -495,7 +495,6 @@ export function AppointmentDialog({
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
-            </div>
 
             {/* Сохранённые услуги для этой машины */}
             {carCustom.enabled && carCustom.items.length > 0 && (
