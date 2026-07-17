@@ -149,6 +149,95 @@ export type Database = {
         }
         Relationships: []
       }
+      car_catalog_models: {
+        Row: {
+          brand_name: string
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          brand_name: string
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          brand_name?: string
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      car_catalog_modifications: {
+        Row: {
+          body_code: string | null
+          chassis_code: string | null
+          created_at: string
+          displacement_cc: number | null
+          engine_code: string | null
+          fuel: string | null
+          horsepower: number | null
+          hybrid: boolean
+          id: string
+          model_id: string
+          note: string | null
+          raw: string
+          source: string
+          steering: string | null
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          body_code?: string | null
+          chassis_code?: string | null
+          created_at?: string
+          displacement_cc?: number | null
+          engine_code?: string | null
+          fuel?: string | null
+          horsepower?: number | null
+          hybrid?: boolean
+          id?: string
+          model_id: string
+          note?: string | null
+          raw?: string
+          source?: string
+          steering?: string | null
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          body_code?: string | null
+          chassis_code?: string | null
+          created_at?: string
+          displacement_cc?: number | null
+          engine_code?: string | null
+          fuel?: string | null
+          horsepower?: number | null
+          hybrid?: boolean
+          id?: string
+          model_id?: string
+          note?: string | null
+          raw?: string
+          source?: string
+          steering?: string | null
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "car_catalog_modifications_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "car_catalog_models"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       car_models: {
         Row: {
           brand_id: string
