@@ -1296,6 +1296,13 @@ function LandingPage() {
                       <CalendarIcon className="mr-2 h-4 w-4" /> Записаться на сервис
                     </Link>
                   </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full border-white/20 bg-white/5 text-white hover:bg-white/10"
+                    onClick={() => setPrinting(true)}
+                  >
+                    <Printer className="mr-2 h-4 w-4" /> Печать работ
+                  </Button>
                   <p className="text-center text-xs text-white/50">
                     Итоговая цена уточняется после диагностики
                   </p>
