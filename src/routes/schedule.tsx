@@ -277,6 +277,15 @@ function SchedulePage() {
                           <Printer className="h-3.5 w-3.5" />
                           Печать
                         </button>
+                        <button
+                          type="button"
+                          title="Удалить запись"
+                          onClick={() => confirmDelete(a.id)}
+                          disabled={deleteMut.isPending}
+                          className="inline-flex items-center gap-1 rounded-full border border-destructive/40 bg-background px-2.5 py-1 text-xs font-medium text-destructive shadow-sm transition hover:bg-destructive/10 disabled:opacity-50"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Удалить
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <button
