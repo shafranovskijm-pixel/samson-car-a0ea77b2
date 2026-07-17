@@ -1328,6 +1328,42 @@ function LandingPage() {
           © Samson Auto · Автосервис полного цикла
         </div>
       </footer>
+
+      {printing && (() => {
+        const works: { name: string; price: number }[] = [];
+        services.forEach((s) => {
+          if (selected.has(s.id)) works.push({ name: s.name, price: priceOf(s.id, s.base_price) });
+        });
+        customServices.items.forEach((c) => {
+          if (selected.has(customId(c.id))) works.push({ name: c.name, price: Number(c.price) || 0 });
+        });
+        const carRows: PrintKV[] = [];
+        if (brandName) carRows.push({ label: "Марка / модель", value: `${brandName} ${modelName}`.trim() });
+        if (year) carRows.push({ label: "Год", value: String(year) });
+        if (currentMod) {
+          const specs = [
+            currentMod.body_code,
+            currentMod.engine_code,
+            currentMod.displacement_cc ? `${currentMod.displacement_cc} cc` : "",
+            currentMod.horsepower ? `${currentMod.horsepower} л.с.` : "",
+            currentMod.fuel ?? "",
+          ].filter(Boolean).join(" · ");
+          if (specs) carRows.push({ label: "Модификация", value: specs });
+        }
+        const now = new Date();
+        const dd = String(now.getDate()).padStart(2, "0");
+        const mm = String(now.getMonth() + 1).padStart(2, "0");
+        return (
+          <PrintDocument
+            onDone={() => setPrinting(false)}
+            title="Предварительный расчёт"
+            meta={[{ label: "Дата", value: `${dd}.${mm}.${now.getFullYear()}` }]}
+            sections={carRows.length ? [{ title: "Автомобиль", rows: carRows }] : []}
+            works={works}
+            total={totals.sum}
+          />
+        );
+      })()}
     </div>
   );
 }
