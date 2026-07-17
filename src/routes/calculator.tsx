@@ -281,9 +281,15 @@ function LandingPage() {
         mins += s.duration_minutes;
       }
     });
+    customServices.items.forEach((c) => {
+      if (selected.has(customId(c.id))) {
+        sum += Number(c.price) || 0;
+        mins += c.duration_minutes;
+      }
+    });
     return { sum, mins };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected, services, prices, brandId, coeff]);
+  }, [selected, services, prices, brandId, coeff, customServices.items]);
 
   const toggle = (id: string) => {
     setSelected((prev) => {
