@@ -124,8 +124,13 @@ function LandingPage() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [editingPrice, setEditingPrice] = useState<string | null>(null);
   const [priceDraft, setPriceDraft] = useState("");
+  const [addingCustom, setAddingCustom] = useState(false);
+  const [customDraft, setCustomDraft] = useState({ name: "", price: "", minutes: "30" });
+  const [savingCustom, setSavingCustom] = useState(false);
 
   const { bump, topServiceIds } = useServiceUsage();
+  const customServices = useCarCustomServices(brandName, modelName, year);
+  const customId = (id: string) => `custom:${id}`;
 
   // Матчинг марки JSON → БД
   const dbBrand = useMemo(
