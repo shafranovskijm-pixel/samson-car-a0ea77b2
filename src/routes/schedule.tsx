@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format, parseISO, startOfDay } from "date-fns";
 import { ru } from "date-fns/locale";
-import { Check, ChevronDown, Plus } from "lucide-react";
+import { Check, ChevronDown, Plus, Printer } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -44,6 +44,8 @@ import {
   type PaymentStatus,
 } from "@/lib/types";
 import { AppointmentDialog } from "@/components/AppointmentDialog";
+import { PrintDocument, type PrintKV } from "@/components/PrintDocument";
+import type { AppointmentWithRelations } from "@/lib/api";
 
 export const Route = createFileRoute("/schedule")({
   ssr: false,
@@ -59,6 +61,7 @@ function SchedulePage() {
     open: false,
     id: null,
   });
+  const [printApptId, setPrintApptId] = useState<string | null>(null);
 
   const { data: appointments = [] } = useQuery({
     queryKey: ["appointments"],
@@ -249,6 +252,15 @@ function SchedulePage() {
                         )}
                       </div>
                       <div className="flex flex-wrap gap-1.5 sm:justify-end">
+                        <button
+                          type="button"
+                          title="Печать заказ-наряда"
+                          onClick={() => setPrintApptId(a.id)}
+                          className="inline-flex items-center gap-1 rounded-full border bg-background px-2.5 py-1 text-xs font-medium shadow-sm transition hover:bg-accent"
+                        >
+                          <Printer className="h-3.5 w-3.5" />
+                          Печать
+                        </button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <button
@@ -359,6 +371,81 @@ function SchedulePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {printApptId && (
+        <ApptPrint
+          appt={appointments.find((x) => x.id === printApptId) ?? null}
+          onDone={() => setPrintApptId(null)}
+        />
+      )}
     </div>
+  );
+}
+
+function ApptPrint({
+  appt,
+  onDone,
+}: {
+  appt: AppointmentWithRelations | null;
+  onDone: () => void;
+}) {
+  if (!appt) {
+    onDone();
+    return null;
+  }
+  const car = appt.car;
+  const client = car?.client;
+  const brand = car?.brand?.name ?? "";
+  const status = (appt.status ?? "planned") as keyof typeof STATUS_LABELS;
+  const payment = (appt.payment_status ?? "unpaid") as keyof typeof PAYMENT_LABELS;
+  const total = appt.total_price ?? 0;
+  const paid = appt.paid_amount ?? 0;
+  const due = Math.max(0, total - paid);
+
+  const carSection: PrintKV[] = [
+    { label: "Марка / модель", value: `${brand} ${car?.model ?? ""}`.trim() },
+    { label: "Год выпуска", value: car?.year ? String(car.year) : "" },
+    { label: "Госномер", value: car?.license_plate ?? "" },
+    { label: "VIN", value: car?.vin ?? "" },
+    { label: "Двигатель", value: [car?.engine_volume ? `${car.engine_volume} л` : "", car?.engine_power ? `${car.engine_power} л.с.` : ""].filter(Boolean).join(" · ") },
+    { label: "Кузов / КПП / привод", value: [car?.color ?? "", car?.transmission ?? "", car?.drive_type ?? ""].filter(Boolean).join(" · ") },
+    { label: "Пробег", value: car?.mileage ? `${car.mileage} км` : "" },
+  ];
+
+  const clientSection: PrintKV[] = [
+    { label: "ФИО", value: client?.full_name ?? "" },
+    { label: "Телефон", value: client?.phone ?? "" },
+  ];
+
+  const works = appt.services.map((s) => ({
+    name: s.service?.name ?? "Услуга",
+    price: s.price ?? 0,
+  }));
+
+  const startsAt = new Date(appt.starts_at);
+  const dateStr = format(startsAt, "d MMMM yyyy, HH:mm", { locale: ru });
+
+  return (
+    <PrintDocument
+      onDone={onDone}
+      title={`Заказ-наряд № ${appt.id.slice(0, 8).toUpperCase()}`}
+      meta={[
+        { label: "Дата и время", value: dateStr },
+        { label: "Мастер", value: appt.mechanic?.full_name ?? "—" },
+        { label: "Статус", value: STATUS_LABELS[status] },
+        { label: "Оплата", value: PAYMENT_LABELS[payment] },
+      ]}
+      sections={[
+        { title: "Клиент", rows: clientSection },
+        { title: "Автомобиль", rows: carSection },
+      ]}
+      works={works}
+      total={total}
+      footer={[
+        { label: "Внесено", value: new Intl.NumberFormat("ru-RU").format(paid) + " ₽" },
+        { label: "К доплате", value: new Intl.NumberFormat("ru-RU").format(due) + " ₽" },
+      ]}
+      signatures
+    />
   );
 }

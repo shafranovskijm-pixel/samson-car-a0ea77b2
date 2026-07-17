@@ -13,6 +13,7 @@ import {
   X,
   Star,
   Car as CarIcon,
+  Printer,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -43,6 +44,7 @@ import {
   type DbModification,
 } from "@/lib/carsCatalogDb";
 import { BrandLogo } from "@/components/BrandLogo";
+import { PrintDocument, type PrintKV } from "@/components/PrintDocument";
 import { useServiceUsage } from "@/hooks/useServiceUsage";
 import { useCarCustomServices } from "@/hooks/useCarCustomServices";
 import { Trash2 } from "lucide-react";
@@ -127,6 +129,7 @@ function LandingPage() {
   const [addingCustom, setAddingCustom] = useState(false);
   const [customDraft, setCustomDraft] = useState({ name: "", price: "", minutes: "30" });
   const [savingCustom, setSavingCustom] = useState(false);
+  const [printing, setPrinting] = useState(false);
 
   const { bump, topServiceIds } = useServiceUsage();
   const customServices = useCarCustomServices(brandName, modelName, year);
@@ -1293,6 +1296,13 @@ function LandingPage() {
                       <CalendarIcon className="mr-2 h-4 w-4" /> Записаться на сервис
                     </Link>
                   </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full border-white/20 bg-white/5 text-white hover:bg-white/10"
+                    onClick={() => setPrinting(true)}
+                  >
+                    <Printer className="mr-2 h-4 w-4" /> Печать работ
+                  </Button>
                   <p className="text-center text-xs text-white/50">
                     Итоговая цена уточняется после диагностики
                   </p>
@@ -1318,6 +1328,42 @@ function LandingPage() {
           © Samson Auto · Автосервис полного цикла
         </div>
       </footer>
+
+      {printing && (() => {
+        const works: { name: string; price: number }[] = [];
+        services.forEach((s) => {
+          if (selected.has(s.id)) works.push({ name: s.name, price: priceOf(s.id, s.base_price) });
+        });
+        customServices.items.forEach((c) => {
+          if (selected.has(customId(c.id))) works.push({ name: c.name, price: Number(c.price) || 0 });
+        });
+        const carRows: PrintKV[] = [];
+        if (brandName) carRows.push({ label: "Марка / модель", value: `${brandName} ${modelName}`.trim() });
+        if (year) carRows.push({ label: "Год", value: String(year) });
+        if (currentMod) {
+          const specs = [
+            currentMod.body_code,
+            currentMod.engine_code,
+            currentMod.displacement_cc ? `${currentMod.displacement_cc} cc` : "",
+            currentMod.horsepower ? `${currentMod.horsepower} л.с.` : "",
+            currentMod.fuel ?? "",
+          ].filter(Boolean).join(" · ");
+          if (specs) carRows.push({ label: "Модификация", value: specs });
+        }
+        const now = new Date();
+        const dd = String(now.getDate()).padStart(2, "0");
+        const mm = String(now.getMonth() + 1).padStart(2, "0");
+        return (
+          <PrintDocument
+            onDone={() => setPrinting(false)}
+            title="Предварительный расчёт"
+            meta={[{ label: "Дата", value: `${dd}.${mm}.${now.getFullYear()}` }]}
+            sections={carRows.length ? [{ title: "Автомобиль", rows: carRows }] : []}
+            works={works}
+            total={totals.sum}
+          />
+        );
+      })()}
     </div>
   );
 }
