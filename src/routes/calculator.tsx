@@ -488,7 +488,7 @@ function LandingPage() {
                   {/* Год */}
                   <div>
                     <div className="mb-2 text-sm text-white/50">Год выпуска</div>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       {years.map((y) => (
                         <button
                           key={y}
@@ -507,6 +507,32 @@ function LandingPage() {
                           {y}
                         </button>
                       ))}
+                      <div className="flex items-center gap-1">
+                        <Input
+                          value={yearInput}
+                          onChange={(e) => setYearInput(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                          placeholder="другой год"
+                          inputMode="numeric"
+                          className="h-9 w-28 border-white/10 bg-white/5 text-sm text-white placeholder:text-white/40"
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          disabled={yearInput.length !== 4}
+                          onClick={() => {
+                            const y = Number(yearInput);
+                            if (y >= 1950 && y <= 2100) {
+                              setYear(y);
+                              setModelName("");
+                              setModIndex(null);
+                              setYearInput("");
+                            }
+                          }}
+                        >
+                          Добавить
+                        </Button>
+                      </div>
                     </div>
                   </div>
 
@@ -522,6 +548,7 @@ function LandingPage() {
                             onClick={() => {
                               setModelName(m.name);
                               setModIndex(null);
+                              setAddingMod(false);
                             }}
                             className={`rounded-lg border px-3 py-2 text-left text-sm font-medium transition ${
                               modelName === m.name
@@ -533,17 +560,58 @@ function LandingPage() {
                           </button>
                         ))}
                       </div>
+                      <div className="mt-3 flex items-center gap-2">
+                        <Input
+                          value={modelInput}
+                          onChange={(e) => setModelInput(e.target.value)}
+                          placeholder="Другая модель (например Camry)"
+                          className="h-10 border-white/10 bg-white/5 text-white placeholder:text-white/40"
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          disabled={!modelInput.trim()}
+                          onClick={() => {
+                            setModelName(modelInput.trim());
+                            setModelInput("");
+                            setModIndex(null);
+                            setAddingMod(true);
+                          }}
+                        >
+                          Добавить
+                        </Button>
+                      </div>
                     </div>
                   )}
 
                   {/* Модификация */}
                   {modelName && (
                     <div>
-                      <div className="mb-2 text-sm text-white/50">Модификация</div>
+                      <div className="mb-2 flex items-center justify-between">
+                        <div className="text-sm text-white/50">Модификация</div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setAddingMod((v) => !v)}
+                          className="text-white/70 hover:text-white"
+                        >
+                          <Plus className="mr-1 h-4 w-4" />
+                          {addingMod ? "Отмена" : "Добавить модификацию"}
+                        </Button>
+                      </div>
+
+                      {modifications.length === 0 && !addingMod && (
+                        <div className="mb-3 rounded-lg border border-white/10 bg-white/5 p-3 text-sm text-white/60">
+                          Для этой модели/года пока нет модификаций — добавьте свою.
+                        </div>
+                      )}
+
                       <div className="grid gap-2 sm:grid-cols-2">
                         {modifications.map((m, i) => (
                           <button
-                            key={`${m.raw}-${i}`}
+                            key={m.key}
                             type="button"
                             onClick={() => setModIndex(i)}
                             className={`rounded-xl border p-3 text-left transition ${
@@ -567,6 +635,115 @@ function LandingPage() {
                           </button>
                         ))}
                       </div>
+
+                      {addingMod && (
+                        <div className="mt-4 rounded-xl border border-white/10 bg-white/5 p-4">
+                          <div className="mb-3 text-sm font-semibold text-white">
+                            Новая модификация · {brandName} {modelName} · {year}
+                          </div>
+                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <Input
+                              placeholder="Кузов (например SXV20)"
+                              value={addForm.body_code}
+                              onChange={(e) => setAddForm({ ...addForm, body_code: e.target.value })}
+                              className="h-10 border-white/10 bg-white/5 text-white placeholder:text-white/40"
+                            />
+                            <Input
+                              placeholder="Код двигателя (5S-FE)"
+                              value={addForm.engine_code}
+                              onChange={(e) => setAddForm({ ...addForm, engine_code: e.target.value })}
+                              className="h-10 border-white/10 bg-white/5 text-white placeholder:text-white/40"
+                            />
+                            <Input
+                              placeholder="Объём, см³ (2200)"
+                              value={addForm.displacement_cc}
+                              onChange={(e) =>
+                                setAddForm({ ...addForm, displacement_cc: e.target.value.replace(/\D/g, "") })
+                              }
+                              inputMode="numeric"
+                              className="h-10 border-white/10 bg-white/5 text-white placeholder:text-white/40"
+                            />
+                            <Input
+                              placeholder="Мощность, л.с. (135)"
+                              value={addForm.horsepower}
+                              onChange={(e) =>
+                                setAddForm({ ...addForm, horsepower: e.target.value.replace(/\D/g, "") })
+                              }
+                              inputMode="numeric"
+                              className="h-10 border-white/10 bg-white/5 text-white placeholder:text-white/40"
+                            />
+                            <Input
+                              placeholder="Топливо (бензин / дизель)"
+                              value={addForm.fuel}
+                              onChange={(e) => setAddForm({ ...addForm, fuel: e.target.value })}
+                              className="h-10 border-white/10 bg-white/5 text-white placeholder:text-white/40"
+                            />
+                            <Input
+                              placeholder="Заметка (опц.)"
+                              value={addForm.note}
+                              onChange={(e) => setAddForm({ ...addForm, note: e.target.value })}
+                              className="h-10 border-white/10 bg-white/5 text-white placeholder:text-white/40"
+                            />
+                          </div>
+                          <div className="mt-3 flex justify-end gap-2">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              onClick={() => setAddingMod(false)}
+                              className="text-white/70"
+                            >
+                              Отмена
+                            </Button>
+                            <Button
+                              type="button"
+                              disabled={savingMod || !year}
+                              onClick={async () => {
+                                if (!year) return;
+                                setSavingMod(true);
+                                try {
+                                  await dbAddModification({
+                                    brand: brandName,
+                                    modelName,
+                                    year,
+                                    body_code: addForm.body_code.trim() || null,
+                                    engine_code: addForm.engine_code.trim() || null,
+                                    displacement_cc: addForm.displacement_cc
+                                      ? Number(addForm.displacement_cc)
+                                      : null,
+                                    horsepower: addForm.horsepower ? Number(addForm.horsepower) : null,
+                                    fuel: addForm.fuel.trim() || null,
+                                    note: addForm.note.trim() || null,
+                                  });
+                                  await Promise.all([
+                                    qc.invalidateQueries({ queryKey: ["catalog-mods", brandName, year, modelName] }),
+                                    qc.invalidateQueries({ queryKey: ["catalog-models", brandName, year] }),
+                                    qc.invalidateQueries({ queryKey: ["catalog-years", brandName] }),
+                                  ]);
+                                  setAddForm({
+                                    body_code: "",
+                                    engine_code: "",
+                                    displacement_cc: "",
+                                    horsepower: "",
+                                    fuel: "",
+                                    note: "",
+                                  });
+                                  setAddingMod(false);
+                                  // авто-выбираем последнюю добавленную (появится наверху db-списка)
+                                  setModIndex(0);
+                                } catch (e) {
+                                  console.error(e);
+                                  alert("Не удалось сохранить модификацию (нужно войти).");
+                                } finally {
+                                  setSavingMod(false);
+                                }
+                              }}
+                              className="bg-red-600 text-white hover:bg-red-700"
+                            >
+                              {savingMod ? "Сохранение…" : "Сохранить"}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
