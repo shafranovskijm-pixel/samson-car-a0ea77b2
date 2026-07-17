@@ -252,6 +252,15 @@ function SchedulePage() {
                         )}
                       </div>
                       <div className="flex flex-wrap gap-1.5 sm:justify-end">
+                        <button
+                          type="button"
+                          title="Печать заказ-наряда"
+                          onClick={() => setPrintApptId(a.id)}
+                          className="inline-flex items-center gap-1 rounded-full border bg-background px-2.5 py-1 text-xs font-medium shadow-sm transition hover:bg-accent"
+                        >
+                          <Printer className="h-3.5 w-3.5" />
+                          Печать
+                        </button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <button
