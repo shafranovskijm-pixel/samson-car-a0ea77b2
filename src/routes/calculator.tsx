@@ -13,6 +13,7 @@ import {
   X,
   Star,
   Car as CarIcon,
+  Printer,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
