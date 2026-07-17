@@ -104,6 +104,18 @@ function LandingPage() {
   const [modelName, setModelName] = useState<string>("");
   const [modIndex, setModIndex] = useState<number | null>(null);
   const [brandSearch, setBrandSearch] = useState("");
+  const [modelInput, setModelInput] = useState("");
+  const [yearInput, setYearInput] = useState("");
+  const [addingMod, setAddingMod] = useState(false);
+  const [addForm, setAddForm] = useState({
+    body_code: "",
+    engine_code: "",
+    displacement_cc: "",
+    horsepower: "",
+    fuel: "",
+    note: "",
+  });
+  const [savingMod, setSavingMod] = useState(false);
 
   // Услуги
   const [selected, setSelected] = useState<Set<string>>(new Set());
