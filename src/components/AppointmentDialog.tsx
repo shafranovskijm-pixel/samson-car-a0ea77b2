@@ -199,6 +199,92 @@ export function AppointmentDialog({
   );
   const selectedCar = useMemo(() => cars.find((c) => c.id === carId), [cars, carId]);
 
+  const selectedBrandName = useMemo(
+    () => brands.find((b) => b.id === selectedCar?.brand_id)?.name ?? "",
+    [brands, selectedCar],
+  );
+  const carCustom = useCarCustomServices(
+    selectedBrandName,
+    selectedCar?.model ?? "",
+    selectedCar?.year ?? null,
+  );
+  const { bump } = useServiceUsage();
+
+  const categories = useMemo(
+    () => Array.from(new Set(services.map((s) => s.category))).sort(),
+    [services],
+  );
+
+  const [customCat, setCustomCat] = useState<string>("");
+  const [customCatOther, setCustomCatOther] = useState<string>("");
+  const [customName, setCustomName] = useState<string>("");
+  const [customPrice, setCustomPrice] = useState<string>("");
+  const [savingCustom, setSavingCustom] = useState(false);
+
+  const addCustomService = async () => {
+    const cat = (customCat === "__other__" ? customCatOther : customCat).trim();
+    const name = customName.trim();
+    const price = Math.max(0, Math.round(Number(customPrice) || 0));
+    if (!cat || !name || price <= 0) {
+      toast.error("Заполните категорию, название и цену");
+      return;
+    }
+    if (!carCustom.enabled) {
+      toast.error("Выберите машину с указанным годом");
+      return;
+    }
+    setSavingCustom(true);
+    try {
+      const svc = await upsertServiceByCategoryName({ category: cat, name, price });
+      await carCustom.add({ category: cat, name, price, duration_minutes: 30 });
+      qc.invalidateQueries({ queryKey: ["services"] });
+      setSelected((prev) =>
+        prev.some((s) => s.service_id === svc.id)
+          ? prev
+          : [...prev, { service_id: svc.id, price, mechanic_payout: rateFor(svc.id, price) }],
+      );
+      setCustomName("");
+      setCustomPrice("");
+      toast.success("Услуга добавлена и запомнена для этой машины");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setSavingCustom(false);
+    }
+  };
+
+  const removeSavedCustom = async (id: string) => {
+    if (!confirm("Удалить сохранённую услугу для этой машины?")) return;
+    try {
+      await carCustom.remove(id);
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  };
+
+  const pickSavedCustom = async (id: string) => {
+    const cs = carCustom.items.find((c) => c.id === id);
+    if (!cs) return;
+    try {
+      const svc = await upsertServiceByCategoryName({
+        category: cs.category,
+        name: cs.name,
+        price: cs.price,
+      });
+      qc.invalidateQueries({ queryKey: ["services"] });
+      setSelected((prev) =>
+        prev.some((s) => s.service_id === svc.id)
+          ? prev
+          : [
+              ...prev,
+              { service_id: svc.id, price: cs.price, mechanic_payout: rateFor(svc.id, cs.price) },
+            ],
+      );
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  };
+
   // auto-set client when car chosen
   useEffect(() => {
     if (carId && !clientId) {
