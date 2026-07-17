@@ -61,6 +61,7 @@ function SchedulePage() {
     open: false,
     id: null,
   });
+  const [printApptId, setPrintApptId] = useState<string | null>(null);
 
   const { data: appointments = [] } = useQuery({
     queryKey: ["appointments"],
