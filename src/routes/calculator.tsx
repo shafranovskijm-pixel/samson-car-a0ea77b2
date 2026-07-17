@@ -888,14 +888,162 @@ function LandingPage() {
                       height={60}
                       className="h-14 w-20 rounded-lg object-cover ring-1 ring-white/10"
                     />
-                    <div>
+                    <div className="flex-1">
                       <h3 className="text-xl font-bold">{activeCategory}</h3>
                       <div className="text-xs text-white/50">
-                        {byCategory[activeCategory]?.length ?? 0} услуг
+                        {(byCategory[activeCategory]?.length ?? 0) +
+                          customServices.items.filter((c) => c.category === activeCategory).length}{" "}
+                        услуг
                       </div>
                     </div>
+                    {customServices.enabled && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => setAddingCustom((v) => !v)}
+                      >
+                        <Plus className="mr-1 h-4 w-4" />
+                        {addingCustom ? "Отмена" : "Добавить услугу"}
+                      </Button>
+                    )}
                   </div>
+
+                  {addingCustom && customServices.enabled && (
+                    <div className="mb-4 rounded-xl border border-white/10 bg-white/5 p-4">
+                      <div className="mb-2 text-xs text-white/60">
+                        Только для {brandName} {modelName} · {year}
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <Input
+                          placeholder="Название услуги"
+                          value={customDraft.name}
+                          onChange={(e) => setCustomDraft({ ...customDraft, name: e.target.value })}
+                          className="h-10 border-white/10 bg-white/5 text-white placeholder:text-white/40 sm:col-span-3"
+                        />
+                        <Input
+                          placeholder="Цена, ₽"
+                          value={customDraft.price}
+                          onChange={(e) =>
+                            setCustomDraft({ ...customDraft, price: e.target.value.replace(/\D/g, "") })
+                          }
+                          inputMode="numeric"
+                          className="h-10 border-white/10 bg-white/5 text-white placeholder:text-white/40"
+                        />
+                        <Input
+                          placeholder="Длительность, мин"
+                          value={customDraft.minutes}
+                          onChange={(e) =>
+                            setCustomDraft({ ...customDraft, minutes: e.target.value.replace(/\D/g, "") })
+                          }
+                          inputMode="numeric"
+                          className="h-10 border-white/10 bg-white/5 text-white placeholder:text-white/40"
+                        />
+                        <Button
+                          type="button"
+                          disabled={savingCustom || !customDraft.name.trim() || !customDraft.price}
+                          onClick={async () => {
+                            setSavingCustom(true);
+                            try {
+                              await customServices.add({
+                                category: activeCategory!,
+                                name: customDraft.name.trim(),
+                                price: Number(customDraft.price) || 0,
+                                duration_minutes: Number(customDraft.minutes) || 30,
+                              });
+                              setCustomDraft({ name: "", price: "", minutes: "30" });
+                              setAddingCustom(false);
+                            } catch (e) {
+                              console.error(e);
+                              alert("Не удалось сохранить (нужно войти).");
+                            } finally {
+                              setSavingCustom(false);
+                            }
+                          }}
+                          className="bg-red-600 text-white hover:bg-red-700"
+                        >
+                          {savingCustom ? "Сохранение…" : "Сохранить"}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="grid gap-3 sm:grid-cols-2">
+                    {customServices.items
+                      .filter((c) => c.category === activeCategory)
+                      .map((c) => {
+                        const sid = customId(c.id);
+                        const active = selected.has(sid);
+                        return (
+                          <div
+                            key={sid}
+                            className={`group relative overflow-hidden rounded-xl border p-4 text-left transition-all ${
+                              active
+                                ? "border-red-500/60 bg-gradient-to-br from-red-500/15 to-orange-500/10"
+                                : "border-white/10 bg-white/[0.03] hover:border-white/20"
+                            }`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <button type="button" onClick={() => toggle(sid)} className="mt-1">
+                                <Checkbox
+                                  checked={active}
+                                  className="border-white/30 data-[state=checked]:border-red-500 data-[state=checked]:bg-red-500"
+                                />
+                              </button>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-start justify-between gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => toggle(sid)}
+                                    className="block flex-1 text-left font-medium text-white"
+                                  >
+                                    {c.name}
+                                    <span className="ml-2 rounded bg-blue-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-blue-300">
+                                      только для этого авто
+                                    </span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      if (
+                                        !confirm(
+                                          `Удалить услугу «${c.name}» для ${brandName} ${modelName} ${year}?`,
+                                        )
+                                      )
+                                        return;
+                                      try {
+                                        await customServices.remove(c.id);
+                                        setSelected((prev) => {
+                                          const n = new Set(prev);
+                                          n.delete(sid);
+                                          return n;
+                                        });
+                                      } catch (e) {
+                                        console.error(e);
+                                        alert("Не удалось удалить.");
+                                      }
+                                    }}
+                                    className="rounded p-1 text-white/40 hover:bg-red-500/20 hover:text-red-400"
+                                    aria-label="Удалить"
+                                    title="Удалить"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </div>
+                                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-white/50">
+                                  <span className="inline-flex items-center gap-1">
+                                    <Clock className="h-3 w-3" />
+                                    {fmtDur(c.duration_minutes)}
+                                  </span>
+                                </div>
+                                <div className="mt-3 text-lg font-bold text-white">
+                                  {fmt(Number(c.price) || 0)}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     {(byCategory[activeCategory] ?? []).map((s) => {
                       const active = selected.has(s.id);
                       const price = priceOf(s.id, s.base_price);
