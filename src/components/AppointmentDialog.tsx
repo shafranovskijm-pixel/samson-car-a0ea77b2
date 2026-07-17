@@ -206,14 +206,15 @@ export function AppointmentDialog({
 
   // when mechanic changes, refill mechanic_payout from rates for services with 0 payout
   useEffect(() => {
-    if (!mechanicId || rates.length === 0) return;
+    if (!mechanicId) return;
     setSelected((prev) =>
       prev.map((s) =>
         s.mechanic_payout === 0
-          ? { ...s, mechanic_payout: rates.find((r) => r.service_id === s.service_id)?.amount ?? 0 }
+          ? { ...s, mechanic_payout: rateFor(s.service_id, s.price) }
           : s,
       ),
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mechanicId, rates]);
 
 
