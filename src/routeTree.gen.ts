@@ -13,6 +13,7 @@ import { Route as StatsRouteImport } from './routes/stats'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ScheduleRouteImport } from './routes/schedule'
 import { Route as MechanicsRouteImport } from './routes/mechanics'
+import { Route as ExpensesRouteImport } from './routes/expenses'
 import { Route as ClientsRouteImport } from './routes/clients'
 import { Route as CalendarRouteImport } from './routes/calendar'
 import { Route as CalculatorRouteImport } from './routes/calculator'
@@ -36,6 +37,11 @@ const ScheduleRoute = ScheduleRouteImport.update({
 const MechanicsRoute = MechanicsRouteImport.update({
   id: '/mechanics',
   path: '/mechanics',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExpensesRoute = ExpensesRouteImport.update({
+  id: '/expenses',
+  path: '/expenses',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ClientsRoute = ClientsRouteImport.update({
@@ -64,6 +70,7 @@ export interface FileRoutesByFullPath {
   '/calculator': typeof CalculatorRoute
   '/calendar': typeof CalendarRoute
   '/clients': typeof ClientsRoute
+  '/expenses': typeof ExpensesRoute
   '/mechanics': typeof MechanicsRoute
   '/schedule': typeof ScheduleRoute
   '/settings': typeof SettingsRoute
@@ -74,6 +81,7 @@ export interface FileRoutesByTo {
   '/calculator': typeof CalculatorRoute
   '/calendar': typeof CalendarRoute
   '/clients': typeof ClientsRoute
+  '/expenses': typeof ExpensesRoute
   '/mechanics': typeof MechanicsRoute
   '/schedule': typeof ScheduleRoute
   '/settings': typeof SettingsRoute
@@ -85,6 +93,7 @@ export interface FileRoutesById {
   '/calculator': typeof CalculatorRoute
   '/calendar': typeof CalendarRoute
   '/clients': typeof ClientsRoute
+  '/expenses': typeof ExpensesRoute
   '/mechanics': typeof MechanicsRoute
   '/schedule': typeof ScheduleRoute
   '/settings': typeof SettingsRoute
@@ -97,6 +106,7 @@ export interface FileRouteTypes {
     | '/calculator'
     | '/calendar'
     | '/clients'
+    | '/expenses'
     | '/mechanics'
     | '/schedule'
     | '/settings'
@@ -107,6 +117,7 @@ export interface FileRouteTypes {
     | '/calculator'
     | '/calendar'
     | '/clients'
+    | '/expenses'
     | '/mechanics'
     | '/schedule'
     | '/settings'
@@ -117,6 +128,7 @@ export interface FileRouteTypes {
     | '/calculator'
     | '/calendar'
     | '/clients'
+    | '/expenses'
     | '/mechanics'
     | '/schedule'
     | '/settings'
@@ -128,6 +140,7 @@ export interface RootRouteChildren {
   CalculatorRoute: typeof CalculatorRoute
   CalendarRoute: typeof CalendarRoute
   ClientsRoute: typeof ClientsRoute
+  ExpensesRoute: typeof ExpensesRoute
   MechanicsRoute: typeof MechanicsRoute
   ScheduleRoute: typeof ScheduleRoute
   SettingsRoute: typeof SettingsRoute
@@ -162,6 +175,13 @@ declare module '@tanstack/react-router' {
       path: '/mechanics'
       fullPath: '/mechanics'
       preLoaderRoute: typeof MechanicsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/expenses': {
+      id: '/expenses'
+      path: '/expenses'
+      fullPath: '/expenses'
+      preLoaderRoute: typeof ExpensesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/clients': {
@@ -200,6 +220,7 @@ const rootRouteChildren: RootRouteChildren = {
   CalculatorRoute: CalculatorRoute,
   CalendarRoute: CalendarRoute,
   ClientsRoute: ClientsRoute,
+  ExpensesRoute: ExpensesRoute,
   MechanicsRoute: MechanicsRoute,
   ScheduleRoute: ScheduleRoute,
   SettingsRoute: SettingsRoute,
