@@ -34,6 +34,7 @@ import {
   listMechanics,
   updateAppointmentPayment,
   updateAppointmentStatus,
+  deleteAppointment,
 } from "@/lib/api";
 import {
   PAYMENT_COLORS,
