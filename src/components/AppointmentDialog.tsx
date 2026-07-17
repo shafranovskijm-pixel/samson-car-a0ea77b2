@@ -232,7 +232,7 @@ export function AppointmentDialog({
     }
     setSelected((prev) => [
       ...prev,
-      { service_id: svc.id, price, mechanic_payout: rateFor(svc.id) },
+      { service_id: svc.id, price, mechanic_payout: rateFor(svc.id, price) },
     ]);
     setAddServiceId("");
   };
