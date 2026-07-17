@@ -238,6 +238,45 @@ export type Database = {
           },
         ]
       }
+      car_custom_services: {
+        Row: {
+          brand_name: string
+          category: string
+          created_at: string
+          duration_minutes: number
+          id: string
+          model_name: string
+          name: string
+          price: number
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          brand_name: string
+          category: string
+          created_at?: string
+          duration_minutes?: number
+          id?: string
+          model_name: string
+          name: string
+          price?: number
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          brand_name?: string
+          category?: string
+          created_at?: string
+          duration_minutes?: number
+          id?: string
+          model_name?: string
+          name?: string
+          price?: number
+          updated_at?: string
+          year?: number
+        }
+        Relationships: []
+      }
       car_models: {
         Row: {
           brand_id: string
