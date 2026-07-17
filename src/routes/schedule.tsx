@@ -44,6 +44,9 @@ import {
   type PaymentStatus,
 } from "@/lib/types";
 import { AppointmentDialog } from "@/components/AppointmentDialog";
+import { PrintDocument, type PrintKV } from "@/components/PrintDocument";
+import type { AppointmentWithRelations } from "@/lib/api";
+import { PAYMENT_LABELS as _PL } from "@/lib/types";
 
 export const Route = createFileRoute("/schedule")({
   ssr: false,
