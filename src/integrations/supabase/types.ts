@@ -527,6 +527,74 @@ export type Database = {
         }
         Relationships: []
       }
+      expenses: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          note: string | null
+          spent_at: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          id?: string
+          note?: string | null
+          spent_at?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          note?: string | null
+          spent_at?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      mechanic_advances: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          mechanic_id: string
+          note: string | null
+          paid_at: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          id?: string
+          mechanic_id: string
+          note?: string | null
+          paid_at?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          mechanic_id?: string
+          note?: string | null
+          paid_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mechanic_advances_mechanic_id_fkey"
+            columns: ["mechanic_id"]
+            isOneToOne: false
+            referencedRelation: "mechanics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mechanic_service_rates: {
         Row: {
           amount: number
@@ -716,6 +784,7 @@ export type Database = {
           base_price: number
           category: string
           created_at: string
+          default_payout_percent: number
           deleted_at: string | null
           duration_minutes: number
           id: string
@@ -726,6 +795,7 @@ export type Database = {
           base_price?: number
           category: string
           created_at?: string
+          default_payout_percent?: number
           deleted_at?: string | null
           duration_minutes?: number
           id?: string
@@ -736,6 +806,7 @@ export type Database = {
           base_price?: number
           category?: string
           created_at?: string
+          default_payout_percent?: number
           deleted_at?: string | null
           duration_minutes?: number
           id?: string

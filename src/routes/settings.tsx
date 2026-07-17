@@ -306,6 +306,7 @@ function ServicesTab() {
 
   const [prices, setPrices] = useState<Record<string, number>>({});
   const [durations, setDurations] = useState<Record<string, number>>({});
+  const [payouts, setPayouts] = useState<Record<string, number>>({});
   const [pricesOpen, setPricesOpen] = useState<string | null>(null);
   const [newOpen, setNewOpen] = useState(false);
   const [newForm, setNewForm] = useState({ name: "", category: "", base_price: 0, duration_minutes: 60 });
@@ -313,8 +314,9 @@ function ServicesTab() {
   const categories = useMemo(() => Array.from(new Set(services.map((s) => s.category))), [services]);
 
   const updM = useMutation({
-    mutationFn: (v: { id: string; base_price?: number; duration_minutes?: number }) =>
-      updateService(v.id, v),
+    mutationFn: (v: { id: string; base_price?: number; duration_minutes?: number; default_payout_percent?: number }) =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      updateService(v.id, v as any),
     onSuccess: () => {
       toast.success("Обновлено");
       qc.invalidateQueries({ queryKey: ["services"] });
@@ -351,16 +353,21 @@ function ServicesTab() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Услуга</TableHead>
-                  <TableHead className="w-36">Базовая цена, ₽</TableHead>
-                  <TableHead className="w-36">Длит., мин</TableHead>
+                  <TableHead className="w-32">Базовая цена, ₽</TableHead>
+                  <TableHead className="w-24">Длит., мин</TableHead>
+                  <TableHead className="w-28">% мастеру</TableHead>
                   <TableHead className="w-64"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {services.filter((s) => s.category === cat).map((s) => {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  const svcAny = s as any;
+                  const svcPct = Number(svcAny.default_payout_percent ?? 50);
                   const price = prices[s.id] ?? s.base_price;
                   const dur = durations[s.id] ?? s.duration_minutes;
-                  const changed = price !== s.base_price || dur !== s.duration_minutes;
+                  const pct = payouts[s.id] ?? svcPct;
+                  const changed = price !== s.base_price || dur !== s.duration_minutes || pct !== svcPct;
                   return (
                     <TableRow key={s.id}>
                       <TableCell className="font-medium">{s.name}</TableCell>
@@ -378,11 +385,18 @@ function ServicesTab() {
                           onChange={(e) => setDurations({ ...durations, [s.id]: Number(e.target.value) })}
                         />
                       </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          value={pct}
+                          onChange={(e) => setPayouts({ ...payouts, [s.id]: Number(e.target.value) })}
+                        />
+                      </TableCell>
                       <TableCell className="flex gap-1">
                         <Button
                           size="sm"
                           disabled={!changed}
-                          onClick={() => updM.mutate({ id: s.id, base_price: price, duration_minutes: dur })}
+                          onClick={() => updM.mutate({ id: s.id, base_price: price, duration_minutes: dur, default_payout_percent: pct })}
                         >
                           <Save className="mr-1 h-4 w-4" />Сохранить
                         </Button>

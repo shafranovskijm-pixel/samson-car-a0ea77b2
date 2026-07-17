@@ -115,8 +115,14 @@ export function AppointmentDialog({
     queryFn: () => listMechanicServiceRates(mechanicId),
     enabled: !!mechanicId,
   });
-  const rateFor = (svc_id: string) =>
-    rates.find((r) => r.service_id === svc_id)?.amount ?? 0;
+  const rateFor = (svc_id: string, price: number) => {
+    const override = rates.find((r) => r.service_id === svc_id)?.amount;
+    if (override != null && override > 0) return override;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const svc = services.find((s) => s.id === svc_id) as any;
+    const pct = Number(svc?.default_payout_percent ?? 50);
+    return Math.round((price * pct) / 100);
+  };
 
 
   useEffect(() => {
@@ -200,14 +206,15 @@ export function AppointmentDialog({
 
   // when mechanic changes, refill mechanic_payout from rates for services with 0 payout
   useEffect(() => {
-    if (!mechanicId || rates.length === 0) return;
+    if (!mechanicId) return;
     setSelected((prev) =>
       prev.map((s) =>
         s.mechanic_payout === 0
-          ? { ...s, mechanic_payout: rates.find((r) => r.service_id === s.service_id)?.amount ?? 0 }
+          ? { ...s, mechanic_payout: rateFor(s.service_id, s.price) }
           : s,
       ),
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mechanicId, rates]);
 
 
@@ -225,7 +232,7 @@ export function AppointmentDialog({
     }
     setSelected((prev) => [
       ...prev,
-      { service_id: svc.id, price, mechanic_payout: rateFor(svc.id) },
+      { service_id: svc.id, price, mechanic_payout: rateFor(svc.id, price) },
     ]);
     setAddServiceId("");
   };
