@@ -65,6 +65,36 @@ export const deleteService = async (id: string) => {
   if (error) throw error;
 };
 
+// Найти или создать услугу по (категория, название). Используется для «ручных» услуг.
+export const upsertServiceByCategoryName = async (input: {
+  category: string;
+  name: string;
+  price: number;
+  duration_minutes?: number;
+}): Promise<Service> => {
+  const { data: existing, error: findErr } = await supabase
+    .from("services")
+    .select("*")
+    .ilike("category", input.category)
+    .ilike("name", input.name)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (findErr && findErr.code !== "PGRST116") throw findErr;
+  if (existing) return existing as Service;
+  const { data, error } = await supabase
+    .from("services")
+    .insert({
+      category: input.category,
+      name: input.name,
+      base_price: input.price,
+      duration_minutes: input.duration_minutes ?? 30,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as Service;
+};
+
 // SERVICE PRICES (brand overrides)
 export const listServicePrices = async (
   serviceId: string,
