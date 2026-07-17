@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format, parseISO, startOfDay } from "date-fns";
 import { ru } from "date-fns/locale";
-import { Check, ChevronDown, Plus, Printer } from "lucide-react";
+import { Check, ChevronDown, Plus, Printer, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -34,6 +34,7 @@ import {
   listMechanics,
   updateAppointmentPayment,
   updateAppointmentStatus,
+  deleteAppointment,
 } from "@/lib/api";
 import {
   PAYMENT_COLORS,
@@ -92,6 +93,21 @@ function SchedulePage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["appointments"] }),
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const deleteMut = useMutation({
+    mutationFn: (id: string) => deleteAppointment(id),
+    onSuccess: () => {
+      toast.success("Запись удалена");
+      qc.invalidateQueries({ queryKey: ["appointments"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const confirmDelete = (id: string) => {
+    if (window.confirm("Удалить эту запись? Действие нельзя отменить.")) {
+      deleteMut.mutate(id);
+    }
+  };
 
   const setStatus = (id: string, status: AppointmentStatus) => {
     statusMut.mutate({ id, status });
@@ -260,6 +276,16 @@ function SchedulePage() {
                         >
                           <Printer className="h-3.5 w-3.5" />
                           Печать
+                        </button>
+                        <button
+                          type="button"
+                          title="Удалить запись"
+                          onClick={() => confirmDelete(a.id)}
+                          disabled={deleteMut.isPending}
+                          className="inline-flex items-center gap-1 rounded-full border border-destructive/40 bg-background px-2.5 py-1 text-xs font-medium text-destructive shadow-sm transition hover:bg-destructive/10 disabled:opacity-50"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Удалить
                         </button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
