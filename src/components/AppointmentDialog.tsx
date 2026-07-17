@@ -39,7 +39,10 @@ import {
   listMechanics,
   listServices,
   updateAppointment,
+  upsertServiceByCategoryName,
 } from "@/lib/api";
+import { useCarCustomServices } from "@/hooks/useCarCustomServices";
+import { useServiceUsage } from "@/hooks/useServiceUsage";
 
 import { STATUS_LABELS, type AppointmentStatus, type ReminderInterval } from "@/lib/types";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -196,6 +199,92 @@ export function AppointmentDialog({
   );
   const selectedCar = useMemo(() => cars.find((c) => c.id === carId), [cars, carId]);
 
+  const selectedBrandName = useMemo(
+    () => brands.find((b) => b.id === selectedCar?.brand_id)?.name ?? "",
+    [brands, selectedCar],
+  );
+  const carCustom = useCarCustomServices(
+    selectedBrandName,
+    selectedCar?.model ?? "",
+    selectedCar?.year ?? null,
+  );
+  const { bump } = useServiceUsage();
+
+  const categories = useMemo(
+    () => Array.from(new Set(services.map((s) => s.category))).sort(),
+    [services],
+  );
+
+  const [customCat, setCustomCat] = useState<string>("");
+  const [customCatOther, setCustomCatOther] = useState<string>("");
+  const [customName, setCustomName] = useState<string>("");
+  const [customPrice, setCustomPrice] = useState<string>("");
+  const [savingCustom, setSavingCustom] = useState(false);
+
+  const addCustomService = async () => {
+    const cat = (customCat === "__other__" ? customCatOther : customCat).trim();
+    const name = customName.trim();
+    const price = Math.max(0, Math.round(Number(customPrice) || 0));
+    if (!cat || !name || price <= 0) {
+      toast.error("Заполните категорию, название и цену");
+      return;
+    }
+    if (!carCustom.enabled) {
+      toast.error("Выберите машину с указанным годом");
+      return;
+    }
+    setSavingCustom(true);
+    try {
+      const svc = await upsertServiceByCategoryName({ category: cat, name, price });
+      await carCustom.add({ category: cat, name, price, duration_minutes: 30 });
+      qc.invalidateQueries({ queryKey: ["services"] });
+      setSelected((prev) =>
+        prev.some((s) => s.service_id === svc.id)
+          ? prev
+          : [...prev, { service_id: svc.id, price, mechanic_payout: rateFor(svc.id, price) }],
+      );
+      setCustomName("");
+      setCustomPrice("");
+      toast.success("Услуга добавлена и запомнена для этой машины");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setSavingCustom(false);
+    }
+  };
+
+  const removeSavedCustom = async (id: string) => {
+    if (!confirm("Удалить сохранённую услугу для этой машины?")) return;
+    try {
+      await carCustom.remove(id);
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  };
+
+  const pickSavedCustom = async (id: string) => {
+    const cs = carCustom.items.find((c) => c.id === id);
+    if (!cs) return;
+    try {
+      const svc = await upsertServiceByCategoryName({
+        category: cs.category,
+        name: cs.name,
+        price: cs.price,
+      });
+      qc.invalidateQueries({ queryKey: ["services"] });
+      setSelected((prev) =>
+        prev.some((s) => s.service_id === svc.id)
+          ? prev
+          : [
+              ...prev,
+              { service_id: svc.id, price: cs.price, mechanic_payout: rateFor(svc.id, cs.price) },
+            ],
+      );
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  };
+
   // auto-set client when car chosen
   useEffect(() => {
     if (carId && !clientId) {
@@ -283,6 +372,7 @@ export function AppointmentDialog({
     },
     onSuccess: () => {
       toast.success(isEdit ? "Запись обновлена" : "Запись создана");
+      bump(selected.map((s) => s.service_id).filter(Boolean));
       qc.invalidateQueries({ queryKey: ["appointments"] });
       qc.invalidateQueries({ queryKey: ["client-reminders"] });
       onOpenChange(false);
@@ -405,6 +495,101 @@ export function AppointmentDialog({
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
+
+            {/* Сохранённые услуги для этой машины */}
+            {carCustom.enabled && carCustom.items.length > 0 && (
+              <div className="mt-3 rounded-md border bg-muted/30 p-2">
+                <div className="mb-1.5 text-xs font-medium text-muted-foreground">
+                  Сохранённые для {selectedBrandName} {selectedCar?.model} · {selectedCar?.year}
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {carCustom.items.map((c) => (
+                    <div
+                      key={c.id}
+                      className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5 text-xs"
+                    >
+                      <button
+                        type="button"
+                        className="hover:text-primary"
+                        onClick={() => pickSavedCustom(c.id)}
+                        title="Добавить в запись"
+                      >
+                        {c.category} — {c.name} · {c.price} ₽
+                      </button>
+                      <button
+                        type="button"
+                        className="text-muted-foreground hover:text-destructive"
+                        onClick={() => removeSavedCustom(c.id)}
+                        title="Удалить сохранённую"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Ручное добавление услуги */}
+            <div className="mt-3 rounded-md border border-dashed p-3">
+              <div className="mb-2 text-xs font-medium text-muted-foreground">
+                Добавить свою услугу
+                {!carCustom.enabled && " (выберите машину с указанным годом)"}
+              </div>
+              <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_100px_auto]">
+                <Select value={customCat} onValueChange={setCustomCat}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Категория" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="__other__">Другое…</SelectItem>
+                  </SelectContent>
+                </Select>
+                {customCat === "__other__" ? (
+                  <Input
+                    placeholder="Новая категория"
+                    value={customCatOther}
+                    onChange={(e) => setCustomCatOther(e.target.value)}
+                  />
+                ) : (
+                  <Input
+                    placeholder="Название услуги"
+                    value={customName}
+                    onChange={(e) => setCustomName(e.target.value)}
+                  />
+                )}
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  placeholder="Цена ₽"
+                  value={customPrice}
+                  onChange={(e) => setCustomPrice(e.target.value)}
+                />
+                <Button
+                  type="button"
+                  onClick={addCustomService}
+                  disabled={!carCustom.enabled || savingCustom}
+                >
+                  <Plus className="mr-1 h-4 w-4" />
+                  Добавить
+                </Button>
+              </div>
+              {customCat === "__other__" && (
+                <div className="mt-2">
+                  <Input
+                    placeholder="Название услуги"
+                    value={customName}
+                    onChange={(e) => setCustomName(e.target.value)}
+                  />
+                </div>
+              )}
+            </div>
+
             <div className="mt-3 space-y-2">
               {selected.length === 0 && (
                 <div className="text-sm text-muted-foreground">Нет добавленных услуг</div>
