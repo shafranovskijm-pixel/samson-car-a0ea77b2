@@ -32,13 +32,21 @@ import {
   getModifications,
   getModelsForBrandYear,
   getYearsForBrand,
-  isBrandLoaded,
   popularBrands,
   type CatalogModification,
 } from "@/lib/cars-catalog";
+import {
+  dbListYearsForBrand,
+  dbListModelsForBrandYear,
+  dbListModifications,
+  dbAddModification,
+  type DbModification,
+} from "@/lib/carsCatalogDb";
 import { BrandLogo } from "@/components/BrandLogo";
 import { useServiceUsage } from "@/hooks/useServiceUsage";
 import { usePriceOverrides } from "@/hooks/usePriceOverrides";
+import { useQueryClient } from "@tanstack/react-query";
+import { Plus } from "lucide-react";
 
 import imgFluids from "@/assets/cat-fluids.jpg";
 import imgEngine from "@/assets/cat-engine.jpg";
