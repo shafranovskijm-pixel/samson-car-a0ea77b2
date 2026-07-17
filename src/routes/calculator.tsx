@@ -1260,6 +1260,19 @@ function LandingPage() {
                           </span>
                         </div>
                       ))}
+                    {customServices.items
+                      .filter((c) => selected.has(customId(c.id)))
+                      .map((c) => (
+                        <div key={c.id} className="flex justify-between gap-2 text-white/70">
+                          <span className="truncate">
+                            {c.name}
+                            <span className="ml-1 text-[10px] text-blue-300">· для этого авто</span>
+                          </span>
+                          <span className="whitespace-nowrap font-medium text-white">
+                            {fmt(Number(c.price) || 0)}
+                          </span>
+                        </div>
+                      ))}
                   </div>
 
                   <Button
