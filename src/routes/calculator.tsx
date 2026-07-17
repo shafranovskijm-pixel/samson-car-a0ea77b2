@@ -44,6 +44,7 @@ import {
   type DbModification,
 } from "@/lib/carsCatalogDb";
 import { BrandLogo } from "@/components/BrandLogo";
+import { PrintDocument, type PrintKV } from "@/components/PrintDocument";
 import { useServiceUsage } from "@/hooks/useServiceUsage";
 import { useCarCustomServices } from "@/hooks/useCarCustomServices";
 import { Trash2 } from "lucide-react";
