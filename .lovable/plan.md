@@ -1,55 +1,56 @@
-## Переработка калькулятора
 
-Перевернуть флоу: сначала авто (марка → год → модель → модификация), потом услуги. Справочник авто из загруженного JSON, значки марок. Память популярных услуг и цен — и в localStorage (мгновенно, офлайн), и в облаке (синк между устройствами).
+## Что меняем
 
-### Шаги
+Сейчас на шаге «Авто»:
+- Клик работает только для 9 «загруженных» марок из `src/data/cars-catalog.json` — остальные ~80 показаны, но некликабельны.
+- Год/модель/модификация читаются только из JSON. Того, что ввёл пользователь, нигде не сохраняется.
 
-**1. Каталог авто (JSON справочник)**
-- Скопировать `hyperauto-cars-popular.json` в `src/data/cars-catalog.json` (~5 МБ, ~1780 моделей, ~7000 модификаций).
-- Модуль `src/lib/cars-catalog.ts`: типы + `getBrands()`, `getYears(brand)`, `getModels(brand, year)`, `getModifications(brand, year, model)`, `searchBrands(q)`, `popularBrands()` (Honda, Hyundai, Kia, Lexus, Mazda, Mitsubishi, Nissan, Subaru, Suzuki, Toyota).
+Делаем так, чтобы:
+1. Любую марку из каталога можно выбрать.
+2. Каталог (год → модель → модификация с кузовом/объёмом/мощностью/топливом/кодами) жил в БД. Стартово — сидим из существующего JSON (9 марок, что уже есть).
+3. Если для марки/года/модели в БД пусто — калькулятор даёт форму «Добавить модификацию»; сохранённые значения появляются у всех и подтягиваются при следующем выборе.
 
-**2. Логотипы марок**
-- CDN `https://cdn.jsdelivr.net/gh/filippofilip95/car-logos-dataset/logos/thumb/<brand>.png`, fallback — инициалы в круге.
-- `src/components/BrandLogo.tsx`.
+## БД (одна миграция)
 
-**3. Новый шаг 1 — «Выберите марку»**
-- Как на референсе: «Популярные марки» (плитки со значками) + «Все марки» с поиском и колоночным списком.
-- После марки — год (горизонтальная лента), модель (список/поиск), модификация (кузов, объём, л.с., топливо).
-- «Далее — выбрать услуги» активна после выбора модификации.
+Новые таблицы в `public`, с GRANT + RLS + `updated_at` триггером.
 
-**4. Шаг 2 — услуги**
-- Оставить текущие категории с картинками.
-- Наверху блок «Популярные услуги» — топ-6 по счётчику использования.
+- `car_catalog_models`
+  - `brand_name text` (не `brand_id` — многих марок нет в `brands`)
+  - `name text`
+  - unique `(lower(brand_name), lower(name))`
+- `car_catalog_modifications`
+  - `model_id uuid → car_catalog_models(id) on delete cascade`
+  - `year int`
+  - `body_code text`, `chassis_code text`, `engine_code text`
+  - `displacement_cc int`, `horsepower int`
+  - `fuel text`, `hybrid bool default false`, `steering text`, `note text`
+  - `raw text` — исходная строка модификации из JSON/ввода
+  - `source text default 'user'` (`seed` | `user`)
+  - unique `(model_id, year, coalesce(raw,''))`
+- Индексы: `(brand_name)` на моделях, `(model_id, year)` на модификациях.
 
-**5. Шаг 3 — оформление**
-- Оставить, добавить в резюме выбранное авто (марка/год/модель/модификация).
+RLS: чтение `anon` + `authenticated`, запись `authenticated`. Это общий справочник — не привязан к пользователю.
 
-**6. Память популярных услуг (dual: local + cloud)**
-- **БД (миграция)**: таблица `service_usage_stats` (`service_id` PK, `count` int, `last_used_at` timestamptz). RLS: чтение/запись `authenticated`, чтение `anon`.
-- **Локально**: `localStorage["calc:service-usage"]` — тот же формат.
-- Хук `useServiceUsage()`:
-  - при загрузке — читает local сразу, потом мержит облако (max count, max lastAt) и пишет обратно.
-  - `bump(serviceIds[])` при переходе с услуг: увеличивает счётчики локально + upsert в Supabase (без ожидания).
-- Топ = сортировка по count с затуханием по давности.
+Сид: `INSERT ... SELECT` из значений — прямо в SQL перечислим то, что сейчас в `cars-catalog.json` (парсер сгенерирует INSERT'ы, ~9 марок × годы × модели × модификации).
 
-**7. Память цен (dual: local + cloud)**
-- **БД**: существующая `service_prices` (`service_id`, `brand_id`, `price`) уже подходит — используем её как облако.
-- **Локально**: `localStorage["calc:price-overrides"]` — `{ "{brand_id}:{service_id}": price }` для мгновенного применения и оффлайн-режима.
-- Хук `usePriceOverrides(brand_id)`:
-  - читает local + `listPricesForBrand(brand_id)`, мержит (облако — истина при конфликте на онлайне, local — фолбек оффлайн).
-  - `setPrice(service_id, price)` → сразу local + `upsertServicePrice` в облако.
-  - `resetPrice(service_id)` → чистит local + `deleteServicePrice`.
-- В шаге услуг рядом с ценой — карандаш (inline-редактор), кнопка «Сбросить».
-- `priceOf()` приоритет: override (merged) → base × tier coeff.
+## Код
 
-### Технические детали
+- `src/lib/carsCatalogDb.ts` (новое) — запросы: `dbListYears(brand)`, `dbListModels(brand, year)`, `dbListModifications(brand, year, model)`, `dbUpsertModification(input)`. Используем публичный `supabase` клиент (RLS разрешает чтение анон).
+- `src/lib/cars-catalog.ts` — оставляем как источник **имён всех марок** (`getAllCatalogBrandNames`) и как fallback данных, если БД молчит. `isBrandLoaded` убираем (все марки кликабельны).
+- `src/routes/calculator.tsx`:
+  - Убрать блокировку «Загружено (…)»: все марки — обычные кнопки.
+  - Годы: `useQuery` → `dbListYears`, объединить с годами из JSON. Если пусто — свободный ввод года (input number 1990–2027) с сохранением в БД при добавлении модификации.
+  - Модели: `useQuery` → `dbListModels`, объединить с JSON. Если пусто — input «Название модели».
+  - Модификации: `useQuery` → `dbListModifications`, объединить с JSON. Если ни одной — форма «Добавить модификацию» (поля: кузов, объём см³, л.с., топливо, коробка/привод опц., заметка). По submit → `dbUpsertModification` + `invalidateQueries` + автоматический выбор новой модификации.
+  - Рядом со списком модификаций — кнопка «+ Добавить модификацию» всегда.
 
-- Файлы: `src/data/cars-catalog.json`, `src/lib/cars-catalog.ts`, `src/components/BrandLogo.tsx`, `src/hooks/useServiceUsage.ts`, `src/hooks/usePriceOverrides.ts`. Переписать `src/routes/calculator.tsx`. API-функции `upsertServiceUsage`, `listServiceUsage` в `src/lib/api.ts`.
-- Миграция: `service_usage_stats` + GRANT + RLS (публичное чтение + запись для authenticated; для гостей — только local).
-- Матчинг марки JSON → Supabase `brands.name` (case-insensitive); если не найдено — тир `economy`, only base/local overrides.
-- Импорт JSON: `import catalog from "@/data/cars-catalog.json"` — Vite инлайнит, работает офлайн.
-- Логотипы: CDN jsdelivr; при необходимости позже перенесём в assets.
+Пользовательский ввод и после выбора авто на шаге 3 (когда всё-таки сохраняется) — уже идёт в `cars` при создании клиентской машины (это уже работает). Здесь мы отдельно копим справочник `car_catalog_*`, чтобы им пользовались следующие пользователи.
 
-### Открытые вопросы
+## Что НЕ меняем
 
-Ничего критичного. Если позже понадобится — добавлю миграцию для автосоздания записей `brands`, отсутствующих в БД, при первом сохранении цены для такой марки.
+- Логика услуг, цен, `service_usage_stats`, `service_prices` — без изменений.
+- Таблицы `brands`, `car_models`, `cars` не трогаем; новые таблицы живут параллельно, потому что тут справочник «марка (текстом) + модификации», а не клиентские машины.
+
+## Открытый вопрос
+
+Массово досидить в БД оставшиеся ~80 марок из «catalog_brands» (только имена, без моделей) не нужно — они и так доступны по имени из JSON. Модели/годы для них будут появляться по мере ввода. Ок?
