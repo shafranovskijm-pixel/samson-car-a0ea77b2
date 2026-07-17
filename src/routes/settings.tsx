@@ -306,6 +306,7 @@ function ServicesTab() {
 
   const [prices, setPrices] = useState<Record<string, number>>({});
   const [durations, setDurations] = useState<Record<string, number>>({});
+  const [payouts, setPayouts] = useState<Record<string, number>>({});
   const [pricesOpen, setPricesOpen] = useState<string | null>(null);
   const [newOpen, setNewOpen] = useState(false);
   const [newForm, setNewForm] = useState({ name: "", category: "", base_price: 0, duration_minutes: 60 });
@@ -313,8 +314,9 @@ function ServicesTab() {
   const categories = useMemo(() => Array.from(new Set(services.map((s) => s.category))), [services]);
 
   const updM = useMutation({
-    mutationFn: (v: { id: string; base_price?: number; duration_minutes?: number }) =>
-      updateService(v.id, v),
+    mutationFn: (v: { id: string; base_price?: number; duration_minutes?: number; default_payout_percent?: number }) =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      updateService(v.id, v as any),
     onSuccess: () => {
       toast.success("Обновлено");
       qc.invalidateQueries({ queryKey: ["services"] });
