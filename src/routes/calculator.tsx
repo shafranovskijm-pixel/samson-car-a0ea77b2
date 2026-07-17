@@ -333,25 +333,17 @@ function LandingPage() {
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-3 md:grid-cols-4">
-                    {filteredBrands.map((n) => {
-                      const loaded = isBrandLoaded(n);
-                      return (
-                        <button
-                          key={n}
-                          type="button"
-                          disabled={!loaded}
-                          onClick={() => setBrandName(n)}
-                          className={`rounded-lg px-3 py-2 text-left font-semibold transition ${
-                            loaded
-                              ? "text-white hover:bg-white/10"
-                              : "cursor-not-allowed text-white/30"
-                          }`}
-                          title={loaded ? n : `${n} — данные будут добавлены позже`}
-                        >
-                          {n}
-                        </button>
-                      );
-                    })}
+                    {filteredBrands.map((n) => (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => setBrandName(n)}
+                        className="rounded-lg px-3 py-2 text-left font-semibold text-white transition hover:bg-white/10"
+                        title={n}
+                      >
+                        {n}
+                      </button>
+                    ))}
                   </div>
                 </div>
               )}
