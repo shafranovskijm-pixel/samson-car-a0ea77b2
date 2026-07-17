@@ -590,7 +590,7 @@ export function AppointmentDialog({
               )}
             </div>
 
-            <div className="mt-3 space-y-2" hidden>
+            <div className="mt-3 space-y-2">
               {selected.length === 0 && (
                 <div className="text-sm text-muted-foreground">Нет добавленных услуг</div>
               )}
