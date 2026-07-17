@@ -551,6 +551,38 @@ export type Database = {
           },
         ]
       }
+      service_usage_stats: {
+        Row: {
+          count: number
+          created_at: string
+          last_used_at: string
+          service_id: string
+          updated_at: string
+        }
+        Insert: {
+          count?: number
+          created_at?: string
+          last_used_at?: string
+          service_id: string
+          updated_at?: string
+        }
+        Update: {
+          count?: number
+          created_at?: string
+          last_used_at?: string
+          service_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_usage_stats_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: true
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       services: {
         Row: {
           base_price: number
