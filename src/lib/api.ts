@@ -467,3 +467,90 @@ export const listMechanicPayouts = async (
     service_name: r.service?.name ?? null,
   }));
 };
+
+// EXPENSES
+export type Expense = {
+  id: string;
+  spent_at: string;
+  amount: number;
+  title: string;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export const listExpenses = async (from?: string, to?: string): Promise<Expense[]> => {
+  let q = anySb.from("expenses").select("*").order("spent_at", { ascending: false });
+  if (from) q = q.gte("spent_at", from);
+  if (to) q = q.lte("spent_at", to);
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data ?? []) as Expense[];
+};
+
+export const createExpense = async (
+  input: { spent_at: string; amount: number; title: string; note: string | null },
+): Promise<Expense> => {
+  const { data, error } = await anySb.from("expenses").insert(input).select().single();
+  if (error) throw error;
+  return data as Expense;
+};
+
+export const updateExpense = async (
+  id: string,
+  input: Partial<{ spent_at: string; amount: number; title: string; note: string | null }>,
+): Promise<Expense> => {
+  const { data, error } = await anySb.from("expenses").update(input).eq("id", id).select().single();
+  if (error) throw error;
+  return data as Expense;
+};
+
+export const deleteExpense = async (id: string) => {
+  const { error } = await anySb.from("expenses").delete().eq("id", id);
+  if (error) throw error;
+};
+
+// MECHANIC ADVANCES
+export type MechanicAdvance = {
+  id: string;
+  mechanic_id: string;
+  paid_at: string;
+  amount: number;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export const listMechanicAdvances = async (
+  opts: { mechanic_id?: string; from?: string; to?: string } = {},
+): Promise<MechanicAdvance[]> => {
+  let q = anySb.from("mechanic_advances").select("*").order("paid_at", { ascending: false });
+  if (opts.mechanic_id) q = q.eq("mechanic_id", opts.mechanic_id);
+  if (opts.from) q = q.gte("paid_at", opts.from);
+  if (opts.to) q = q.lte("paid_at", opts.to);
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data ?? []) as MechanicAdvance[];
+};
+
+export const createMechanicAdvance = async (
+  input: { mechanic_id: string; paid_at: string; amount: number; note: string | null },
+): Promise<MechanicAdvance> => {
+  const { data, error } = await anySb.from("mechanic_advances").insert(input).select().single();
+  if (error) throw error;
+  return data as MechanicAdvance;
+};
+
+export const deleteMechanicAdvance = async (id: string) => {
+  const { error } = await anySb.from("mechanic_advances").delete().eq("id", id);
+  if (error) throw error;
+};
+
+// SERVICE DEFAULT PAYOUT %
+export const updateServiceDefaultPayoutPercent = async (id: string, percent: number) => {
+  const { error } = await anySb
+    .from("services")
+    .update({ default_payout_percent: percent })
+    .eq("id", id);
+  if (error) throw error;
+};
