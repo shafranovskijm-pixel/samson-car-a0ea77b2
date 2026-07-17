@@ -94,6 +94,21 @@ function SchedulePage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const deleteMut = useMutation({
+    mutationFn: (id: string) => deleteAppointment(id),
+    onSuccess: () => {
+      toast.success("Запись удалена");
+      qc.invalidateQueries({ queryKey: ["appointments"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const confirmDelete = (id: string) => {
+    if (window.confirm("Удалить эту запись? Действие нельзя отменить.")) {
+      deleteMut.mutate(id);
+    }
+  };
+
   const setStatus = (id: string, status: AppointmentStatus) => {
     statusMut.mutate({ id, status });
   };
