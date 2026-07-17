@@ -44,6 +44,8 @@ import {
 } from "@/lib/carsCatalogDb";
 import { BrandLogo } from "@/components/BrandLogo";
 import { useServiceUsage } from "@/hooks/useServiceUsage";
+import { useCarCustomServices } from "@/hooks/useCarCustomServices";
+import { Trash2 } from "lucide-react";
 import { usePriceOverrides } from "@/hooks/usePriceOverrides";
 import { useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
