@@ -132,19 +132,104 @@ function LandingPage() {
     return basePrice;
   };
 
-  // Данные по каталогу для выбранного авто
-  const years = useMemo(
-    () => (brandName ? getYearsForBrand(brandName) : []),
-    [brandName],
-  );
-  const models = useMemo(
-    () => (brandName && year ? getModelsForBrandYear(brandName, year) : []),
-    [brandName, year],
-  );
-  const modifications: CatalogModification[] = useMemo(
-    () => (brandName && year && modelName ? getModifications(brandName, year, modelName) : []),
-    [brandName, year, modelName],
-  );
+  const qc = useQueryClient();
+
+  // Данные из БД + fallback на JSON
+  const yearsQ = useQuery({
+    queryKey: ["catalog-years", brandName],
+    queryFn: () => dbListYearsForBrand(brandName),
+    enabled: !!brandName,
+  });
+  const years = useMemo(() => {
+    const j = brandName ? getYearsForBrand(brandName) : [];
+    const merged = new Set<number>([...(yearsQ.data ?? []), ...j]);
+    return Array.from(merged).sort((a, b) => b - a);
+  }, [brandName, yearsQ.data]);
+
+  const modelsQ = useQuery({
+    queryKey: ["catalog-models", brandName, year],
+    queryFn: () => dbListModelsForBrandYear(brandName, year!),
+    enabled: !!brandName && year != null,
+  });
+  const models = useMemo(() => {
+    const j = brandName && year ? getModelsForBrandYear(brandName, year) : [];
+    const names = new Set<string>();
+    const list: { name: string }[] = [];
+    (modelsQ.data ?? []).forEach((m) => {
+      if (!names.has(m.name.toLowerCase())) {
+        names.add(m.name.toLowerCase());
+        list.push({ name: m.name });
+      }
+    });
+    j.forEach((m) => {
+      if (!names.has(m.name.toLowerCase())) {
+        names.add(m.name.toLowerCase());
+        list.push({ name: m.name });
+      }
+    });
+    return list.sort((a, b) => a.name.localeCompare(b.name));
+  }, [brandName, year, modelsQ.data]);
+
+  const modsQ = useQuery({
+    queryKey: ["catalog-mods", brandName, year, modelName],
+    queryFn: () => dbListModifications(brandName, year!, modelName),
+    enabled: !!brandName && year != null && !!modelName,
+  });
+
+  // Единый тип для отображения (нормализуем DB и JSON)
+  type UiMod = {
+    key: string;
+    body_code: string | null;
+    engine_code: string | null;
+    displacement_cc: number | null;
+    horsepower: number | null;
+    fuel: string | null;
+    hybrid: boolean;
+    note: string | null;
+    source: "db" | "json";
+    dbId?: string;
+  };
+
+  const modifications: UiMod[] = useMemo(() => {
+    const out: UiMod[] = [];
+    const seen = new Set<string>();
+    (modsQ.data ?? []).forEach((m: DbModification) => {
+      const k = `db:${m.id}`;
+      if (seen.has(k)) return;
+      seen.add(k);
+      out.push({
+        key: k,
+        body_code: m.body_code,
+        engine_code: m.engine_code,
+        displacement_cc: m.displacement_cc,
+        horsepower: m.horsepower,
+        fuel: m.fuel,
+        hybrid: m.hybrid,
+        note: m.note,
+        source: "db",
+        dbId: m.id,
+      });
+    });
+    const j: CatalogModification[] =
+      brandName && year && modelName ? getModifications(brandName, year, modelName) : [];
+    j.forEach((m, i) => {
+      const dedup = `${m.body_code ?? ""}|${m.engine_code ?? ""}|${m.displacement_cc ?? ""}|${m.horsepower ?? ""}`;
+      if (out.some((o) => `${o.body_code ?? ""}|${o.engine_code ?? ""}|${o.displacement_cc ?? ""}|${o.horsepower ?? ""}` === dedup)) return;
+      out.push({
+        key: `json:${i}`,
+        body_code: m.body_code,
+        engine_code: m.engine_code,
+        displacement_cc: m.displacement_cc,
+        horsepower: m.horsepower,
+        fuel: m.fuel,
+        hybrid: m.hybrid,
+        note: m.note,
+        source: "json",
+      });
+    });
+    return out;
+  }, [modsQ.data, brandName, year, modelName]);
+
   const currentMod = modIndex != null ? modifications[modIndex] : null;
 
   // Автовыбор года, когда выбрана марка
