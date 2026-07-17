@@ -144,3 +144,50 @@
   }
 
 }
+
+/* Print styles */
+#print-root { display: none; }
+@media print {
+  @page { size: A4; margin: 12mm; }
+  html, body { background: white !important; }
+  body * { visibility: hidden !important; }
+  #print-root, #print-root * { visibility: visible !important; }
+  #print-root {
+    display: block !important;
+    position: absolute;
+    left: 0; top: 0;
+    width: 100%;
+    background: white;
+    color: black;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 12pt;
+    padding: 0;
+  }
+  #print-root .print-header {
+    display: flex; justify-content: space-between; align-items: baseline;
+    border-bottom: 2px solid #000; padding-bottom: 6pt; margin-bottom: 10pt;
+  }
+  #print-root .print-brand { font-size: 18pt; font-weight: bold; }
+  #print-root .print-title { font-size: 14pt; font-weight: 600; }
+  #print-root .print-meta {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 3pt 20pt;
+    margin-bottom: 10pt; font-size: 11pt;
+  }
+  #print-root .print-section { margin-bottom: 12pt; page-break-inside: avoid; }
+  #print-root .print-section h3 {
+    font-size: 12pt; font-weight: bold; margin: 0 0 4pt 0;
+    border-bottom: 1px solid #999; padding-bottom: 2pt;
+  }
+  #print-root table { width: 100%; border-collapse: collapse; }
+  #print-root .print-kv td { padding: 2pt 4pt; vertical-align: top; }
+  #print-root .print-kv td.k { color: #444; width: 35%; }
+  #print-root .print-works th, #print-root .print-works td {
+    border: 1px solid #333; padding: 4pt 6pt; text-align: left;
+  }
+  #print-root .print-works th { background: #eee; }
+  #print-root .print-works tfoot td { border-top: 2px solid #000; padding: 4pt 6pt; }
+  #print-root .print-signatures {
+    margin-top: 24pt; display: grid; grid-template-columns: 1fr 1fr; gap: 20pt;
+    font-size: 11pt;
+  }
+}
