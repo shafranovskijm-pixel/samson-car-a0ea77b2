@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format, parseISO, startOfDay } from "date-fns";
 import { ru } from "date-fns/locale";
-import { Check, ChevronDown, Plus } from "lucide-react";
+import { Check, ChevronDown, Plus, Printer } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
