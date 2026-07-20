@@ -258,7 +258,35 @@ export function AppointmentDialog({
   const [customPrice, setCustomPrice] = useState<string>("");
   const [savingCustom, setSavingCustom] = useState(false);
 
-  const addCustomService = async () => {
+  // Live-поиск дублей при вводе своей услуги
+  const customCatValue = customCat === "__other__" ? customCatOther : customCat;
+  const duplicates = useMemo(() => {
+    const name = norm(customName);
+    if (name.length < 2) return { exact: null as null | typeof services[number], similar: [] as typeof services };
+    const cat = norm(customCatValue);
+    const exact = services.find(
+      (s) => norm(s.name) === name && (cat ? norm(s.category) === cat : true),
+    ) ?? null;
+    const similar = services
+      .filter((s) => s !== exact)
+      .filter((s) => {
+        const n = norm(s.name);
+        return n.includes(name) || name.includes(n);
+      })
+      .slice(0, 5);
+    return { exact, similar };
+  }, [customName, customCatValue, services]);
+
+  const addExistingToRecord = (svc: typeof services[number], overridePrice?: number) => {
+    const price = overridePrice ?? svc.base_price;
+    setSelected((prev) =>
+      prev.some((s) => s.service_id === svc.id)
+        ? prev
+        : [...prev, { service_id: svc.id, price, mechanic_payout: rateFor(svc.id, price) }],
+    );
+  };
+
+  const addCustomService = async (opts?: { force?: boolean; updatePriceOf?: string }) => {
     const cat = (customCat === "__other__" ? customCatOther : customCat).trim();
     const name = customName.trim();
     const price = Math.max(0, Math.round(Number(customPrice) || 0));
@@ -266,14 +294,54 @@ export function AppointmentDialog({
       toast.error("Заполните категорию, название и цену");
       return;
     }
-    if (!carCustom.enabled) {
-      toast.error("Выберите машину с указанным годом");
-      return;
-    }
     setSavingCustom(true);
     try {
+      // 1) Обновить цену у существующей и добавить
+      if (opts?.updatePriceOf) {
+        const existingSvc = services.find((s) => s.id === opts.updatePriceOf);
+        if (existingSvc) {
+          await updateService(existingSvc.id, { base_price: price });
+          qc.invalidateQueries({ queryKey: ["services"] });
+          addExistingToRecord({ ...existingSvc, base_price: price }, price);
+          if (carCustom.enabled) {
+            try {
+              await carCustom.add({
+                category: existingSvc.category,
+                name: existingSvc.name,
+                price,
+                duration_minutes: 30,
+              });
+            } catch (err) {
+              console.warn("carCustom.add failed", err);
+            }
+          }
+          setCustomName("");
+          setCustomPrice("");
+          toast.success("Цена обновлена, услуга добавлена");
+          return;
+        }
+      }
+
+      // 2) Автоматически подставить точный дубль, если пользователь не форсит создание
+      if (!opts?.force && duplicates.exact) {
+        addExistingToRecord(duplicates.exact);
+        toast.message("Такая услуга уже есть — добавлена в запись", {
+          description: `${duplicates.exact.category} — ${duplicates.exact.name}`,
+        });
+        setCustomName("");
+        setCustomPrice("");
+        return;
+      }
+
+      // 3) Создать новую (или переиспользовать при force, если совпадение по имени)
       const svc = await upsertServiceByCategoryName({ category: cat, name, price });
-      await carCustom.add({ category: cat, name, price, duration_minutes: 30 });
+      if (carCustom.enabled) {
+        try {
+          await carCustom.add({ category: cat, name, price, duration_minutes: 30 });
+        } catch (err) {
+          console.warn("carCustom.add failed", err);
+        }
+      }
       qc.invalidateQueries({ queryKey: ["services"] });
       setSelected((prev) =>
         prev.some((s) => s.service_id === svc.id)
@@ -282,9 +350,14 @@ export function AppointmentDialog({
       );
       setCustomName("");
       setCustomPrice("");
-      toast.success("Услуга добавлена и запомнена для этой машины");
+      toast.success(
+        carCustom.enabled
+          ? "Услуга добавлена и запомнена для этой машины"
+          : "Услуга добавлена",
+      );
     } catch (e) {
-      toast.error((e as Error).message);
+      console.error("addCustomService failed", e);
+      toast.error(mapError(e));
     } finally {
       setSavingCustom(false);
     }
