@@ -32,7 +32,8 @@ import {
 import {
   listAppointments,
   listMechanics,
-  updateAppointmentPayment,
+  createAppointmentPayment,
+  clearAppointmentPayments,
   updateAppointmentStatus,
   deleteAppointment,
 } from "@/lib/api";
@@ -44,6 +45,7 @@ import {
   type AppointmentStatus,
   type PaymentStatus,
 } from "@/lib/types";
+
 import { AppointmentDialog } from "@/components/AppointmentDialog";
 import { PrintDocument, type PrintKV } from "@/components/PrintDocument";
 import type { AppointmentWithRelations } from "@/lib/api";
