@@ -14,9 +14,10 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  createMechanic, createMechanicShift, deleteMechanic, deleteMechanicShift,
-  listMechanicPayouts, listMechanicServiceRates, listMechanicShifts, listMechanics,
-  listServices, updateMechanic, upsertMechanicServiceRate,
+  createMechanic, createMechanicAdvance, createMechanicShift, deleteMechanic,
+  deleteMechanicAdvance, deleteMechanicShift, listMechanicAdvances, listMechanicPayouts,
+  listMechanicServiceRates, listMechanicShifts, listMechanics, listServices, updateMechanic,
+  updateMechanicDefaultPayoutPercent, upsertMechanicServiceRate,
 } from "@/lib/api";
 import type { Mechanic, MechanicShift } from "@/lib/types";
 import { STATUS_LABELS } from "@/lib/types";
