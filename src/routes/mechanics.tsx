@@ -188,7 +188,7 @@ function MechanicsPage() {
             </div>
 
             <MechanicDefaultPercent mechanic={selected} />
-            <MechanicSalary mechanicId={selected.id} />
+            <MechanicSalary mechanicId={selected.id} defaultPercent={Number(selected.default_payout_percent ?? 50)} />
             <MechanicAdvances mechanicId={selected.id} />
             <MechanicRates mechanicId={selected.id} />
             <MechanicShifts mechanicId={selected.id} color={selected.color} />
@@ -305,13 +305,17 @@ function MechanicDefaultPercent({ mechanic }: { mechanic: Mechanic }) {
   );
 }
 
-function MechanicSalary({ mechanicId }: { mechanicId: string }) {
+function MechanicSalary({ mechanicId, defaultPercent }: { mechanicId: string; defaultPercent: number }) {
   const { data: rows = [] } = useQuery({
     queryKey: ["mechanic-payouts", mechanicId],
     queryFn: () => listMechanicPayouts(mechanicId),
   });
   const [period, setPeriod] = useState<Period>("month");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  const pct = defaultPercent > 0 ? defaultPercent : 50;
+  const effPayout = (r: { price: number; mechanic_payout: number }) =>
+    r.mechanic_payout > 0 ? r.mechanic_payout : Math.round((Number(r.price) * pct) / 100);
 
   const filtered = useMemo(() => {
     const start = periodStart(period);
@@ -326,9 +330,9 @@ function MechanicSalary({ mechanicId }: { mechanicId: string }) {
   );
 
   const totalRevenue = filtered.reduce((s, r) => s + r.price, 0);
-  const totalPayout = filtered.reduce((s, r) => s + r.mechanic_payout, 0);
+  const totalPayout = filtered.reduce((s, r) => s + effPayout(r), 0);
   const avgPercent = totalRevenue > 0 ? Math.round((totalPayout / totalRevenue) * 100) : 0;
-  const pendingTotal = pending.reduce((s, r) => s + r.mechanic_payout, 0);
+  const pendingTotal = pending.reduce((s, r) => s + effPayout(r), 0);
 
   const toggle = (key: string) =>
     setExpanded((prev) => {
@@ -381,7 +385,8 @@ function MechanicSalary({ mechanicId }: { mechanicId: string }) {
             const key = `${r.appointment_id}:${r.service_id}:${i}`;
             const open = expanded.has(key);
             const dt = new Date(r.starts_at);
-            const pct = r.price > 0 ? Math.round((r.mechanic_payout / r.price) * 100) : 0;
+            const payout = effPayout(r);
+            const pctRow = r.price > 0 ? Math.round((payout / r.price) * 100) : 0;
             return (
               <div key={key} className="rounded border bg-card">
                 <button
@@ -407,9 +412,9 @@ function MechanicSalary({ mechanicId }: { mechanicId: string }) {
                   </div>
                   <div className="flex shrink-0 items-center gap-3">
                     <span className="text-muted-foreground">{r.price} ₽</span>
-                    <span className="font-semibold">{r.mechanic_payout} ₽</span>
+                    <span className="font-semibold">{payout} ₽</span>
                     <span className="hidden w-10 text-right text-muted-foreground sm:inline">
-                      {pct}%
+                      {pctRow}%
                     </span>
                   </div>
                 </button>
