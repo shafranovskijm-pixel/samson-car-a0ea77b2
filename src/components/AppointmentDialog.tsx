@@ -913,8 +913,14 @@ export function AppointmentDialog({
             <Button
               type="button"
               variant="destructive"
-              onClick={() => {
-                if (confirm("Удалить запись?")) delMutation.mutate();
+              onClick={async () => {
+                const ok = await confirmAction({
+                  title: "Удалить запись?",
+                  description: "Восстановить будет нельзя.",
+                  destructive: true,
+                  confirmText: "Удалить",
+                });
+                if (ok) delMutation.mutate();
               }}
             >
               <Trash2 className="mr-2 h-4 w-4" /> Удалить
