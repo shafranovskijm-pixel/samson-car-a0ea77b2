@@ -207,10 +207,12 @@ function StatCard({
   label,
   value,
   tone,
+  hint,
 }: {
   label: string;
   value: string;
   tone: "good" | "bad" | "warn" | "neutral";
+  hint?: string;
 }) {
   const toneClass = {
     good: "text-green-600",
@@ -223,6 +225,7 @@ function StatCard({
       <CardContent className="p-4">
         <div className="text-xs text-muted-foreground">{label}</div>
         <div className={`mt-1 text-xl font-bold sm:text-2xl ${toneClass}`}>{value}</div>
+        {hint && <div className="mt-1 text-[11px] text-muted-foreground">{hint}</div>}
       </CardContent>
     </Card>
   );
