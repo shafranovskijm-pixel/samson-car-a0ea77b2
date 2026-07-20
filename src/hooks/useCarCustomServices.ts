@@ -85,6 +85,13 @@ export const useCarCustomServices = (
       duration_minutes: number;
     }) => {
       if (!enabled) return null;
+      const nameNorm = input.name.trim().toLowerCase();
+      const catNorm = input.category.trim().toLowerCase();
+      const existing = items.find(
+        (x) =>
+          x.name.trim().toLowerCase() === nameNorm &&
+          x.category.trim().toLowerCase() === catNorm,
+      );
       const payload = {
         brand_name: brand,
         model_name: model,
@@ -109,10 +116,11 @@ export const useCarCustomServices = (
         writeLocal(k, next);
         return next;
       });
-      return row;
+      return { row, wasUpdate: !!existing, previousPrice: existing?.price ?? null };
     },
-    [enabled, brand, model, year, k],
+    [enabled, brand, model, year, k, items],
   );
+
 
   const remove = useCallback(
     async (id: string) => {

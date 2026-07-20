@@ -23,7 +23,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 
-import { listBrands, listCars, listServices, upsertServiceByCategoryName } from "@/lib/api";
+import { listBrands, listCars, listServices, upsertServiceByCategoryName, humanizeSupabaseError } from "@/lib/api";
 import {
   TIER_COEFFICIENT,
   TIER_LABEL,
@@ -957,12 +957,29 @@ function LandingPage() {
                         Только для {brandName} {modelName} · {year}
                       </div>
                       <div className="grid gap-3 sm:grid-cols-3">
-                        <Input
-                          placeholder="Название услуги"
-                          value={customDraft.name}
-                          onChange={(e) => setCustomDraft({ ...customDraft, name: e.target.value })}
-                          className="h-10 border-white/10 bg-white/5 text-white placeholder:text-white/40 sm:col-span-3"
-                        />
+                        <div className="sm:col-span-3">
+                          <Input
+                            placeholder="Название услуги"
+                            value={customDraft.name}
+                            onChange={(e) => setCustomDraft({ ...customDraft, name: e.target.value })}
+                            className="h-10 border-white/10 bg-white/5 text-white placeholder:text-white/40"
+                          />
+                          {(() => {
+                            const n = customDraft.name.trim().toLowerCase();
+                            if (!n || !activeCategory) return null;
+                            const dup = customServices.items.find(
+                              (x) =>
+                                x.category === activeCategory &&
+                                x.name.trim().toLowerCase() === n,
+                            );
+                            if (!dup) return null;
+                            return (
+                              <div className="mt-1 text-xs text-amber-300">
+                                Уже есть, цена {dup.price} ₽ — сохранение перезапишет цену
+                              </div>
+                            );
+                          })()}
+                        </div>
                         <Input
                           placeholder="Цена, ₽"
                           value={customDraft.price}
@@ -987,17 +1004,26 @@ function LandingPage() {
                           onClick={async () => {
                             setSavingCustom(true);
                             try {
-                              await customServices.add({
+                              const res = await customServices.add({
                                 category: activeCategory!,
                                 name: customDraft.name.trim(),
                                 price: Number(customDraft.price) || 0,
                                 duration_minutes: Number(customDraft.minutes) || 30,
                               });
+                              if (res?.wasUpdate) {
+                                toast.success(
+                                  `Цена обновлена: ${res.row.name} — ${res.row.price} ₽`,
+                                );
+                              } else if (res) {
+                                toast.success(
+                                  `Добавлено для ${brandName} ${modelName} ${year}: ${res.row.name}`,
+                                );
+                              }
                               setCustomDraft({ name: "", price: "", minutes: "30" });
                               setAddingCustom(false);
                             } catch (e) {
                               console.error(e);
-                              alert("Не удалось сохранить (нужно войти).");
+                              toast.error(humanizeSupabaseError(e));
                             } finally {
                               setSavingCustom(false);
                             }
