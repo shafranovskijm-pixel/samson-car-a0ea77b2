@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Trash2, Plus, X } from "lucide-react";
+import { Trash2, Plus, X, ChevronsUpDown, Search, Check } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +23,15 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 
 import {
   addReminderInterval,
@@ -39,6 +48,7 @@ import {
   listMechanics,
   listServices,
   updateAppointment,
+  updateService,
   upsertServiceByCategoryName,
 } from "@/lib/api";
 import { useCarCustomServices } from "@/hooks/useCarCustomServices";
@@ -48,6 +58,25 @@ import { STATUS_LABELS, type AppointmentStatus, type ReminderInterval } from "@/
 import { Checkbox } from "@/components/ui/checkbox";
 
 type SvcRow = { service_id: string; price: number; mechanic_payout: number };
+
+const norm = (s: string) => s.trim().replace(/\s+/g, " ").toLowerCase();
+
+function mapError(e: unknown): string {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const err = e as any;
+  const code = err?.code ?? err?.status;
+  const msg = String(err?.message ?? err ?? "");
+  if (code === "23505" || /duplicate key|already exists/i.test(msg)) {
+    return "Такая услуга уже есть";
+  }
+  if (code === "42501" || code === "PGRST301" || code === 401 || code === 403) {
+    return "Нет доступа для этого действия";
+  }
+  if (/network|fetch|failed to fetch/i.test(msg)) {
+    return "Нет соединения. Проверьте интернет";
+  }
+  return msg || "Не удалось выполнить действие";
+}
 
 type Props = {
   open: boolean;
@@ -229,7 +258,35 @@ export function AppointmentDialog({
   const [customPrice, setCustomPrice] = useState<string>("");
   const [savingCustom, setSavingCustom] = useState(false);
 
-  const addCustomService = async () => {
+  // Live-поиск дублей при вводе своей услуги
+  const customCatValue = customCat === "__other__" ? customCatOther : customCat;
+  const duplicates = useMemo(() => {
+    const name = norm(customName);
+    if (name.length < 2) return { exact: null as null | typeof services[number], similar: [] as typeof services };
+    const cat = norm(customCatValue);
+    const exact = services.find(
+      (s) => norm(s.name) === name && (cat ? norm(s.category) === cat : true),
+    ) ?? null;
+    const similar = services
+      .filter((s) => s !== exact)
+      .filter((s) => {
+        const n = norm(s.name);
+        return n.includes(name) || name.includes(n);
+      })
+      .slice(0, 5);
+    return { exact, similar };
+  }, [customName, customCatValue, services]);
+
+  const addExistingToRecord = (svc: typeof services[number], overridePrice?: number) => {
+    const price = overridePrice ?? svc.base_price;
+    setSelected((prev) =>
+      prev.some((s) => s.service_id === svc.id)
+        ? prev
+        : [...prev, { service_id: svc.id, price, mechanic_payout: rateFor(svc.id, price) }],
+    );
+  };
+
+  const addCustomService = async (opts?: { force?: boolean; updatePriceOf?: string }) => {
     const cat = (customCat === "__other__" ? customCatOther : customCat).trim();
     const name = customName.trim();
     const price = Math.max(0, Math.round(Number(customPrice) || 0));
@@ -237,14 +294,54 @@ export function AppointmentDialog({
       toast.error("Заполните категорию, название и цену");
       return;
     }
-    if (!carCustom.enabled) {
-      toast.error("Выберите машину с указанным годом");
-      return;
-    }
     setSavingCustom(true);
     try {
+      // 1) Обновить цену у существующей и добавить
+      if (opts?.updatePriceOf) {
+        const existingSvc = services.find((s) => s.id === opts.updatePriceOf);
+        if (existingSvc) {
+          await updateService(existingSvc.id, { base_price: price });
+          qc.invalidateQueries({ queryKey: ["services"] });
+          addExistingToRecord({ ...existingSvc, base_price: price }, price);
+          if (carCustom.enabled) {
+            try {
+              await carCustom.add({
+                category: existingSvc.category,
+                name: existingSvc.name,
+                price,
+                duration_minutes: 30,
+              });
+            } catch (err) {
+              console.warn("carCustom.add failed", err);
+            }
+          }
+          setCustomName("");
+          setCustomPrice("");
+          toast.success("Цена обновлена, услуга добавлена");
+          return;
+        }
+      }
+
+      // 2) Автоматически подставить точный дубль, если пользователь не форсит создание
+      if (!opts?.force && duplicates.exact) {
+        addExistingToRecord(duplicates.exact);
+        toast.message("Такая услуга уже есть — добавлена в запись", {
+          description: `${duplicates.exact.category} — ${duplicates.exact.name}`,
+        });
+        setCustomName("");
+        setCustomPrice("");
+        return;
+      }
+
+      // 3) Создать новую (или переиспользовать при force, если совпадение по имени)
       const svc = await upsertServiceByCategoryName({ category: cat, name, price });
-      await carCustom.add({ category: cat, name, price, duration_minutes: 30 });
+      if (carCustom.enabled) {
+        try {
+          await carCustom.add({ category: cat, name, price, duration_minutes: 30 });
+        } catch (err) {
+          console.warn("carCustom.add failed", err);
+        }
+      }
       qc.invalidateQueries({ queryKey: ["services"] });
       setSelected((prev) =>
         prev.some((s) => s.service_id === svc.id)
@@ -253,9 +350,14 @@ export function AppointmentDialog({
       );
       setCustomName("");
       setCustomPrice("");
-      toast.success("Услуга добавлена и запомнена для этой машины");
+      toast.success(
+        carCustom.enabled
+          ? "Услуга добавлена и запомнена для этой машины"
+          : "Услуга добавлена",
+      );
     } catch (e) {
-      toast.error((e as Error).message);
+      console.error("addCustomService failed", e);
+      toast.error(mapError(e));
     } finally {
       setSavingCustom(false);
     }
@@ -266,7 +368,8 @@ export function AppointmentDialog({
     try {
       await carCustom.remove(id);
     } catch (e) {
-      toast.error((e as Error).message);
+      console.error("removeSavedCustom failed", e);
+      toast.error(mapError(e));
     }
   };
 
@@ -289,7 +392,8 @@ export function AppointmentDialog({
             ],
       );
     } catch (e) {
-      toast.error((e as Error).message);
+      console.error("pickSavedCustom failed", e);
+      toast.error(mapError(e));
     }
   };
 
@@ -487,18 +591,11 @@ export function AppointmentDialog({
           <div>
             <Label>Услуги</Label>
             <div className="mt-2 flex gap-2">
-              <Select value={addServiceId} onValueChange={setAddServiceId}>
-                <SelectTrigger className="flex-1"><SelectValue placeholder="Добавить услугу" /></SelectTrigger>
-                <SelectContent>
-                  {services
-                    .filter((s) => !selected.some((x) => x.service_id === s.id))
-                    .map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.category} — {s.name} · {s.base_price} ₽
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+              <ServicePicker
+                services={services.filter((s) => !selected.some((x) => x.service_id === s.id))}
+                value={addServiceId}
+                onChange={setAddServiceId}
+              />
               <Button type="button" onClick={addService} disabled={!addServiceId}>
                 <Plus className="h-4 w-4" />
               </Button>
@@ -542,7 +639,7 @@ export function AppointmentDialog({
             <div className="mt-3 rounded-md border border-dashed p-3">
               <div className="mb-2 text-xs font-medium text-muted-foreground">
                 Добавить свою услугу
-                {!carCustom.enabled && " (выберите машину с указанным годом)"}
+                {!carCustom.enabled && " (без сохранения для машины — выберите машину с годом, чтобы запомнить)"}
               </div>
               <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_100px_auto]">
                 <Select value={customCat} onValueChange={setCustomCat}>
@@ -580,8 +677,8 @@ export function AppointmentDialog({
                 />
                 <Button
                   type="button"
-                  onClick={addCustomService}
-                  disabled={!carCustom.enabled || savingCustom}
+                  onClick={() => addCustomService()}
+                  disabled={savingCustom}
                 >
                   <Plus className="mr-1 h-4 w-4" />
                   Добавить
@@ -594,6 +691,79 @@ export function AppointmentDialog({
                     value={customName}
                     onChange={(e) => setCustomName(e.target.value)}
                   />
+                </div>
+              )}
+
+              {/* Точное совпадение */}
+              {duplicates.exact && (
+                <div className="mt-3 rounded-md border border-amber-400/60 bg-amber-50 p-2 text-xs dark:bg-amber-950/30">
+                  <div className="mb-1.5 font-medium text-amber-900 dark:text-amber-200">
+                    Такая услуга уже есть в справочнике
+                  </div>
+                  <div className="mb-2 text-muted-foreground">
+                    {duplicates.exact.category} — {duplicates.exact.name} ·{" "}
+                    {duplicates.exact.base_price} ₽
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      disabled={savingCustom}
+                      onClick={() => {
+                        addExistingToRecord(duplicates.exact!);
+                        toast.success("Добавлено в запись");
+                        setCustomName("");
+                        setCustomPrice("");
+                      }}
+                    >
+                      <Check className="mr-1 h-3.5 w-3.5" />
+                      Добавить в запись
+                    </Button>
+                    {Number(customPrice) > 0 &&
+                      Number(customPrice) !== duplicates.exact.base_price && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={savingCustom}
+                          onClick={() =>
+                            addCustomService({ updatePriceOf: duplicates.exact!.id })
+                          }
+                        >
+                          Обновить цену на {Number(customPrice)} ₽ и добавить
+                        </Button>
+                      )}
+                  </div>
+                </div>
+              )}
+
+              {/* Похожие */}
+              {!duplicates.exact && duplicates.similar.length > 0 && (
+                <div className="mt-3 rounded-md border bg-muted/30 p-2 text-xs">
+                  <div className="mb-1.5 flex items-center gap-1 font-medium text-muted-foreground">
+                    <Search className="h-3.5 w-3.5" />
+                    Похоже, есть уже такие:
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {duplicates.similar.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5 hover:border-primary hover:text-primary"
+                        onClick={() => {
+                          addExistingToRecord(s);
+                          toast.success("Добавлено в запись");
+                          setCustomName("");
+                          setCustomPrice("");
+                        }}
+                      >
+                        {s.category} — {s.name} · {s.base_price} ₽
+                      </button>
+                    ))}
+                  </div>
+                  <div className="mt-1.5 text-[11px] text-muted-foreground">
+                    Не подходит? Тогда нажмите «Добавить» — создастся новая услуга.
+                  </div>
                 </div>
               )}
             </div>
@@ -738,5 +908,80 @@ export function AppointmentDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function ServicePicker({
+  services,
+  value,
+  onChange,
+}: {
+  services: { id: string; category: string; name: string; base_price: number }[];
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const grouped = useMemo(() => {
+    const map = new Map<string, typeof services>();
+    for (const s of services) {
+      const arr = map.get(s.category) ?? [];
+      arr.push(s);
+      map.set(s.category, arr);
+    }
+    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b, "ru"));
+  }, [services]);
+  const selected = services.find((s) => s.id === value);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="flex-1 justify-between font-normal"
+        >
+          <span className="truncate">
+            {selected
+              ? `${selected.category} — ${selected.name} · ${selected.base_price} ₽`
+              : "Добавить услугу"}
+          </span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+        <Command
+          filter={(itemValue, search) => {
+            if (!search) return 1;
+            return itemValue.toLowerCase().includes(search.toLowerCase()) ? 1 : 0;
+          }}
+        >
+          <CommandInput placeholder="Поиск услуги…" />
+          <CommandList className="max-h-72">
+            <CommandEmpty>Ничего не найдено. Добавьте свою услугу ниже.</CommandEmpty>
+            {grouped.map(([cat, items]) => (
+              <CommandGroup key={cat} heading={cat}>
+                {items.map((s) => (
+                  <CommandItem
+                    key={s.id}
+                    value={`${s.category} ${s.name} ${s.base_price}`}
+                    onSelect={() => {
+                      onChange(s.id);
+                      setOpen(false);
+                    }}
+                  >
+                    <span className="flex-1 truncate">{s.name}</span>
+                    <span className="ml-2 shrink-0 text-xs text-muted-foreground">
+                      {s.base_price} ₽
+                    </span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            ))}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
