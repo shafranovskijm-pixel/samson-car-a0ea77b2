@@ -212,16 +212,16 @@ function ExpensesPage() {
         >
           <CardContent className="flex h-full flex-col p-4 sm:p-5">
             <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-              Прибыль (касса)
+              Чистая прибыль
             </div>
             <div
-              className={`mt-1.5 truncate text-2xl font-bold tracking-tight sm:text-3xl ${
+              className={`mt-1.5 text-xl font-bold tracking-tight tabular-nums sm:text-2xl ${
                 cashProfit >= 0 ? "text-green-600" : "text-red-600"
               }`}
             >
               {fmt(cashProfit)}
             </div>
-            <div className="mt-1 text-[11px] text-muted-foreground">
+            <div className="mt-1 text-[10px] leading-tight text-muted-foreground">
               касса − авансы мастерам − расходы
             </div>
             <div className="mt-auto border-t pt-3">
