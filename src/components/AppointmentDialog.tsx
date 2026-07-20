@@ -36,10 +36,13 @@ import {
 import {
   addReminderInterval,
   createAppointment,
+  createAppointmentPayment,
   createClientReminder,
   deleteAppointment,
+  deleteAppointmentPayment,
   getAppointment,
   getPriceForBrand,
+  listAppointmentPayments,
   listBrands,
   listCarModels,
   listCars,
@@ -51,6 +54,7 @@ import {
   updateService,
   upsertServiceByCategoryName,
 } from "@/lib/api";
+
 import { useCarCustomServices } from "@/hooks/useCarCustomServices";
 import { useServiceUsage } from "@/hooks/useServiceUsage";
 
