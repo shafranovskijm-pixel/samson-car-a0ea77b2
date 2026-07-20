@@ -85,12 +85,15 @@ function SchedulePage() {
   });
   const { data: mechanics = [] } = useQuery({ queryKey: ["mechanics"], queryFn: listMechanics });
 
-  const [prepaidDlg, setPrepaidDlg] = useState<{
+  const [payDlg, setPayDlg] = useState<{
     open: boolean;
     id: string | null;
     total: number;
+    paid: number;
+    paid_at: string;
     amount: string;
-  }>({ open: false, id: null, total: 0, amount: "" });
+    note: string;
+  }>({ open: false, id: null, total: 0, paid: 0, paid_at: "", amount: "", note: "" });
 
   const statusMut = useMutation({
     mutationFn: ({ id, status }: { id: string; status: AppointmentStatus }) =>
@@ -99,13 +102,35 @@ function SchedulePage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const paymentMut = useMutation({
-    mutationFn: (v: { id: string; payment_status: PaymentStatus; paid_amount: number }) =>
-      updateAppointmentPayment(v.id, {
-        payment_status: v.payment_status,
-        paid_amount: v.paid_amount,
+  const addPayMut = useMutation({
+    mutationFn: (v: {
+      appointment_id: string;
+      paid_at: string;
+      amount: number;
+      note?: string | null;
+    }) =>
+      createAppointmentPayment({
+        appointment_id: v.appointment_id,
+        paid_at: v.paid_at,
+        amount: v.amount,
+        note: v.note ?? null,
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["appointments"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["appointments"] });
+      qc.invalidateQueries({ queryKey: ["appointment-payments"] });
+      qc.invalidateQueries({ queryKey: ["payments-range"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const clearPayMut = useMutation({
+    mutationFn: (id: string) => clearAppointmentPayments(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["appointments"] });
+      qc.invalidateQueries({ queryKey: ["appointment-payments"] });
+      qc.invalidateQueries({ queryKey: ["payments-range"] });
+      toast.success("Оплата сброшена");
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -128,41 +153,64 @@ function SchedulePage() {
     statusMut.mutate({ id, status });
   };
 
-  const setPayment = (
-    id: string,
-    next: PaymentStatus,
-    total: number,
-    paid: number,
-  ) => {
-    if (next === "prepaid") {
-      setPrepaidDlg({
-        open: true,
-        id,
-        total,
-        amount: String(paid > 0 && paid < total ? paid : Math.round(total / 2)),
-      });
+  const payFullNow = (id: string, total: number, paid: number) => {
+    const due = Math.max(0, total - paid);
+    if (due <= 0) {
+      toast.info("Уже оплачено полностью");
       return;
     }
-    const paid_amount = next === "paid" ? total : 0;
-    paymentMut.mutate({ id, payment_status: next, paid_amount });
+    addPayMut.mutate(
+      {
+        appointment_id: id,
+        paid_at: format(new Date(), "yyyy-MM-dd"),
+        amount: due,
+        note: "Полная оплата",
+      },
+      { onSuccess: () => toast.success("Оплата записана") },
+    );
   };
 
-  const submitPrepaid = () => {
-    if (!prepaidDlg.id) return;
-    const amt = Math.max(0, Math.round(Number(prepaidDlg.amount) || 0));
+  const openPayDialog = (id: string, total: number, paid: number) => {
+    const due = Math.max(0, total - paid);
+    setPayDlg({
+      open: true,
+      id,
+      total,
+      paid,
+      paid_at: format(new Date(), "yyyy-MM-dd"),
+      amount: String(due > 0 ? due : total),
+      note: "",
+    });
+  };
+
+  const submitPayDialog = () => {
+    if (!payDlg.id) return;
+    const amt = Math.max(0, Math.round(Number(payDlg.amount) || 0));
     if (amt <= 0) {
       toast.error("Введите сумму больше 0");
       return;
     }
-    if (amt >= prepaidDlg.total) {
-      toast.error("Сумма предоплаты должна быть меньше итоговой");
+    if (!payDlg.paid_at) {
+      toast.error("Укажите дату платежа");
       return;
     }
-    paymentMut.mutate(
-      { id: prepaidDlg.id, payment_status: "prepaid", paid_amount: amt },
-      { onSuccess: () => setPrepaidDlg((d) => ({ ...d, open: false })) },
+    addPayMut.mutate(
+      {
+        appointment_id: payDlg.id,
+        paid_at: payDlg.paid_at,
+        amount: amt,
+        note: payDlg.note.trim() || null,
+      },
+      {
+        onSuccess: () => {
+          setPayDlg((d) => ({ ...d, open: false }));
+          toast.success("Платёж добавлен");
+        },
+      },
     );
   };
+
+
 
 
   const grouped = useMemo(() => {
