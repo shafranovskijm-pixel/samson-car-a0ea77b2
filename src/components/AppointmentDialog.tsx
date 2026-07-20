@@ -800,7 +800,9 @@ export function AppointmentDialog({
                             const p = Number(e.target.value);
                             setSelected((prev) =>
                               prev.map((x) =>
-                                x.service_id === row.service_id ? { ...x, price: p } : x,
+                                x.service_id === row.service_id
+                                  ? { ...x, price: p, mechanic_payout: rateFor(x.service_id, p) }
+                                  : x,
                               ),
                             );
                           }}
