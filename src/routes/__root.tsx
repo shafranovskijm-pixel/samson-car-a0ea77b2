@@ -111,30 +111,32 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <QueryClientProvider client={queryClient}>
-      <SidebarProvider>
-        <div className="flex min-h-screen w-full overflow-x-hidden">
-          <AppSidebar />
+      <ConfirmProvider>
+        <SidebarProvider>
+          <div className="flex min-h-screen w-full overflow-x-hidden">
+            <AppSidebar />
 
-          <div className="flex min-w-0 flex-1 flex-col">
-            <header className="flex h-12 items-center gap-2 border-b bg-background px-2 sm:gap-3 sm:px-3">
-              <SidebarTrigger />
-              <div className="truncate text-sm font-medium">
-                <span className="sm:hidden">Samson Auto</span>
-                <span className="hidden sm:inline">Samson Auto — CRM</span>
-              </div>
-              <div className="ml-auto">
-                <UssuriyskClock />
-              </div>
-            </header>
+            <div className="flex min-w-0 flex-1 flex-col">
+              <header className="flex h-12 items-center gap-2 border-b bg-background px-2 sm:gap-3 sm:px-3">
+                <SidebarTrigger />
+                <div className="truncate text-sm font-medium">
+                  <span className="sm:hidden">Samson Auto</span>
+                  <span className="hidden sm:inline">Samson Auto — CRM</span>
+                </div>
+                <div className="ml-auto">
+                  <UssuriyskClock />
+                </div>
+              </header>
 
-            <main className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
-              <Outlet />
-            </main>
+              <main className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
+                <Outlet />
+              </main>
+            </div>
+
           </div>
-
-        </div>
-      </SidebarProvider>
-      <Toaster />
+        </SidebarProvider>
+        <Toaster />
+      </ConfirmProvider>
     </QueryClientProvider>
   );
 }
