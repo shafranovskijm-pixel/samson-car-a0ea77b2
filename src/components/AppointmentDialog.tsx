@@ -844,6 +844,12 @@ export function AppointmentDialog({
             </div>
           </div>
 
+          {isEdit && appointmentId && (
+            <PaymentsSection appointmentId={appointmentId} total={total} />
+          )}
+
+
+
           <div className="rounded-md border p-3">
             <div className="flex items-center gap-2">
               <Checkbox
