@@ -794,18 +794,6 @@ function MechanicShifts({ mechanicId, color = "#64748b" }: { mechanicId: string;
           <Plus className="mr-1 h-4 w-4" />Смена
         </Button>
       </div>
-      <div className="mb-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <CalendarClock className="h-5 w-5" />
-          <h2 className="text-lg font-semibold">
-            График работы{" "}
-            <span className="text-sm font-normal text-muted-foreground">· {shifts.length}</span>
-          </h2>
-        </div>
-        <Button size="sm" onClick={openNew}>
-          <Plus className="mr-1 h-4 w-4" />Смена
-        </Button>
-      </div>
       {shifts.length === 0 ? (
         <div className="rounded-lg border border-dashed py-6 text-center text-sm text-muted-foreground">
           Смен пока нет
