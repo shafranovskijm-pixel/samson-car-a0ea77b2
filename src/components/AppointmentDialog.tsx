@@ -910,3 +910,78 @@ export function AppointmentDialog({
     </Dialog>
   );
 }
+
+function ServicePicker({
+  services,
+  value,
+  onChange,
+}: {
+  services: { id: string; category: string; name: string; base_price: number }[];
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const grouped = useMemo(() => {
+    const map = new Map<string, typeof services>();
+    for (const s of services) {
+      const arr = map.get(s.category) ?? [];
+      arr.push(s);
+      map.set(s.category, arr);
+    }
+    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b, "ru"));
+  }, [services]);
+  const selected = services.find((s) => s.id === value);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="flex-1 justify-between font-normal"
+        >
+          <span className="truncate">
+            {selected
+              ? `${selected.category} — ${selected.name} · ${selected.base_price} ₽`
+              : "Добавить услугу"}
+          </span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+        <Command
+          filter={(itemValue, search) => {
+            if (!search) return 1;
+            return itemValue.toLowerCase().includes(search.toLowerCase()) ? 1 : 0;
+          }}
+        >
+          <CommandInput placeholder="Поиск услуги…" />
+          <CommandList className="max-h-72">
+            <CommandEmpty>Ничего не найдено. Добавьте свою услугу ниже.</CommandEmpty>
+            {grouped.map(([cat, items]) => (
+              <CommandGroup key={cat} heading={cat}>
+                {items.map((s) => (
+                  <CommandItem
+                    key={s.id}
+                    value={`${s.category} ${s.name} ${s.base_price}`}
+                    onSelect={() => {
+                      onChange(s.id);
+                      setOpen(false);
+                    }}
+                  >
+                    <span className="flex-1 truncate">{s.name}</span>
+                    <span className="ml-2 shrink-0 text-xs text-muted-foreground">
+                      {s.base_price} ₽
+                    </span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            ))}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
