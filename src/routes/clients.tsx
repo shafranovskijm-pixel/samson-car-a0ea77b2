@@ -573,6 +573,14 @@ function ClientsPage() {
                           </div>
                         </div>
                         <div className="flex gap-1">
+                          <Link
+                            to="/calculator"
+                            search={{ carId: car.id }}
+                            title="Добавить услуги в калькулятор"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-md text-primary hover:bg-primary/10"
+                          >
+                            <CalculatorIcon className="h-4 w-4" />
+                          </Link>
                           <Button
                             size="icon"
                             variant="ghost"
@@ -604,6 +612,14 @@ function ClientsPage() {
                         <div>VIN: <span className="font-mono text-foreground">{car.vin ?? "—"}</span></div>
                         <div>КПП: <span className="text-foreground">{car.transmission ?? "—"}</span></div>
                       </div>
+                      <Link
+                        to="/calculator"
+                        search={{ carId: car.id }}
+                        className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary/10 px-3 py-2 text-sm font-medium text-primary hover:bg-primary/15"
+                      >
+                        <CalculatorIcon className="h-4 w-4" />
+                        Добавить услуги
+                      </Link>
                     </div>
                   );
                 })}
