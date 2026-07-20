@@ -176,8 +176,23 @@ function SchedulePage() {
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(a);
     }
-    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
-  }, [appointments, mechanicFilter, statusFilter, paymentFilter]);
+    const dayDir = sortMode === "day-asc" || sortMode === "time-asc" ? 1 : -1;
+    const timeDir = sortMode === "time-asc" ? 1 : sortMode === "time-desc" ? -1 : 1;
+    const entries = Array.from(map.entries()).sort(([a], [b]) =>
+      dayDir * a.localeCompare(b),
+    );
+    for (const [, items] of entries) {
+      items.sort(
+        (x, y) => timeDir * (parseISO(x.starts_at).getTime() - parseISO(y.starts_at).getTime()),
+      );
+    }
+    return entries;
+  }, [appointments, mechanicFilter, statusFilter, paymentFilter, sortMode]);
+
+  const changeSort = (v: SortMode) => {
+    setSortMode(v);
+    if (typeof window !== "undefined") window.localStorage.setItem("schedule.sort", v);
+  };
 
   return (
     <div className="p-4">
