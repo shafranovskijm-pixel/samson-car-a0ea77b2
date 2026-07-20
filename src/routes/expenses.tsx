@@ -455,7 +455,8 @@ function ExpensesBlock({
   });
 
   return (
-    <Card>
+    <Card id="expenses-block">
+
       <CardContent className="p-4 sm:p-6">
         <div className="mb-4 flex items-center justify-between gap-2">
           <div>
