@@ -509,15 +509,13 @@ function MechanicsBlock({
     appts.forEach((a) => {
       if (!a.mechanic_id) return;
       const entry = map.get(a.mechanic_id) ?? { payout: 0, rows: [] };
-      entry.payout += (a.services ?? []).reduce(
-        (s, x) => s + Number(x.mechanic_payout ?? 0),
-        0,
-      );
+      entry.payout += apptPayout(a);
       entry.rows.push(a);
       map.set(a.mechanic_id, entry);
     });
     return map;
-  }, [appts]);
+  }, [appts, apptPayout]);
+
 
   const advByMech = useMemo(() => {
     const map = new Map<string, { total: number; rows: MechanicAdvance[] }>();
