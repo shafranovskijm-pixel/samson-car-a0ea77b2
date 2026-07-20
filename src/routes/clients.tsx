@@ -510,6 +510,25 @@ function ClientsPage() {
               </div>
 
               <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    if (selectedCars.length === 0) {
+                      toast.info("Сначала добавьте машину клиенту");
+                      setCarDialog({ open: true, editing: null, clientId: selected.id });
+                      return;
+                    }
+                    if (selectedCars.length === 1) {
+                      navigate({ to: "/calculator", search: { carId: selectedCars[0].id } });
+                      return;
+                    }
+                    setPickCarOpen(true);
+                  }}
+                >
+                  <Plus className="mr-1 h-4 w-4" />
+                  <span className="hidden sm:inline">Добавить услугу</span>
+                  <span className="sm:hidden">Услуга</span>
+                </Button>
                 <Button variant="outline" size="sm" onClick={() => openEditClient(selected)}>
                   <Pencil className="mr-1 h-4 w-4" />Изменить
                 </Button>
