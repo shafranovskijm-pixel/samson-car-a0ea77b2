@@ -573,7 +573,15 @@ function MechanicAdvances({ mechanicId }: { mechanicId: string }) {
                   variant="ghost"
                   className="h-7 w-7"
                   onClick={() => {
-                    if (confirm("Удалить аванс?")) del.mutate(a.id);
+                    (async () => {
+                      const ok = await confirmActionCtx({
+                        title: "Удалить аванс?",
+                        description: `${new Date(a.paid_at).toLocaleDateString("ru-RU")} · ${Number(a.amount).toLocaleString("ru-RU")} ₽`,
+                        destructive: true,
+                        confirmText: "Удалить",
+                      });
+                      if (ok) del.mutate(a.id);
+                    })();
                   }}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -877,7 +885,14 @@ function MechanicShifts({ mechanicId, color = "#64748b" }: { mechanicId: string;
                             size="icon"
                             variant="ghost"
                             onClick={() => {
-                              if (confirm("Удалить смену?")) delM.mutate(s.id);
+                              (async () => {
+                                const ok = await confirmActionCtx({
+                                  title: "Удалить смену?",
+                                  destructive: true,
+                                  confirmText: "Удалить",
+                                });
+                                if (ok) delM.mutate(s.id);
+                              })();
                             }}
                           >
                             <Trash2 className="h-4 w-4" />
