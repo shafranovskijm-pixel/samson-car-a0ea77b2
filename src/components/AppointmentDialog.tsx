@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Trash2, Plus, X, ChevronsUpDown, Search, Check } from "lucide-react";
+import { Trash2, Plus, X, ChevronsUpDown, Search, Check, Calculator, User, Car, CalendarClock, Wrench, ClipboardList, Bell, MessageSquare, ExternalLink } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 
 import { Button } from "@/components/ui/button";
 import {
