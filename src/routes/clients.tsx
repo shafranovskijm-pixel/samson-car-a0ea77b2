@@ -29,9 +29,9 @@ import {
 
 import {
   createCar, createClient, createClientComment, createClientReminder, deleteCar, deleteClient,
-  deleteClientComment, deleteClientReminder, listAppointmentsByClient, listBrands, listCarModels,
-  listCars, listClientComments, listClientReminders, listClients, updateCar, updateClient,
-  updateClientComment, updateClientReminder,
+  deleteClientComment, deleteClientReminder, listAllClientComments, listAppointmentsByClient,
+  listBrands, listCarModels, listCars, listClientComments, listClientReminders, listClients,
+  updateCar, updateClient, updateClientComment, updateClientReminder,
 } from "@/lib/api";
 import type {
   Car, Client, ClientCategory, ClientComment, ClientReminder, ReminderInterval,
