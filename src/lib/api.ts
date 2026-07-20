@@ -14,6 +14,23 @@ import type {
 } from "./types";
 
 
+export function humanizeSupabaseError(e: unknown): string {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const err = e as any;
+  const code = err?.code ?? err?.status;
+  const msg = String(err?.message ?? err ?? "");
+  if (code === "23505" || /duplicate key|already exists/i.test(msg)) {
+    return "Такая услуга уже есть";
+  }
+  if (code === "42501" || code === "PGRST301" || code === 401 || code === 403) {
+    return "Нет доступа для этого действия";
+  }
+  if (/network|fetch|failed to fetch/i.test(msg)) {
+    return "Нет соединения. Проверьте интернет";
+  }
+  return msg || "Не удалось выполнить действие";
+}
+
 
 const throwIf = <T,>(x: { data: T | null; error: unknown }): T => {
   if (x.error) throw x.error;
