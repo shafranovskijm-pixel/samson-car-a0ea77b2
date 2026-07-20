@@ -471,29 +471,6 @@ export function AppointmentDialog({
       if (isEdit) await updateAppointment(appointmentId!, payload);
       else await createAppointment(payload);
 
-      // Автосоздание напоминания
-      if (reminderOn && clientId && reminderInterval !== "custom") {
-        const remindAt = addReminderInterval(
-          startsDate,
-          reminderInterval as "day" | "week" | "month" | "half_year" | "year",
-        );
-        const client = clients.find((c) => c.id === clientId);
-        const svcNames = selected
-          .map((s) => services.find((sv) => sv.id === s.service_id)?.name)
-          .filter(Boolean)
-          .join(", ");
-        const title =
-          reminderTitle.trim() ||
-          `Напоминание${svcNames ? ` (${svcNames})` : ""}${client ? ` — ${client.full_name}` : ""}`;
-        await createClientReminder({
-          client_id: clientId,
-          title,
-          note: null,
-          remind_at: remindAt.toISOString(),
-          interval_kind: reminderInterval,
-          repeat: false,
-        });
-      }
     },
     onSuccess: () => {
       toast.success(isEdit ? "Запись обновлена" : "Запись создана");
