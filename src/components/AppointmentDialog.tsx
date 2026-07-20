@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -409,15 +409,26 @@ export function AppointmentDialog({
     }
   }, [carId, clientId, cars]);
 
-  // При смене мастера пересчитываем выплату для ВСЕХ услуг —
-  // прежняя ставка от другого мастера не должна «залипать».
+  // При смене мастера / загрузке ставок пересчитываем выплату.
+  // Нулевые выплаты (префилл из калькулятора, старые записи без мастера,
+  // только что добавленные без выбранного мастера) заполняем по проценту
+  // (индивидуальный % мастера → % услуги → 50% по умолчанию).
+  // Ненулевые (ручная правка) не трогаем при загрузке ставок; при смене
+  // мастера пересчитываем всё, т.к. ставка другого мастера может отличаться.
+  const prevMechIdRef = useRef<string>("");
   useEffect(() => {
     if (!mechanicId) return;
+    const mechChanged = prevMechIdRef.current !== "" && prevMechIdRef.current !== mechanicId;
+    prevMechIdRef.current = mechanicId;
     setSelected((prev) =>
-      prev.map((s) => ({ ...s, mechanic_payout: rateFor(s.service_id, s.price) })),
+      prev.map((s) =>
+        mechChanged || !(s.mechanic_payout > 0)
+          ? { ...s, mechanic_payout: rateFor(s.service_id, s.price) }
+          : s,
+      ),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mechanicId, rates]);
+  }, [mechanicId, rates, selected.length]);
 
 
   const total = selected.reduce((s, x) => s + (x.price || 0), 0);
@@ -446,6 +457,16 @@ export function AppointmentDialog({
       const startsDate = new Date(`${startDate}T${startTime}:00`);
       const starts_at = startsDate.toISOString();
 
+      // Страховка: если мастер выбран, а выплата у услуги 0 — считаем по %
+      // (индивидуальный мастера/услуги, иначе 50%). Так в разделе «Механики»
+      // корректно считаются оборот и зарплата, даже если пользователь не
+      // трогал строку услуги вручную.
+      const servicesPayload = selected.map((s) =>
+        mechanicId && !(s.mechanic_payout > 0)
+          ? { ...s, mechanic_payout: rateFor(s.service_id, s.price) }
+          : s,
+      );
+
       const payload = {
         car_id: carId,
         mechanic_id: mechanicId || null,
@@ -454,7 +475,7 @@ export function AppointmentDialog({
         status,
         mileage: mileage ? Number(mileage) : null,
         comment: comment || null,
-        services: selected,
+        services: servicesPayload,
       };
       if (isEdit) await updateAppointment(appointmentId!, payload);
       else await createAppointment(payload);
