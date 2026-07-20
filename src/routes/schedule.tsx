@@ -330,19 +330,53 @@ function SchedulePage() {
                 return (
                   <div
                     key={a.id}
-                    className="group flex flex-col gap-3 rounded-lg border bg-card p-3 transition hover:border-primary/50 hover:bg-accent/40 hover:shadow-md sm:flex-row sm:items-center"
+                    className="group relative overflow-hidden rounded-xl border bg-card shadow-sm transition hover:border-primary/40 hover:shadow-md"
                   >
-                    <button
-                      type="button"
-                      onClick={() => setDialog({ open: true, id: a.id })}
-                      className="flex flex-1 cursor-pointer items-center gap-3 text-left transition group-hover:text-primary"
-                    >
+                    <span
+                      aria-hidden
+                      className={`absolute inset-y-0 left-0 w-1 ${STATUS_STRIPE[status]}`}
+                    />
+                    <div className="grid gap-3 py-3 pl-4 pr-3 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center sm:gap-4 sm:py-3.5 sm:pl-5 sm:pr-4">
+                      {/* Время + дата */}
+                      <button
+                        type="button"
+                        onClick={() => setDialog({ open: true, id: a.id })}
+                        className="flex items-baseline gap-2 text-left sm:w-20 sm:flex-col sm:items-start sm:gap-0.5"
+                      >
+                        <span className="text-xl font-bold leading-none tabular-nums sm:text-2xl">
+                          {format(parseISO(a.starts_at), "HH:mm")}
+                        </span>
+                        {(() => {
+                          const d = parseISO(a.starts_at);
+                          const rel = relativeDayLabel(d);
+                          return (
+                            <span className="flex flex-wrap items-baseline gap-1.5 text-[11px] text-muted-foreground">
+                              <span className="tabular-nums">
+                                {format(d, "d MMM", { locale: ru })}
+                              </span>
+                              {rel && (
+                                <span
+                                  className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                                    isToday(d)
+                                      ? "bg-primary/10 text-primary"
+                                      : "bg-muted text-muted-foreground"
+                                  }`}
+                                >
+                                  {rel}
+                                </span>
+                              )}
+                            </span>
+                          );
+                        })()}
+                      </button>
 
-                      <div className="w-16 shrink-0 text-sm font-medium tabular-nums">
-                        {format(parseISO(a.starts_at), "HH:mm")}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate font-medium">
+                      {/* Контент */}
+                      <button
+                        type="button"
+                        onClick={() => setDialog({ open: true, id: a.id })}
+                        className="min-w-0 text-left transition group-hover:text-primary"
+                      >
+                        <div className="truncate font-semibold">
                           {a.car?.brand?.name} {a.car?.model}
                           {a.car?.license_plate ? ` · ${a.car.license_plate}` : ""}
                         </div>
@@ -350,117 +384,122 @@ function SchedulePage() {
                           {a.car?.client?.full_name}
                           {a.car?.client?.phone ? ` · ${a.car.client.phone}` : ""}
                         </div>
-                        <div className="mt-1 truncate text-xs text-muted-foreground">
-                          {a.services.map((s) => s.service?.name).filter(Boolean).join(", ") || "—"}
+                        <div className="mt-1 line-clamp-1 text-xs text-muted-foreground">
+                          {a.services.map((s) => s.service?.name).filter(Boolean).join(", ") ||
+                            "—"}
                         </div>
-                      </div>
-                    </button>
-
-                    <div className="flex flex-col items-stretch gap-1.5 sm:items-end">
-                      {a.mechanic && (
-                        <div className="flex items-center gap-1 text-xs sm:justify-end">
-                          <span
-                            className="h-2 w-2 rounded-full"
-                            style={{ background: a.mechanic.color }}
-                          />
-                          {a.mechanic.full_name}
-                        </div>
-                      )}
-                      <div className="text-sm font-semibold sm:text-right">
-                        {a.total_price} ₽
-                        {payment === "prepaid" && a.paid_amount > 0 && (
-                          <span className="ml-1 text-xs font-normal text-muted-foreground">
-                            (внесено {a.paid_amount})
-                          </span>
+                        {a.mechanic && (
+                          <div className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <span
+                              className="h-2 w-2 shrink-0 rounded-full"
+                              style={{ background: a.mechanic.color }}
+                            />
+                            <span className="truncate">{a.mechanic.full_name}</span>
+                          </div>
                         )}
-                      </div>
-                      <div className="flex flex-wrap gap-1.5 sm:justify-end">
-                        <button
-                          type="button"
-                          title="Печать заказ-наряда"
-                          onClick={() => setPrintApptId(a.id)}
-                          className="inline-flex items-center gap-1 rounded-full border bg-background px-2.5 py-1 text-xs font-medium shadow-sm transition hover:bg-accent"
-                        >
-                          <Printer className="h-3.5 w-3.5" />
-                          Печать
-                        </button>
-                        <button
-                          type="button"
-                          title="Удалить запись"
-                          onClick={() => confirmDelete(a.id)}
-                          disabled={deleteMut.isPending}
-                          className="inline-flex items-center gap-1 rounded-full border border-destructive/40 bg-background px-2.5 py-1 text-xs font-medium text-destructive shadow-sm transition hover:bg-destructive/10 disabled:opacity-50"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          Удалить
-                        </button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button
-                              type="button"
-                              className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium shadow-sm transition hover:opacity-90 ${STATUS_COLORS[status]}`}
-                            >
-                              {STATUS_LABELS[status]}
-                              <ChevronDown className="h-3 w-3 opacity-70" />
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {(Object.keys(STATUS_LABELS) as AppointmentStatus[]).map((s) => (
-                              <DropdownMenuItem
-                                key={s}
-                                onClick={() => setStatus(a.id, s)}
-                                className="gap-2"
-                              >
-                                <Check
-                                  className={`h-3.5 w-3.5 ${s === status ? "opacity-100" : "opacity-0"}`}
-                                />
-                                {STATUS_LABELS[s]}
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button
-                              type="button"
-                              className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium shadow-sm transition hover:opacity-90 ${PAYMENT_COLORS[payment]}`}
-                            >
-                              {PAYMENT_LABELS[payment]}
-                              <ChevronDown className="h-3 w-3 opacity-70" />
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() =>
-                                payFullNow(a.id, a.total_price ?? 0, a.paid_amount ?? 0)
-                              }
-                            >
-                              Оплачено полностью
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() =>
-                                openPayDialog(a.id, a.total_price ?? 0, a.paid_amount ?? 0)
-                              }
-                            >
-                              Записать платёж…
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={async () => {
-                                const ok = await confirmAction({
-                                  title: "Сбросить оплату?",
-                                  description: "Все платежи по этой записи будут удалены.",
-                                  destructive: true,
-                                  confirmText: "Сбросить",
-                                });
-                                if (ok) clearPayMut.mutate(a.id);
-                              }}
-                              className="text-destructive"
-                            >
-                              Сбросить оплату
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                      </button>
 
+                      {/* Сумма + действия */}
+                      <div className="flex flex-col gap-2 sm:items-end">
+                        <div className="flex items-baseline justify-between gap-2 sm:flex-col sm:items-end sm:gap-0.5">
+                          <div className="text-lg font-bold tabular-nums sm:text-xl">
+                            {Number(a.total_price ?? 0).toLocaleString("ru-RU")} ₽
+                          </div>
+                          {Number(a.paid_amount ?? 0) > 0 &&
+                            Number(a.paid_amount) < Number(a.total_price ?? 0) && (
+                              <div className="text-[11px] text-muted-foreground tabular-nums">
+                                внесено {Number(a.paid_amount).toLocaleString("ru-RU")} ₽
+                              </div>
+                            )}
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-1.5 sm:justify-end">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                type="button"
+                                className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium shadow-sm transition hover:opacity-90 ${STATUS_COLORS[status]}`}
+                              >
+                                {STATUS_LABELS[status]}
+                                <ChevronDown className="h-3 w-3 opacity-70" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {(Object.keys(STATUS_LABELS) as AppointmentStatus[]).map((s) => (
+                                <DropdownMenuItem
+                                  key={s}
+                                  onClick={() => setStatus(a.id, s)}
+                                  className="gap-2"
+                                >
+                                  <Check
+                                    className={`h-3.5 w-3.5 ${s === status ? "opacity-100" : "opacity-0"}`}
+                                  />
+                                  {STATUS_LABELS[s]}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                type="button"
+                                className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium shadow-sm transition hover:opacity-90 ${PAYMENT_COLORS[payment]}`}
+                              >
+                                {PAYMENT_LABELS[payment]}
+                                <ChevronDown className="h-3 w-3 opacity-70" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  payFullNow(a.id, a.total_price ?? 0, a.paid_amount ?? 0)
+                                }
+                              >
+                                Оплачено полностью
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  openPayDialog(a.id, a.total_price ?? 0, a.paid_amount ?? 0)
+                                }
+                              >
+                                Записать платёж…
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={async () => {
+                                  const ok = await confirmAction({
+                                    title: "Сбросить оплату?",
+                                    description: "Все платежи по этой записи будут удалены.",
+                                    destructive: true,
+                                    confirmText: "Сбросить",
+                                  });
+                                  if (ok) clearPayMut.mutate(a.id);
+                                }}
+                                className="text-destructive"
+                              >
+                                Сбросить оплату
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                          <button
+                            type="button"
+                            title="Печать заказ-наряда"
+                            aria-label="Печать заказ-наряда"
+                            onClick={() => setPrintApptId(a.id)}
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-full border bg-background text-muted-foreground shadow-sm transition hover:bg-accent hover:text-foreground"
+                          >
+                            <Printer className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            title="Удалить запись"
+                            aria-label="Удалить запись"
+                            onClick={() => confirmDelete(a.id)}
+                            disabled={deleteMut.isPending}
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-destructive/40 bg-background text-destructive shadow-sm transition hover:bg-destructive/10 disabled:opacity-50"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
