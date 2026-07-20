@@ -1098,7 +1098,15 @@ function PaymentsSection({
                 variant="ghost"
                 size="icon"
                 className="h-7 w-7"
-                onClick={() => delMut.mutate(p.id)}
+                onClick={async () => {
+                  const ok = await confirmAction({
+                    title: "Удалить платёж?",
+                    description: `${format(new Date(p.paid_at), "d MMM yyyy")} · ${Number(p.amount)} ₽`,
+                    destructive: true,
+                    confirmText: "Удалить",
+                  });
+                  if (ok) delMut.mutate(p.id);
+                }}
                 aria-label="Удалить платёж"
               >
                 <Trash2 className="h-3.5 w-3.5 text-red-600" />
