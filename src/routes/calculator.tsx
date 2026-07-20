@@ -23,7 +23,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 
-import { listBrands, listServices } from "@/lib/api";
+import { listBrands, listCars, listServices } from "@/lib/api";
 import {
   TIER_COEFFICIENT,
   TIER_LABEL,
