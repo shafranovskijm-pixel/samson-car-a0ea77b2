@@ -957,12 +957,29 @@ function LandingPage() {
                         Только для {brandName} {modelName} · {year}
                       </div>
                       <div className="grid gap-3 sm:grid-cols-3">
-                        <Input
-                          placeholder="Название услуги"
-                          value={customDraft.name}
-                          onChange={(e) => setCustomDraft({ ...customDraft, name: e.target.value })}
-                          className="h-10 border-white/10 bg-white/5 text-white placeholder:text-white/40 sm:col-span-3"
-                        />
+                        <div className="sm:col-span-3">
+                          <Input
+                            placeholder="Название услуги"
+                            value={customDraft.name}
+                            onChange={(e) => setCustomDraft({ ...customDraft, name: e.target.value })}
+                            className="h-10 border-white/10 bg-white/5 text-white placeholder:text-white/40"
+                          />
+                          {(() => {
+                            const n = customDraft.name.trim().toLowerCase();
+                            if (!n || !activeCategory) return null;
+                            const dup = customServices.items.find(
+                              (x) =>
+                                x.category === activeCategory &&
+                                x.name.trim().toLowerCase() === n,
+                            );
+                            if (!dup) return null;
+                            return (
+                              <div className="mt-1 text-xs text-amber-300">
+                                Уже есть, цена {dup.price} ₽ — сохранение перезапишет цену
+                              </div>
+                            );
+                          })()}
+                        </div>
                         <Input
                           placeholder="Цена, ₽"
                           value={customDraft.price}
