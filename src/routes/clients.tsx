@@ -653,8 +653,6 @@ function ClientsPage() {
             {/* HISTORY */}
             <ClientHistory clientId={selected.id} />
 
-            {/* REMINDERS */}
-            <ClientReminders clientId={selected.id} />
 
           </div>
         )}

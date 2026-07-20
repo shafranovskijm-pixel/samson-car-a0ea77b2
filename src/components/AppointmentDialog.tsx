@@ -471,29 +471,6 @@ export function AppointmentDialog({
       if (isEdit) await updateAppointment(appointmentId!, payload);
       else await createAppointment(payload);
 
-      // Автосоздание напоминания
-      if (reminderOn && clientId && reminderInterval !== "custom") {
-        const remindAt = addReminderInterval(
-          startsDate,
-          reminderInterval as "day" | "week" | "month" | "half_year" | "year",
-        );
-        const client = clients.find((c) => c.id === clientId);
-        const svcNames = selected
-          .map((s) => services.find((sv) => sv.id === s.service_id)?.name)
-          .filter(Boolean)
-          .join(", ");
-        const title =
-          reminderTitle.trim() ||
-          `Напоминание${svcNames ? ` (${svcNames})` : ""}${client ? ` — ${client.full_name}` : ""}`;
-        await createClientReminder({
-          client_id: clientId,
-          title,
-          note: null,
-          remind_at: remindAt.toISOString(),
-          interval_kind: reminderInterval,
-          repeat: false,
-        });
-      }
     },
     onSuccess: () => {
       toast.success(isEdit ? "Запись обновлена" : "Запись создана");
@@ -932,46 +909,6 @@ export function AppointmentDialog({
               <PaymentsSection appointmentId={appointmentId} total={total} />
             )}
 
-            <Section icon={<Bell className="h-3.5 w-3.5" />} title="Напоминание клиенту">
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="reminder-on"
-                  checked={reminderOn}
-                  onCheckedChange={(v) => setReminderOn(!!v)}
-                />
-                <Label htmlFor="reminder-on" className="cursor-pointer">
-                  Создать напоминание после визита
-                </Label>
-              </div>
-              {reminderOn && (
-                <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Через</Label>
-                    <Select
-                      value={reminderInterval}
-                      onValueChange={(v) => setReminderInterval(v as ReminderInterval)}
-                    >
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="day">День</SelectItem>
-                        <SelectItem value="week">Неделю</SelectItem>
-                        <SelectItem value="month">Месяц</SelectItem>
-                        <SelectItem value="half_year">Полгода</SelectItem>
-                        <SelectItem value="year">Год</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Название (необязательно)</Label>
-                    <Input
-                      value={reminderTitle}
-                      onChange={(e) => setReminderTitle(e.target.value)}
-                      placeholder="Авто: услуги + клиент"
-                    />
-                  </div>
-                </div>
-              )}
-            </Section>
 
             <Section icon={<MessageSquare className="h-3.5 w-3.5" />} title="Комментарий">
               <Textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={3} />
