@@ -457,6 +457,16 @@ export function AppointmentDialog({
       const startsDate = new Date(`${startDate}T${startTime}:00`);
       const starts_at = startsDate.toISOString();
 
+      // Страховка: если мастер выбран, а выплата у услуги 0 — считаем по %
+      // (индивидуальный мастера/услуги, иначе 50%). Так в разделе «Механики»
+      // корректно считаются оборот и зарплата, даже если пользователь не
+      // трогал строку услуги вручную.
+      const servicesPayload = selected.map((s) =>
+        mechanicId && !(s.mechanic_payout > 0)
+          ? { ...s, mechanic_payout: rateFor(s.service_id, s.price) }
+          : s,
+      );
+
       const payload = {
         car_id: carId,
         mechanic_id: mechanicId || null,
@@ -465,7 +475,7 @@ export function AppointmentDialog({
         status,
         mileage: mileage ? Number(mileage) : null,
         comment: comment || null,
-        services: selected,
+        services: servicesPayload,
       };
       if (isEdit) await updateAppointment(appointmentId!, payload);
       else await createAppointment(payload);
