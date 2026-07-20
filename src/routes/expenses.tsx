@@ -204,24 +204,37 @@ function ExpensesPage() {
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {/* Чистая прибыль — герой */}
+        {/* Прибыль (кассовая) — герой */}
         <Card
-          className={`border-2 ${profit >= 0 ? "border-green-500/30" : "border-red-500/30"}`}
+          className={`border-2 ${cashProfit >= 0 ? "border-green-500/30" : "border-red-500/30"}`}
         >
           <CardContent className="p-5">
-            <div className="text-xs font-medium text-muted-foreground">Чистая прибыль</div>
+            <div className="text-xs font-medium text-muted-foreground">Прибыль (касса)</div>
             <div
               className={`mt-2 text-3xl font-bold tracking-tight ${
-                profit >= 0 ? "text-green-600" : "text-red-600"
+                cashProfit >= 0 ? "text-green-600" : "text-red-600"
               }`}
             >
-              {fmt(profit)}
+              {fmt(cashProfit)}
             </div>
             <div className="mt-4 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               Формула
             </div>
             <div className="mt-1 text-[11px] text-muted-foreground">
-              касса − начисл. ЗП − расходы
+              касса − авансы мастерам − расходы
+            </div>
+            <div className="mt-3 border-t pt-2">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-muted-foreground">Прибыль (начисление)</span>
+                <span
+                  className={`font-semibold ${accruedProfit >= 0 ? "text-green-700" : "text-red-700"}`}
+                >
+                  {fmt(accruedProfit)}
+                </span>
+              </div>
+              <div className="text-[10px] text-muted-foreground">
+                выполнено − начислено ЗП − расходы
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -285,12 +298,18 @@ function ExpensesPage() {
             <div className="mt-auto border-t pt-3">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                  Текущий долг
+                  {mechanicsDebt >= 0 ? "К выплате" : "Переплата"}
                 </span>
                 <span
-                  className={`text-sm font-semibold ${mechanicsDebt > 0 ? "text-amber-600" : "text-green-600"}`}
+                  className={`text-sm font-semibold ${
+                    mechanicsDebt > 0
+                      ? "text-amber-600"
+                      : mechanicsDebt < 0
+                        ? "text-red-600"
+                        : "text-green-600"
+                  }`}
                 >
-                  {fmt(mechanicsDebt)}
+                  {fmt(Math.abs(mechanicsDebt))}
                 </span>
               </div>
               <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-muted">
@@ -341,6 +360,7 @@ function ExpensesPage() {
           </CardContent>
         </Card>
       </div>
+
 
 
 
