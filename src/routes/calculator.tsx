@@ -64,8 +64,13 @@ import imgAc from "@/assets/cat-ac.jpg";
 import imgTires from "@/assets/cat-tires.jpg";
 import imgElectric from "@/assets/cat-electric.jpg";
 
+const calculatorSearchSchema = z.object({
+  carId: fallback(z.string().optional(), undefined),
+});
+
 export const Route = createFileRoute("/calculator")({
   ssr: false,
+  validateSearch: zodValidator(calculatorSearchSchema),
   head: () => ({
     meta: [
       { title: "Samson Auto — автосервис · калькулятор стоимости" },
