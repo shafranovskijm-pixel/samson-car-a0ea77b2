@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
@@ -23,7 +23,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 
-import { listBrands, listCars, listServices } from "@/lib/api";
+import { listBrands, listCars, listServices, upsertServiceByCategoryName } from "@/lib/api";
 import {
   TIER_COEFFICIENT,
   TIER_LABEL,
