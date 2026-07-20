@@ -1020,6 +1020,7 @@ function PaymentsSection({
   total: number;
 }) {
   const qc = useQueryClient();
+  const confirmAction = useConfirm();
   const { data: payments = [], isLoading } = useQuery({
     queryKey: ["appointment-payments", appointmentId],
     queryFn: () => listAppointmentPayments(appointmentId),
