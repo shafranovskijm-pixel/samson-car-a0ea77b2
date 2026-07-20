@@ -472,6 +472,7 @@ function MechanicSalary({ mechanicId, defaultPercent }: { mechanicId: string; de
 
 function MechanicAdvances({ mechanicId }: { mechanicId: string }) {
   const qc = useQueryClient();
+  const confirmActionCtx = useConfirm();
   const [period, setPeriod] = useState<Period>("month");
   const [open, setOpen] = useState(false);
   const today = new Date().toISOString().slice(0, 10);
@@ -709,6 +710,7 @@ function MechanicRates({ mechanicId }: { mechanicId: string }) {
 // ================= SHIFTS =================
 function MechanicShifts({ mechanicId, color = "#64748b" }: { mechanicId: string; color?: string }) {
   const qc = useQueryClient();
+  const confirmActionCtx = useConfirm();
   const { data: shifts = [] } = useQuery({
     queryKey: ["mechanic-shifts", mechanicId],
     queryFn: () => listMechanicShifts(mechanicId),
