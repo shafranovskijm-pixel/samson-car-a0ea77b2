@@ -59,6 +59,25 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 type SvcRow = { service_id: string; price: number; mechanic_payout: number };
 
+const norm = (s: string) => s.trim().replace(/\s+/g, " ").toLowerCase();
+
+function mapError(e: unknown): string {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const err = e as any;
+  const code = err?.code ?? err?.status;
+  const msg = String(err?.message ?? err ?? "");
+  if (code === "23505" || /duplicate key|already exists/i.test(msg)) {
+    return "Такая услуга уже есть";
+  }
+  if (code === "42501" || code === "PGRST301" || code === 401 || code === 403) {
+    return "Нет доступа для этого действия";
+  }
+  if (/network|fetch|failed to fetch/i.test(msg)) {
+    return "Нет соединения. Проверьте интернет";
+  }
+  return msg || "Не удалось выполнить действие";
+}
+
 type Props = {
   open: boolean;
   onOpenChange: (o: boolean) => void;
