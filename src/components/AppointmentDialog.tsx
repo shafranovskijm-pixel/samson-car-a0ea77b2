@@ -368,7 +368,8 @@ export function AppointmentDialog({
     try {
       await carCustom.remove(id);
     } catch (e) {
-      toast.error((e as Error).message);
+      console.error("removeSavedCustom failed", e);
+      toast.error(mapError(e));
     }
   };
 
@@ -391,7 +392,8 @@ export function AppointmentDialog({
             ],
       );
     } catch (e) {
-      toast.error((e as Error).message);
+      console.error("pickSavedCustom failed", e);
+      toast.error(mapError(e));
     }
   };
 
