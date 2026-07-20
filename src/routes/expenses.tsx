@@ -93,13 +93,22 @@ function ExpensesPage() {
   // Only completed appointments count towards revenue
   const doneAppts = useMemo(() => appts.filter((a) => a.status === "done"), [appts]);
 
-  const revenue = doneAppts.reduce((s, a) => s + (a.total_price ?? 0), 0);
-  const mechanicsPayoutTotal = doneAppts.reduce(
+  // Оборот = только фактически оплаченные суммы
+  const revenue = doneAppts.reduce((s, a) => s + Number(a.paid_amount ?? 0), 0);
+  const accrued = doneAppts.reduce((s, a) => s + (a.total_price ?? 0), 0);
+  const unpaidBalance = accrued - revenue;
+
+  // Начислено мастерам (по всем выполненным работам)
+  const mechanicsAccrued = doneAppts.reduce(
     (s, a) => s + (a.services ?? []).reduce((ss, x) => ss + Number(x.mechanic_payout ?? 0), 0),
     0,
   );
+  // Фактически выплачено мастерам за месяц (авансы)
+  const mechanicsPaid = advances.reduce((s, a) => s + Number(a.amount ?? 0), 0);
+
   const otherExpenses = expenses.reduce((s, e) => s + Number(e.amount ?? 0), 0);
-  const profit = revenue - mechanicsPayoutTotal - otherExpenses;
+  // Чистая прибыль: только по деньгам, реально прошедшим через кассу
+  const profit = revenue - mechanicsPaid - otherExpenses;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
@@ -113,9 +122,15 @@ function ExpensesPage() {
         <MonthPicker month={month} setMonth={setMonth} />
       </div>
 
-      <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatCard label="Оборот за месяц" value={fmt(revenue)} tone="neutral" />
-        <StatCard label="ЗП мастеров" value={fmt(mechanicsPayoutTotal)} tone="warn" />
+      <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+        <StatCard label="Оборот (оплачено)" value={fmt(revenue)} tone="neutral" />
+        <StatCard label="Не оплачено" value={fmt(unpaidBalance)} tone={unpaidBalance > 0 ? "warn" : "neutral"} />
+        <StatCard
+          label="ЗП мастерам"
+          value={fmt(mechanicsPaid)}
+          hint={`начислено ${fmt(mechanicsAccrued)}`}
+          tone="warn"
+        />
         <StatCard label="Прочие расходы" value={fmt(otherExpenses)} tone="warn" />
         <StatCard
           label="Чистая прибыль"
