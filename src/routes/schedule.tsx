@@ -48,6 +48,7 @@ import {
 
 import { AppointmentDialog } from "@/components/AppointmentDialog";
 import { PrintDocument, type PrintKV } from "@/components/PrintDocument";
+import { useConfirm } from "@/components/ConfirmDialog";
 import type { AppointmentWithRelations } from "@/lib/api";
 
 export const Route = createFileRoute("/schedule")({
