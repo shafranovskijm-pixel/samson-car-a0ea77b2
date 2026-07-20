@@ -909,46 +909,6 @@ export function AppointmentDialog({
               <PaymentsSection appointmentId={appointmentId} total={total} />
             )}
 
-            <Section icon={<Bell className="h-3.5 w-3.5" />} title="Напоминание клиенту">
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="reminder-on"
-                  checked={reminderOn}
-                  onCheckedChange={(v) => setReminderOn(!!v)}
-                />
-                <Label htmlFor="reminder-on" className="cursor-pointer">
-                  Создать напоминание после визита
-                </Label>
-              </div>
-              {reminderOn && (
-                <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Через</Label>
-                    <Select
-                      value={reminderInterval}
-                      onValueChange={(v) => setReminderInterval(v as ReminderInterval)}
-                    >
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="day">День</SelectItem>
-                        <SelectItem value="week">Неделю</SelectItem>
-                        <SelectItem value="month">Месяц</SelectItem>
-                        <SelectItem value="half_year">Полгода</SelectItem>
-                        <SelectItem value="year">Год</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Название (необязательно)</Label>
-                    <Input
-                      value={reminderTitle}
-                      onChange={(e) => setReminderTitle(e.target.value)}
-                      placeholder="Авто: услуги + клиент"
-                    />
-                  </div>
-                </div>
-              )}
-            </Section>
 
             <Section icon={<MessageSquare className="h-3.5 w-3.5" />} title="Комментарий">
               <Textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={3} />
