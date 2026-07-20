@@ -320,7 +320,7 @@ function SchedulePage() {
       <div className="space-y-6">
         {grouped.map(([day, items]) => (
           <div key={day}>
-            <h2 className="mb-2 text-lg font-semibold">
+            <h2 className="sticky top-0 z-10 -mx-1 mb-2 rounded bg-background/85 px-1 py-1 text-sm font-semibold text-muted-foreground backdrop-blur sm:text-base">
               {format(parseISO(day), "d MMMM yyyy, EEEE", { locale: ru })}
             </h2>
             <div className="space-y-2">
