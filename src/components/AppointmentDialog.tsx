@@ -514,406 +514,478 @@ export function AppointmentDialog({
     },
   });
 
+  const selectedClient = clients.find((c) => c.id === clientId);
+  const subtitleParts: string[] = [];
+  if (selectedClient) subtitleParts.push(selectedClient.full_name);
+  if (selectedCar) {
+    const carLbl = [selectedBrandName, selectedCar.model, selectedCar.license_plate]
+      .filter(Boolean)
+      .join(" · ");
+    if (carLbl) subtitleParts.push(carLbl);
+  }
+  const subtitle = subtitleParts.join(" — ");
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{isEdit ? "Редактировать запись" : "Новая запись"}</DialogTitle>
-        </DialogHeader>
-
-        <div className="grid gap-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Клиент</Label>
-              <Select value={clientId} onValueChange={setClientId}>
-                <SelectTrigger><SelectValue placeholder="Выберите клиента" /></SelectTrigger>
-                <SelectContent>
-                  {clients.filter((c) => !c.is_archived).map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.full_name}{c.phone ? ` · ${c.phone}` : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Машина</Label>
-              <Select value={carId} onValueChange={setCarId}>
-                <SelectTrigger><SelectValue placeholder="Выберите машину" /></SelectTrigger>
-                <SelectContent>
-                  {carsForClient.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.model}{c.license_plate ? ` · ${c.license_plate}` : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-4 gap-3">
-            <div className="col-span-2">
-              <Label>Дата</Label>
-              <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-            </div>
-            <div>
-              <Label>Время</Label>
-              <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
-            </div>
-            <div>
-              <Label>Длит. (мин)</Label>
-              <Input type="number" value={duration} onChange={(e) => setDuration(Number(e.target.value))} />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Мастер</Label>
-              <Select value={mechanicId} onValueChange={setMechanicId}>
-                <SelectTrigger><SelectValue placeholder="Не назначен" /></SelectTrigger>
-                <SelectContent>
-                  {mechanics.map((m) => (
-                    <SelectItem key={m.id} value={m.id}>{m.full_name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Статус</Label>
-              <Select value={status} onValueChange={(v) => setStatus(v as AppointmentStatus)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {Object.entries(STATUS_LABELS).map(([k, v]) => (
-                    <SelectItem key={k} value={k}>{v}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div>
-            <Label>Пробег на момент визита</Label>
-            <Input
-              type="number"
-              value={mileage}
-              onChange={(e) => setMileage(e.target.value)}
-              placeholder="км"
-            />
-          </div>
-
-          <div>
-            <Label>Услуги</Label>
-            <div className="mt-2 flex gap-2">
-              <ServicePicker
-                services={services.filter((s) => !selected.some((x) => x.service_id === s.id))}
-                value={addServiceId}
-                onChange={setAddServiceId}
-              />
-              <Button type="button" onClick={addService} disabled={!addServiceId}>
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-
-            {/* Сохранённые услуги для этой машины */}
-            {carCustom.enabled && carCustom.items.length > 0 && (
-              <div className="mt-3 rounded-md border bg-muted/30 p-2">
-                <div className="mb-1.5 text-xs font-medium text-muted-foreground">
-                  Сохранённые для {selectedBrandName} {selectedCar?.model} · {selectedCar?.year}
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {carCustom.items.map((c) => (
-                    <div
-                      key={c.id}
-                      className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5 text-xs"
-                    >
-                      <button
-                        type="button"
-                        className="hover:text-primary"
-                        onClick={() => pickSavedCustom(c.id)}
-                        title="Добавить в запись"
-                      >
-                        {c.category} — {c.name} · {c.price} ₽
-                      </button>
-                      <button
-                        type="button"
-                        className="text-muted-foreground hover:text-destructive"
-                        onClick={() => removeSavedCustom(c.id)}
-                        title="Удалить сохранённую"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Ручное добавление услуги */}
-            <div className="mt-3 rounded-md border border-dashed p-3">
-              <div className="mb-2 text-xs font-medium text-muted-foreground">
-                Добавить свою услугу
-                {!carCustom.enabled && " (без сохранения для машины — выберите машину с годом, чтобы запомнить)"}
-              </div>
-              <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_100px_auto]">
-                <Select value={customCat} onValueChange={setCustomCat}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Категория" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((c) => (
-                      <SelectItem key={c} value={c}>
-                        {c}
-                      </SelectItem>
-                    ))}
-                    <SelectItem value="__other__">Другое…</SelectItem>
-                  </SelectContent>
-                </Select>
-                {customCat === "__other__" ? (
-                  <Input
-                    placeholder="Новая категория"
-                    value={customCatOther}
-                    onChange={(e) => setCustomCatOther(e.target.value)}
-                  />
-                ) : (
-                  <Input
-                    placeholder="Название услуги"
-                    value={customName}
-                    onChange={(e) => setCustomName(e.target.value)}
-                  />
+      <DialogContent
+        className="flex h-full max-h-[100dvh] w-full max-w-3xl flex-col gap-0 overflow-hidden p-0 sm:h-auto sm:max-h-[92vh] sm:rounded-lg"
+      >
+        {/* Sticky header with live clock */}
+        <div className="sticky top-0 z-10 border-b bg-background/95 px-4 py-3 backdrop-blur sm:px-6">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+            <div className="min-w-0">
+              <DialogHeader className="space-y-0.5 text-left">
+                <DialogTitle className="truncate text-base sm:text-lg">
+                  {isEdit ? "Редактирование записи" : "Новая запись"}
+                </DialogTitle>
+                {subtitle && (
+                  <div className="truncate text-xs text-muted-foreground sm:text-sm">
+                    {subtitle}
+                  </div>
                 )}
-                <Input
-                  type="number"
-                  inputMode="numeric"
-                  placeholder="Цена ₽"
-                  value={customPrice}
-                  onChange={(e) => setCustomPrice(e.target.value)}
-                />
+              </DialogHeader>
+            </div>
+            <LiveClock />
+          </div>
+        </div>
+
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6">
+          <div className="space-y-4">
+            {/* Секция: Клиент и машина */}
+            <Section icon={<User className="h-3.5 w-3.5" />} title="Клиент и машина">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>Клиент</Label>
+                  <Select value={clientId} onValueChange={setClientId}>
+                    <SelectTrigger><SelectValue placeholder="Выберите клиента" /></SelectTrigger>
+                    <SelectContent>
+                      {clients.filter((c) => !c.is_archived).map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.full_name}{c.phone ? ` · ${c.phone}` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Машина</Label>
+                  <Select value={carId} onValueChange={setCarId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Выберите машину" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {carsForClient.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          <span className="inline-flex items-center gap-1.5">
+                            <Car className="h-3.5 w-3.5 text-muted-foreground" />
+                            {c.model}{c.license_plate ? ` · ${c.license_plate}` : ""}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </Section>
+
+            {/* Секция: Когда */}
+            <Section icon={<CalendarClock className="h-3.5 w-3.5" />} title="Когда">
+              <div className="grid gap-3 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.9fr)]">
+                <div className="space-y-1.5">
+                  <Label>Дата</Label>
+                  <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Время</Label>
+                  <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Длит., мин</Label>
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    value={duration}
+                    onChange={(e) => setDuration(Number(e.target.value))}
+                  />
+                </div>
+              </div>
+            </Section>
+
+            {/* Секция: Исполнение */}
+            <Section icon={<Wrench className="h-3.5 w-3.5" />} title="Исполнение">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="space-y-1.5">
+                  <Label>Мастер</Label>
+                  <Select value={mechanicId} onValueChange={setMechanicId}>
+                    <SelectTrigger><SelectValue placeholder="Не назначен" /></SelectTrigger>
+                    <SelectContent>
+                      {mechanics.map((m) => (
+                        <SelectItem key={m.id} value={m.id}>{m.full_name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Статус</Label>
+                  <Select value={status} onValueChange={(v) => setStatus(v as AppointmentStatus)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(STATUS_LABELS).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Пробег, км</Label>
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    value={mileage}
+                    onChange={(e) => setMileage(e.target.value)}
+                    placeholder="—"
+                  />
+                </div>
+              </div>
+            </Section>
+
+            {/* Секция: Услуги */}
+            <Section
+              icon={<ClipboardList className="h-3.5 w-3.5" />}
+              title="Услуги"
+              action={
                 <Button
                   type="button"
-                  onClick={() => addCustomService()}
-                  disabled={savingCustom}
+                  size="sm"
+                  variant="outline"
+                  asChild
+                  disabled={!carId}
+                  title={carId ? "Открыть калькулятор в новой вкладке" : "Сначала выберите машину"}
+                  className="h-8"
                 >
-                  <Plus className="mr-1 h-4 w-4" />
-                  Добавить
+                  {carId ? (
+                    <Link
+                      to="/calculator"
+                      search={{ carId }}
+                      target="_blank"
+                      rel="noopener"
+                    >
+                      <Calculator className="mr-1.5 h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">Калькулятор</span>
+                      <span className="sm:hidden">Калькул.</span>
+                      <ExternalLink className="ml-1 h-3 w-3 opacity-60" />
+                    </Link>
+                  ) : (
+                    <span>
+                      <Calculator className="mr-1.5 h-3.5 w-3.5" />
+                      Калькулятор
+                    </span>
+                  )}
+                </Button>
+              }
+            >
+              <div className="flex gap-2">
+                <ServicePicker
+                  services={services.filter((s) => !selected.some((x) => x.service_id === s.id))}
+                  value={addServiceId}
+                  onChange={setAddServiceId}
+                />
+                <Button type="button" onClick={addService} disabled={!addServiceId} className="shrink-0">
+                  <Plus className="h-4 w-4" />
                 </Button>
               </div>
-              {customCat === "__other__" && (
-                <div className="mt-2">
-                  <Input
-                    placeholder="Название услуги"
-                    value={customName}
-                    onChange={(e) => setCustomName(e.target.value)}
-                  />
-                </div>
-              )}
 
-              {/* Точное совпадение */}
-              {duplicates.exact && (
-                <div className="mt-3 rounded-md border border-amber-400/60 bg-amber-50 p-2 text-xs dark:bg-amber-950/30">
-                  <div className="mb-1.5 font-medium text-amber-900 dark:text-amber-200">
-                    Такая услуга уже есть в справочнике
-                  </div>
-                  <div className="mb-2 text-muted-foreground">
-                    {duplicates.exact.category} — {duplicates.exact.name} ·{" "}
-                    {duplicates.exact.base_price} ₽
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="secondary"
-                      disabled={savingCustom}
-                      onClick={() => {
-                        addExistingToRecord(duplicates.exact!);
-                        toast.success("Добавлено в запись");
-                        setCustomName("");
-                        setCustomPrice("");
-                      }}
-                    >
-                      <Check className="mr-1 h-3.5 w-3.5" />
-                      Добавить в запись
-                    </Button>
-                    {Number(customPrice) > 0 &&
-                      Number(customPrice) !== duplicates.exact.base_price && (
-                        <Button
-                          type="button"
-                          size="sm"
-                          disabled={savingCustom}
-                          onClick={() =>
-                            addCustomService({ updatePriceOf: duplicates.exact!.id })
-                          }
-                        >
-                          Обновить цену на {Number(customPrice)} ₽ и добавить
-                        </Button>
-                      )}
-                  </div>
-                </div>
-              )}
-
-              {/* Похожие */}
-              {!duplicates.exact && duplicates.similar.length > 0 && (
-                <div className="mt-3 rounded-md border bg-muted/30 p-2 text-xs">
-                  <div className="mb-1.5 flex items-center gap-1 font-medium text-muted-foreground">
-                    <Search className="h-3.5 w-3.5" />
-                    Похоже, есть уже такие:
+              {/* Сохранённые услуги для этой машины */}
+              {carCustom.enabled && carCustom.items.length > 0 && (
+                <div className="mt-3 rounded-md border bg-muted/30 p-2">
+                  <div className="mb-1.5 text-xs font-medium text-muted-foreground">
+                    Сохранённые для {selectedBrandName} {selectedCar?.model} · {selectedCar?.year}
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    {duplicates.similar.map((s) => (
-                      <button
-                        key={s.id}
+                    {carCustom.items.map((c) => (
+                      <div
+                        key={c.id}
+                        className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5 text-xs"
+                      >
+                        <button
+                          type="button"
+                          className="hover:text-primary"
+                          onClick={() => pickSavedCustom(c.id)}
+                          title="Добавить в запись"
+                        >
+                          {c.category} — {c.name} · {c.price} ₽
+                        </button>
+                        <button
+                          type="button"
+                          className="text-muted-foreground hover:text-destructive"
+                          onClick={() => removeSavedCustom(c.id)}
+                          title="Удалить сохранённую"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Ручное добавление услуги */}
+              <div className="mt-3 rounded-md border border-dashed p-3">
+                <div className="mb-2 text-xs font-medium text-muted-foreground">
+                  Добавить свою услугу
+                  {!carCustom.enabled && " (без сохранения для машины — выберите машину с годом, чтобы запомнить)"}
+                </div>
+                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_100px_auto]">
+                  <Select value={customCat} onValueChange={setCustomCat}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Категория" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((c) => (
+                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                      ))}
+                      <SelectItem value="__other__">Другое…</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {customCat === "__other__" ? (
+                    <Input
+                      placeholder="Новая категория"
+                      value={customCatOther}
+                      onChange={(e) => setCustomCatOther(e.target.value)}
+                    />
+                  ) : (
+                    <Input
+                      placeholder="Название услуги"
+                      value={customName}
+                      onChange={(e) => setCustomName(e.target.value)}
+                    />
+                  )}
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    placeholder="Цена ₽"
+                    value={customPrice}
+                    onChange={(e) => setCustomPrice(e.target.value)}
+                  />
+                  <Button type="button" onClick={() => addCustomService()} disabled={savingCustom}>
+                    <Plus className="mr-1 h-4 w-4" />
+                    Добавить
+                  </Button>
+                </div>
+                {customCat === "__other__" && (
+                  <div className="mt-2">
+                    <Input
+                      placeholder="Название услуги"
+                      value={customName}
+                      onChange={(e) => setCustomName(e.target.value)}
+                    />
+                  </div>
+                )}
+
+                {duplicates.exact && (
+                  <div className="mt-3 rounded-md border border-amber-400/60 bg-amber-50 p-2 text-xs dark:bg-amber-950/30">
+                    <div className="mb-1.5 font-medium text-amber-900 dark:text-amber-200">
+                      Такая услуга уже есть в справочнике
+                    </div>
+                    <div className="mb-2 text-muted-foreground">
+                      {duplicates.exact.category} — {duplicates.exact.name} · {duplicates.exact.base_price} ₽
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
                         type="button"
-                        className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5 hover:border-primary hover:text-primary"
+                        size="sm"
+                        variant="secondary"
+                        disabled={savingCustom}
                         onClick={() => {
-                          addExistingToRecord(s);
+                          addExistingToRecord(duplicates.exact!);
                           toast.success("Добавлено в запись");
                           setCustomName("");
                           setCustomPrice("");
                         }}
                       >
-                        {s.category} — {s.name} · {s.base_price} ₽
-                      </button>
-                    ))}
-                  </div>
-                  <div className="mt-1.5 text-[11px] text-muted-foreground">
-                    Не подходит? Тогда нажмите «Добавить» — создастся новая услуга.
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="mt-3 space-y-2">
-              {selected.length === 0 && (
-                <div className="text-sm text-muted-foreground">Нет добавленных услуг</div>
-              )}
-              {selected.map((row) => {
-                const svc = services.find((s) => s.id === row.service_id);
-                return (
-                  <div key={row.service_id} className="rounded border p-2">
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 text-sm">
-                        <div className="font-medium">{svc?.name}</div>
-                        <div className="text-xs text-muted-foreground">{svc?.category}</div>
-                      </div>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        type="button"
-                        onClick={() =>
-                          setSelected((prev) => prev.filter((x) => x.service_id !== row.service_id))
-                        }
-                      >
-                        <X className="h-4 w-4" />
+                        <Check className="mr-1 h-3.5 w-3.5" />
+                        Добавить в запись
                       </Button>
-                    </div>
-                    <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
-                      <div className="flex items-center gap-1">
-                        <span className="text-muted-foreground">Клиенту:</span>
-                        <Input
-                          type="number"
-                          className="h-8 w-24"
-                          value={row.price}
-                          onChange={(e) => {
-                            const p = Number(e.target.value);
-                            setSelected((prev) =>
-                              prev.map((x) =>
-                                x.service_id === row.service_id
-                                  ? { ...x, price: p, mechanic_payout: rateFor(x.service_id, p) }
-                                  : x,
-                              ),
-                            );
-                          }}
-                        />
-                        <span>₽</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <span className="text-muted-foreground">Мастеру:</span>
-                        <Input
-                          type="number"
-                          className="h-8 w-24"
-                          value={row.mechanic_payout}
-                          disabled={!mechanicId}
-                          onChange={(e) => {
-                            const p = Number(e.target.value);
-                            setSelected((prev) =>
-                              prev.map((x) =>
-                                x.service_id === row.service_id
-                                  ? { ...x, mechanic_payout: p }
-                                  : x,
-                              ),
-                            );
-                          }}
-                        />
-                        <span>₽</span>
-                      </div>
+                      {Number(customPrice) > 0 &&
+                        Number(customPrice) !== duplicates.exact.base_price && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            disabled={savingCustom}
+                            onClick={() =>
+                              addCustomService({ updatePriceOf: duplicates.exact!.id })
+                            }
+                          >
+                            Обновить цену на {Number(customPrice)} ₽ и добавить
+                          </Button>
+                        )}
                     </div>
                   </div>
-                );
-              })}
+                )}
 
-            </div>
-            <div className="mt-3 flex justify-end">
-              <Badge variant="secondary" className="text-base">Итого: {total} ₽</Badge>
-            </div>
-          </div>
-
-          {isEdit && appointmentId && (
-            <PaymentsSection appointmentId={appointmentId} total={total} />
-          )}
-
-
-
-          <div className="rounded-md border p-3">
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="reminder-on"
-                checked={reminderOn}
-                onCheckedChange={(v) => setReminderOn(!!v)}
-              />
-              <Label htmlFor="reminder-on" className="cursor-pointer">
-                Создать напоминание клиенту после визита
-              </Label>
-            </div>
-            {reminderOn && (
-              <div className="mt-3 grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-xs">Через</Label>
-                  <Select
-                    value={reminderInterval}
-                    onValueChange={(v) => setReminderInterval(v as ReminderInterval)}
-                  >
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="day">День</SelectItem>
-                      <SelectItem value="week">Неделю</SelectItem>
-                      <SelectItem value="month">Месяц</SelectItem>
-                      <SelectItem value="half_year">Полгода</SelectItem>
-                      <SelectItem value="year">Год</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-xs">Название (необязательно)</Label>
-                  <Input
-                    value={reminderTitle}
-                    onChange={(e) => setReminderTitle(e.target.value)}
-                    placeholder="Авто: услуги + клиент"
-                  />
-                </div>
+                {!duplicates.exact && duplicates.similar.length > 0 && (
+                  <div className="mt-3 rounded-md border bg-muted/30 p-2 text-xs">
+                    <div className="mb-1.5 flex items-center gap-1 font-medium text-muted-foreground">
+                      <Search className="h-3.5 w-3.5" />
+                      Похоже, есть уже такие:
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {duplicates.similar.map((s) => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5 hover:border-primary hover:text-primary"
+                          onClick={() => {
+                            addExistingToRecord(s);
+                            toast.success("Добавлено в запись");
+                            setCustomName("");
+                            setCustomPrice("");
+                          }}
+                        >
+                          {s.category} — {s.name} · {s.base_price} ₽
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
 
-          <div>
-            <Label>Комментарий</Label>
-            <Textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={3} />
+              <div className="mt-3 space-y-2">
+                {selected.length === 0 && (
+                  <div className="rounded-md border border-dashed py-4 text-center text-sm text-muted-foreground">
+                    Нет добавленных услуг
+                  </div>
+                )}
+                {selected.map((row) => {
+                  const svc = services.find((s) => s.id === row.service_id);
+                  return (
+                    <div key={row.service_id} className="rounded-md border bg-background p-2">
+                      <div className="flex items-start gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-sm font-medium">{svc?.name}</div>
+                          <div className="truncate text-xs text-muted-foreground">{svc?.category}</div>
+                        </div>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          type="button"
+                          className="h-7 w-7 shrink-0"
+                          onClick={() =>
+                            setSelected((prev) => prev.filter((x) => x.service_id !== row.service_id))
+                          }
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="mt-2 grid grid-cols-2 gap-2 text-xs sm:flex sm:flex-wrap sm:items-center sm:gap-3">
+                        <div className="flex items-center gap-1">
+                          <span className="text-muted-foreground">Клиенту:</span>
+                          <Input
+                            type="number"
+                            className="h-8 w-24"
+                            value={row.price}
+                            onChange={(e) => {
+                              const p = Number(e.target.value);
+                              setSelected((prev) =>
+                                prev.map((x) =>
+                                  x.service_id === row.service_id
+                                    ? { ...x, price: p, mechanic_payout: rateFor(x.service_id, p) }
+                                    : x,
+                                ),
+                              );
+                            }}
+                          />
+                          <span>₽</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-muted-foreground">Мастеру:</span>
+                          <Input
+                            type="number"
+                            className="h-8 w-24"
+                            value={row.mechanic_payout}
+                            disabled={!mechanicId}
+                            onChange={(e) => {
+                              const p = Number(e.target.value);
+                              setSelected((prev) =>
+                                prev.map((x) =>
+                                  x.service_id === row.service_id
+                                    ? { ...x, mechanic_payout: p }
+                                    : x,
+                                ),
+                              );
+                            }}
+                          />
+                          <span>₽</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-3 flex justify-end">
+                <Badge variant="secondary" className="text-base">Итого: {total} ₽</Badge>
+              </div>
+            </Section>
+
+            {isEdit && appointmentId && (
+              <PaymentsSection appointmentId={appointmentId} total={total} />
+            )}
+
+            <Section icon={<Bell className="h-3.5 w-3.5" />} title="Напоминание клиенту">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="reminder-on"
+                  checked={reminderOn}
+                  onCheckedChange={(v) => setReminderOn(!!v)}
+                />
+                <Label htmlFor="reminder-on" className="cursor-pointer">
+                  Создать напоминание после визита
+                </Label>
+              </div>
+              {reminderOn && (
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Через</Label>
+                    <Select
+                      value={reminderInterval}
+                      onValueChange={(v) => setReminderInterval(v as ReminderInterval)}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="day">День</SelectItem>
+                        <SelectItem value="week">Неделю</SelectItem>
+                        <SelectItem value="month">Месяц</SelectItem>
+                        <SelectItem value="half_year">Полгода</SelectItem>
+                        <SelectItem value="year">Год</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Название (необязательно)</Label>
+                    <Input
+                      value={reminderTitle}
+                      onChange={(e) => setReminderTitle(e.target.value)}
+                      placeholder="Авто: услуги + клиент"
+                    />
+                  </div>
+                </div>
+              )}
+            </Section>
+
+            <Section icon={<MessageSquare className="h-3.5 w-3.5" />} title="Комментарий">
+              <Textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={3} />
+            </Section>
           </div>
         </div>
 
-        <DialogFooter className="gap-2">
+        {/* Sticky footer */}
+        <DialogFooter className="sticky bottom-0 z-10 flex flex-row flex-wrap items-center gap-2 border-t bg-background/95 px-4 py-3 backdrop-blur sm:px-6">
           {isEdit && (
             <Button
               type="button"
               variant="destructive"
+              size="sm"
               onClick={async () => {
                 const ok = await confirmAction({
                   title: "Удалить запись?",
@@ -924,17 +996,74 @@ export function AppointmentDialog({
                 if (ok) delMutation.mutate();
               }}
             >
-              <Trash2 className="mr-2 h-4 w-4" /> Удалить
+              <Trash2 className="mr-1.5 h-4 w-4" />
+              <span className="hidden sm:inline">Удалить</span>
             </Button>
           )}
-          <div className="flex-1" />
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Отмена</Button>
-          <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
-            {saveMutation.isPending ? "Сохранение..." : "Сохранить"}
-          </Button>
+          <div className="ml-auto flex flex-1 items-center justify-end gap-2 sm:flex-none">
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1 sm:flex-none">
+              Отмена
+            </Button>
+            <Button
+              onClick={() => saveMutation.mutate()}
+              disabled={saveMutation.isPending}
+              className="flex-1 sm:flex-none"
+            >
+              {saveMutation.isPending ? "Сохранение..." : "Сохранить"}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function Section({
+  icon,
+  title,
+  action,
+  children,
+}: {
+  icon?: React.ReactNode;
+  title: string;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-lg border bg-card/40 p-3 sm:p-4">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          {icon}
+          <span className="truncate">{title}</span>
+        </div>
+        {action && <div className="shrink-0">{action}</div>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function LiveClock() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const timeStr = format(now, "HH:mm:ss");
+  const dateStr = format(now, "EEE, d MMM", { locale: undefined as never }); // fallback below
+  // date-fns без locale — покажем ISO-подобно; ниже собираем русскую дату вручную
+  const dow = ["вс", "пн", "вт", "ср", "чт", "пт", "сб"][now.getDay()];
+  const months = ["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
+  const ruDate = `${dow}, ${now.getDate()} ${months[now.getMonth()]}`;
+  return (
+    <div className="flex flex-col items-end rounded-md border bg-muted/40 px-2.5 py-1 text-right leading-tight">
+      <div className="font-mono text-sm font-semibold tabular-nums text-foreground sm:text-base">
+        {timeStr}
+      </div>
+      <div className="text-[10px] text-muted-foreground sm:text-xs" title={dateStr}>
+        {ruDate}
+      </div>
+    </div>
   );
 }
 
