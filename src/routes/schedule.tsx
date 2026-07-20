@@ -53,11 +53,24 @@ export const Route = createFileRoute("/schedule")({
   component: SchedulePage,
 });
 
+type SortMode = "day-desc" | "day-asc" | "time-desc" | "time-asc";
+const SORT_LABELS: Record<SortMode, string> = {
+  "day-desc": "Сначала новые дни",
+  "day-asc": "Сначала старые дни",
+  "time-desc": "По времени: позже → раньше",
+  "time-asc": "По времени: раньше → позже",
+};
+
 function SchedulePage() {
   const qc = useQueryClient();
   const [mechanicFilter, setMechanicFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [paymentFilter, setPaymentFilter] = useState<string>("all");
+  const [sortMode, setSortMode] = useState<SortMode>(() => {
+    if (typeof window === "undefined") return "day-desc";
+    const v = window.localStorage.getItem("schedule.sort") as SortMode | null;
+    return v && v in SORT_LABELS ? v : "day-desc";
+  });
   const [dialog, setDialog] = useState<{ open: boolean; id: string | null }>({
     open: false,
     id: null,
