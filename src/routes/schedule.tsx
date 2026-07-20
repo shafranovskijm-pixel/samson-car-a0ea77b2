@@ -431,7 +431,15 @@ function SchedulePage() {
                               Записать платёж…
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              onClick={() => clearPayMut.mutate(a.id)}
+                              onClick={async () => {
+                                const ok = await confirmAction({
+                                  title: "Сбросить оплату?",
+                                  description: "Все платежи по этой записи будут удалены.",
+                                  destructive: true,
+                                  confirmText: "Сбросить",
+                                });
+                                if (ok) clearPayMut.mutate(a.id);
+                              }}
                               className="text-destructive"
                             >
                               Сбросить оплату
