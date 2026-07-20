@@ -53,11 +53,24 @@ export const Route = createFileRoute("/schedule")({
   component: SchedulePage,
 });
 
+type SortMode = "day-desc" | "day-asc" | "time-desc" | "time-asc";
+const SORT_LABELS: Record<SortMode, string> = {
+  "day-desc": "Сначала новые дни",
+  "day-asc": "Сначала старые дни",
+  "time-desc": "По времени: позже → раньше",
+  "time-asc": "По времени: раньше → позже",
+};
+
 function SchedulePage() {
   const qc = useQueryClient();
   const [mechanicFilter, setMechanicFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [paymentFilter, setPaymentFilter] = useState<string>("all");
+  const [sortMode, setSortMode] = useState<SortMode>(() => {
+    if (typeof window === "undefined") return "day-desc";
+    const v = window.localStorage.getItem("schedule.sort") as SortMode | null;
+    return v && v in SORT_LABELS ? v : "day-desc";
+  });
   const [dialog, setDialog] = useState<{ open: boolean; id: string | null }>({
     open: false,
     id: null,
@@ -163,8 +176,23 @@ function SchedulePage() {
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(a);
     }
-    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
-  }, [appointments, mechanicFilter, statusFilter, paymentFilter]);
+    const dayDir = sortMode === "day-asc" || sortMode === "time-asc" ? 1 : -1;
+    const timeDir = sortMode === "time-asc" ? 1 : sortMode === "time-desc" ? -1 : 1;
+    const entries = Array.from(map.entries()).sort(([a], [b]) =>
+      dayDir * a.localeCompare(b),
+    );
+    for (const [, items] of entries) {
+      items.sort(
+        (x, y) => timeDir * (parseISO(x.starts_at).getTime() - parseISO(y.starts_at).getTime()),
+      );
+    }
+    return entries;
+  }, [appointments, mechanicFilter, statusFilter, paymentFilter, sortMode]);
+
+  const changeSort = (v: SortMode) => {
+    setSortMode(v);
+    if (typeof window !== "undefined") window.localStorage.setItem("schedule.sort", v);
+  };
 
   return (
     <div className="p-4">
@@ -200,6 +228,14 @@ function SchedulePage() {
             <SelectItem value="all">Все оплаты</SelectItem>
             {Object.entries(PAYMENT_LABELS).map(([k, v]) => (
               <SelectItem key={k} value={k}>{v}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={sortMode} onValueChange={(v) => changeSort(v as SortMode)}>
+          <SelectTrigger className="w-64"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {(Object.keys(SORT_LABELS) as SortMode[]).map((k) => (
+              <SelectItem key={k} value={k}>{SORT_LABELS[k]}</SelectItem>
             ))}
           </SelectContent>
         </Select>

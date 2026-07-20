@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -6,7 +6,7 @@ import {
   Plus, Trash2, Pencil, Search, Car as CarIcon, Phone, Mail, User,
   Bell, History as HistoryIcon, Check, Archive, ArchiveRestore,
   Crown, Sparkles, AlertTriangle, Briefcase, Heart, MessageSquare, ArrowLeft,
-  ChevronDown, Filter,
+  ChevronDown, Filter, Calculator as CalculatorIcon,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -29,9 +29,9 @@ import {
 
 import {
   createCar, createClient, createClientComment, createClientReminder, deleteCar, deleteClient,
-  deleteClientComment, deleteClientReminder, listAppointmentsByClient, listBrands, listCarModels,
-  listCars, listClientComments, listClientReminders, listClients, updateCar, updateClient,
-  updateClientComment, updateClientReminder,
+  deleteClientComment, deleteClientReminder, listAllClientComments, listAppointmentsByClient,
+  listBrands, listCarModels, listCars, listClientComments, listClientReminders, listClients,
+  updateCar, updateClient, updateClientComment, updateClientReminder,
 } from "@/lib/api";
 import type {
   Car, Client, ClientCategory, ClientComment, ClientReminder, ReminderInterval,
@@ -67,6 +67,10 @@ function ClientsPage() {
   const { data: clients = [] } = useQuery({ queryKey: ["clients"], queryFn: listClients });
   const { data: cars = [] } = useQuery({ queryKey: ["cars"], queryFn: listCars });
   const { data: brands = [] } = useQuery({ queryKey: ["brands"], queryFn: listBrands });
+  const { data: allComments = [] } = useQuery({
+    queryKey: ["client_comments", "all"],
+    queryFn: listAllClientComments,
+  });
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -109,13 +113,25 @@ function ClientsPage() {
       );
     }
     if (!q) return byTab;
+    const carClientIds = new Set(
+      cars
+        .filter((car) => (car.license_plate ?? "").toLowerCase().replace(/\s+/g, "").includes(q.replace(/\s+/g, "")))
+        .map((car) => car.client_id),
+    );
+    const commentClientIds = new Set(
+      allComments
+        .filter((cm) => (cm.body ?? "").toLowerCase().includes(q))
+        .map((cm) => cm.client_id),
+    );
     return byTab.filter(
       (c) =>
         c.full_name.toLowerCase().includes(q) ||
         (c.phone ?? "").toLowerCase().includes(q) ||
-        (c.email ?? "").toLowerCase().includes(q),
+        (c.email ?? "").toLowerCase().includes(q) ||
+        carClientIds.has(c.id) ||
+        commentClientIds.has(c.id),
     );
-  }, [clients, search, tab, categoryFilter]);
+  }, [clients, search, tab, categoryFilter, cars, allComments]);
 
 
   useEffect(() => {
@@ -253,7 +269,7 @@ function ClientsPage() {
           <div className="relative">
             <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Поиск по имени, тел., email"
+              placeholder="Имя, тел., email, гос. номер, коммент."
               className="pl-8"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -557,6 +573,14 @@ function ClientsPage() {
                           </div>
                         </div>
                         <div className="flex gap-1">
+                          <Link
+                            to="/calculator"
+                            search={{ carId: car.id }}
+                            title="Добавить услуги в калькулятор"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-md text-primary hover:bg-primary/10"
+                          >
+                            <CalculatorIcon className="h-4 w-4" />
+                          </Link>
                           <Button
                             size="icon"
                             variant="ghost"
@@ -588,6 +612,14 @@ function ClientsPage() {
                         <div>VIN: <span className="font-mono text-foreground">{car.vin ?? "—"}</span></div>
                         <div>КПП: <span className="text-foreground">{car.transmission ?? "—"}</span></div>
                       </div>
+                      <Link
+                        to="/calculator"
+                        search={{ carId: car.id }}
+                        className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary/10 px-3 py-2 text-sm font-medium text-primary hover:bg-primary/15"
+                      >
+                        <CalculatorIcon className="h-4 w-4" />
+                        Добавить услуги
+                      </Link>
                     </div>
                   );
                 })}

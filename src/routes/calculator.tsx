@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { zodValidator, fallback } from "@tanstack/zod-adapter";
+import { z } from "zod";
 import {
   Calendar as CalendarIcon,
   Clock,
@@ -21,7 +23,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 
-import { listBrands, listServices } from "@/lib/api";
+import { listBrands, listCars, listServices } from "@/lib/api";
 import {
   TIER_COEFFICIENT,
   TIER_LABEL,
@@ -62,8 +64,13 @@ import imgAc from "@/assets/cat-ac.jpg";
 import imgTires from "@/assets/cat-tires.jpg";
 import imgElectric from "@/assets/cat-electric.jpg";
 
+const calculatorSearchSchema = z.object({
+  carId: fallback(z.string().optional(), undefined),
+});
+
 export const Route = createFileRoute("/calculator")({
   ssr: false,
+  validateSearch: zodValidator(calculatorSearchSchema),
   head: () => ({
     meta: [
       { title: "Samson Auto — автосервис · калькулятор стоимости" },
@@ -97,8 +104,14 @@ const CATEGORIES: { name: string; img: string }[] = [
 type Step = 1 | 2 | 3;
 
 function LandingPage() {
+  const { carId } = Route.useSearch();
   const { data: brands = [] } = useQuery({ queryKey: ["brands"], queryFn: listBrands });
   const { data: services = [] } = useQuery({ queryKey: ["services"], queryFn: listServices });
+  const { data: cars = [] } = useQuery({
+    queryKey: ["cars"],
+    queryFn: listCars,
+    enabled: !!carId,
+  });
 
   const [step, setStep] = useState<Step>(1);
 
@@ -111,6 +124,8 @@ function LandingPage() {
   const [modelInput, setModelInput] = useState("");
   const [yearInput, setYearInput] = useState("");
   const [addingMod, setAddingMod] = useState(false);
+  const [carFromClient, setCarFromClient] = useState(false);
+  const [prefillDone, setPrefillDone] = useState(false);
   const [addForm, setAddForm] = useState({
     body_code: "",
     engine_code: "",
@@ -259,6 +274,25 @@ function LandingPage() {
     if (brandName && years.length && year == null) setYear(years[0]);
   }, [brandName, years, year]);
 
+  // Префилл авто из карточки клиента (?carId=...)
+  useEffect(() => {
+    if (!carId || prefillDone) return;
+    if (cars.length === 0) return;
+    const car = cars.find((c) => c.id === carId);
+    if (!car) {
+      setPrefillDone(true);
+      return;
+    }
+    const brand = brands.find((b) => b.id === car.brand_id);
+    if (!brand) return;
+    setBrandName(brand.name);
+    if (car.year) setYear(car.year);
+    if (car.model) setModelName(car.model);
+    setCarFromClient(true);
+    setPrefillDone(true);
+    setStep(2);
+  }, [carId, cars, brands, prefillDone]);
+
   // Услуги по категориям
   const byCategory = useMemo(() => {
     const map: Record<string, typeof services> = {};
@@ -311,7 +345,8 @@ function LandingPage() {
     return r ? `${h} ч ${r} мин` : `${h} ч`;
   };
 
-  const carReady = !!brandName && year != null && !!modelName && modIndex != null;
+  const carReady =
+    !!brandName && year != null && !!modelName && (modIndex != null || carFromClient);
 
   const goStep = (s: Step) => {
     if (s === 1) setStep(1);
