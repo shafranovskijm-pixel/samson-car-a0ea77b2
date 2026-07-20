@@ -310,13 +310,14 @@ function SchedulePage() {
                 return (
                   <div
                     key={a.id}
-                    className="flex flex-col gap-3 rounded-lg border bg-card p-3 sm:flex-row sm:items-center"
+                    className="group flex flex-col gap-3 rounded-lg border bg-card p-3 transition hover:border-primary/50 hover:bg-accent/40 hover:shadow-md sm:flex-row sm:items-center"
                   >
                     <button
                       type="button"
                       onClick={() => setDialog({ open: true, id: a.id })}
-                      className="flex flex-1 items-center gap-3 text-left"
+                      className="flex flex-1 cursor-pointer items-center gap-3 text-left transition group-hover:text-primary"
                     >
+
                       <div className="w-16 shrink-0 text-sm font-medium tabular-nums">
                         {format(parseISO(a.starts_at), "HH:mm")}
                       </div>
