@@ -67,6 +67,10 @@ function ClientsPage() {
   const { data: clients = [] } = useQuery({ queryKey: ["clients"], queryFn: listClients });
   const { data: cars = [] } = useQuery({ queryKey: ["cars"], queryFn: listCars });
   const { data: brands = [] } = useQuery({ queryKey: ["brands"], queryFn: listBrands });
+  const { data: allComments = [] } = useQuery({
+    queryKey: ["client_comments", "all"],
+    queryFn: listAllClientComments,
+  });
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
