@@ -118,6 +118,7 @@ export type Mechanic = {
   specialization: string | null;
   phone: string | null;
   color: string;
+  default_payout_percent?: number;
 };
 export type MechanicServiceRate = {
   id: string;
