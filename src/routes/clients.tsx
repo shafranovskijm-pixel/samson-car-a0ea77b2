@@ -113,13 +113,25 @@ function ClientsPage() {
       );
     }
     if (!q) return byTab;
+    const carClientIds = new Set(
+      cars
+        .filter((car) => (car.license_plate ?? "").toLowerCase().replace(/\s+/g, "").includes(q.replace(/\s+/g, "")))
+        .map((car) => car.client_id),
+    );
+    const commentClientIds = new Set(
+      allComments
+        .filter((cm) => (cm.body ?? "").toLowerCase().includes(q))
+        .map((cm) => cm.client_id),
+    );
     return byTab.filter(
       (c) =>
         c.full_name.toLowerCase().includes(q) ||
         (c.phone ?? "").toLowerCase().includes(q) ||
-        (c.email ?? "").toLowerCase().includes(q),
+        (c.email ?? "").toLowerCase().includes(q) ||
+        carClientIds.has(c.id) ||
+        commentClientIds.has(c.id),
     );
-  }, [clients, search, tab, categoryFilter]);
+  }, [clients, search, tab, categoryFilter, cars, allComments]);
 
 
   useEffect(() => {
