@@ -1047,12 +1047,13 @@ function LandingPage() {
                                   <button
                                     type="button"
                                     onClick={async () => {
-                                      if (
-                                        !confirm(
-                                          `Удалить услугу «${c.name}» для ${brandName} ${modelName} ${year}?`,
-                                        )
-                                      )
-                                        return;
+                                      const ok = await confirm({
+                                        title: "Удалить услугу?",
+                                        description: `Услуга «${c.name}» будет удалена только для ${brandName} ${modelName} ${year}.`,
+                                        destructive: true,
+                                        confirmText: "Удалить",
+                                      });
+                                      if (!ok) return;
                                       try {
                                         await customServices.remove(c.id);
                                         setSelected((prev) => {
@@ -1062,7 +1063,7 @@ function LandingPage() {
                                         });
                                       } catch (e) {
                                         console.error(e);
-                                        alert("Не удалось удалить.");
+                                        toast.error("Не удалось удалить.");
                                       }
                                     }}
                                     className="rounded p-1 text-white/40 hover:bg-red-500/20 hover:text-red-400"
