@@ -994,3 +994,148 @@ function ServicePicker({
     </Popover>
   );
 }
+
+function PaymentsSection({
+  appointmentId,
+  total,
+}: {
+  appointmentId: string;
+  total: number;
+}) {
+  const qc = useQueryClient();
+  const { data: payments = [], isLoading } = useQuery({
+    queryKey: ["appointment-payments", appointmentId],
+    queryFn: () => listAppointmentPayments(appointmentId),
+  });
+
+  const paid = payments.reduce((s, p) => s + Number(p.amount ?? 0), 0);
+  const due = Math.max(0, total - paid);
+
+  const [paidAt, setPaidAt] = useState(() => format(new Date(), "yyyy-MM-dd"));
+  const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
+
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ["appointment-payments", appointmentId] });
+    qc.invalidateQueries({ queryKey: ["appointment", appointmentId] });
+    qc.invalidateQueries({ queryKey: ["appointments"] });
+    qc.invalidateQueries({ queryKey: ["payments-range"] });
+  };
+
+  const addMut = useMutation({
+    mutationFn: () =>
+      createAppointmentPayment({
+        appointment_id: appointmentId,
+        paid_at: paidAt,
+        amount: Math.max(0, Math.round(Number(amount) || 0)),
+        note: note.trim() || null,
+      }),
+    onSuccess: () => {
+      invalidate();
+      setAmount("");
+      setNote("");
+      toast.success("Платёж добавлен");
+    },
+    onError: (e: Error) => toast.error(mapError(e)),
+  });
+
+  const delMut = useMutation({
+    mutationFn: (id: string) => deleteAppointmentPayment(id),
+    onSuccess: () => {
+      invalidate();
+      toast.success("Платёж удалён");
+    },
+    onError: (e: Error) => toast.error(mapError(e)),
+  });
+
+  return (
+    <div className="rounded-md border p-3">
+      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+        <div className="text-sm font-medium">Оплаты клиента</div>
+        <div className="text-xs text-muted-foreground">
+          Оплачено <span className="font-medium text-foreground">{paid} ₽</span> из {total} ₽ ·
+          осталось <span className="font-medium text-foreground">{due} ₽</span>
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="text-xs text-muted-foreground">Загрузка…</div>
+      ) : payments.length === 0 ? (
+        <div className="text-xs text-muted-foreground">Платежей пока нет.</div>
+      ) : (
+        <div className="space-y-1.5">
+          {payments.map((p) => (
+            <div
+              key={p.id}
+              className="flex items-center justify-between gap-2 rounded border bg-background px-2 py-1.5 text-xs"
+            >
+              <div className="min-w-0">
+                <div className="font-medium">
+                  {format(new Date(p.paid_at), "d MMM yyyy")} · {Number(p.amount)} ₽
+                </div>
+                {p.note && <div className="truncate text-muted-foreground">{p.note}</div>}
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => delMut.mutate(p.id)}
+                aria-label="Удалить платёж"
+              >
+                <Trash2 className="h-3.5 w-3.5 text-red-600" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="mt-3 grid grid-cols-[130px_minmax(0,1fr)_auto] items-end gap-2">
+        <div>
+          <Label className="text-xs">Дата</Label>
+          <Input type="date" value={paidAt} onChange={(e) => setPaidAt(e.target.value)} />
+        </div>
+        <div>
+          <Label className="text-xs">Сумма, ₽</Label>
+          <Input
+            type="number"
+            inputMode="numeric"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder={due > 0 ? String(due) : "0"}
+          />
+        </div>
+        <Button
+          type="button"
+          onClick={() => addMut.mutate()}
+          disabled={addMut.isPending || !amount || Number(amount) <= 0}
+        >
+          <Plus className="mr-1 h-4 w-4" /> Добавить
+        </Button>
+      </div>
+      <div className="mt-2">
+        <Input
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="Заметка (необязательно): наличными, перевод…"
+        />
+      </div>
+      {due > 0 && (
+        <div className="mt-2 flex justify-end">
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={() => {
+              setPaidAt(format(new Date(), "yyyy-MM-dd"));
+              setAmount(String(due));
+            }}
+          >
+            Заполнить остатком {due} ₽
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
