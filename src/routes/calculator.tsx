@@ -49,6 +49,8 @@ import { BrandLogo } from "@/components/BrandLogo";
 import { PrintDocument, type PrintKV } from "@/components/PrintDocument";
 import { useServiceUsage } from "@/hooks/useServiceUsage";
 import { useCarCustomServices } from "@/hooks/useCarCustomServices";
+import { useConfirm } from "@/components/ConfirmDialog";
+import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
 import { usePriceOverrides } from "@/hooks/usePriceOverrides";
 import { useQueryClient } from "@tanstack/react-query";
@@ -106,6 +108,7 @@ type Step = 1 | 2 | 3;
 function LandingPage() {
   const { carId } = Route.useSearch();
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const { data: brands = [] } = useQuery({ queryKey: ["brands"], queryFn: listBrands });
   const { data: services = [] } = useQuery({ queryKey: ["services"], queryFn: listServices });
   const { data: cars = [] } = useQuery({
