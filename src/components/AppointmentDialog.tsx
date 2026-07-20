@@ -409,15 +409,26 @@ export function AppointmentDialog({
     }
   }, [carId, clientId, cars]);
 
-  // При смене мастера пересчитываем выплату для ВСЕХ услуг —
-  // прежняя ставка от другого мастера не должна «залипать».
+  // При смене мастера / загрузке ставок пересчитываем выплату.
+  // Нулевые выплаты (префилл из калькулятора, старые записи без мастера,
+  // только что добавленные без выбранного мастера) заполняем по проценту
+  // (индивидуальный % мастера → % услуги → 50% по умолчанию).
+  // Ненулевые (ручная правка) не трогаем при загрузке ставок; при смене
+  // мастера пересчитываем всё, т.к. ставка другого мастера может отличаться.
+  const prevMechIdRef = useRef<string>("");
   useEffect(() => {
     if (!mechanicId) return;
+    const mechChanged = prevMechIdRef.current !== "" && prevMechIdRef.current !== mechanicId;
+    prevMechIdRef.current = mechanicId;
     setSelected((prev) =>
-      prev.map((s) => ({ ...s, mechanic_payout: rateFor(s.service_id, s.price) })),
+      prev.map((s) =>
+        mechChanged || !(s.mechanic_payout > 0)
+          ? { ...s, mechanic_payout: rateFor(s.service_id, s.price) }
+          : s,
+      ),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mechanicId, rates]);
+  }, [mechanicId, rates, selected.length]);
 
 
   const total = selected.reduce((s, x) => s + (x.price || 0), 0);
