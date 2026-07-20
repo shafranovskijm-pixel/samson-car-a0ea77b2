@@ -24,7 +24,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 
 import { listBrands, listCars, listServices, upsertServiceByCategoryName, humanizeSupabaseError } from "@/lib/api";
-import { toast } from "sonner";
 import {
   TIER_COEFFICIENT,
   TIER_LABEL,
