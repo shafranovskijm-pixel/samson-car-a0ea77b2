@@ -66,6 +66,7 @@ const SORT_LABELS: Record<SortMode, string> = {
 
 function SchedulePage() {
   const qc = useQueryClient();
+  const confirmAction = useConfirm();
   const [mechanicFilter, setMechanicFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [paymentFilter, setPaymentFilter] = useState<string>("all");
@@ -144,10 +145,14 @@ function SchedulePage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const confirmDelete = (id: string) => {
-    if (window.confirm("Удалить эту запись? Действие нельзя отменить.")) {
-      deleteMut.mutate(id);
-    }
+  const confirmDelete = async (id: string) => {
+    const ok = await confirmAction({
+      title: "Удалить запись?",
+      description: "Действие нельзя отменить.",
+      destructive: true,
+      confirmText: "Удалить",
+    });
+    if (ok) deleteMut.mutate(id);
   };
 
   const setStatus = (id: string, status: AppointmentStatus) => {
