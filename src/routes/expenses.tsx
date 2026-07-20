@@ -47,9 +47,11 @@ import {
   createMechanicAdvance,
   deleteMechanicAdvance,
   listPaymentsRange,
+  listServices,
   type Expense,
   type MechanicAdvance,
 } from "@/lib/api";
+import { effectivePayout, type PayoutMechanic, type PayoutService } from "@/lib/payouts";
 
 
 export const Route = createFileRoute("/expenses")({
@@ -104,26 +106,54 @@ function ExpensesPage() {
     [appts],
   );
 
-  // Ставка по умолчанию для мастера: индивидуальный % → 50%.
-  const mechPct = useMemo(() => {
-    const map = new Map<string, number>();
-    mechanics.forEach((m) => {
-      const p = Number((m as { default_payout_percent?: number }).default_payout_percent ?? 50);
-      map.set(m.id, p > 0 ? p : 50);
-    });
-    return map;
-  }, [mechanics]);
+  const { data: servicesList = [] } = useQuery({
+    queryKey: ["services"],
+    queryFn: () => listServices(),
+  });
 
-  // Эффективная выплата по строке услуги: если стоит 0, считаем по % мастера (иначе 50%).
-  const effPayout = (mechanicId: string | null, price: number, stored: number) => {
-    if (stored > 0) return Number(stored);
-    if (!mechanicId) return 0;
-    const pct = mechPct.get(mechanicId) ?? 50;
-    return Math.round((Number(price) * pct) / 100);
-  };
+  // Единый расчёт выплаты за строку услуги (индивидуальный % мастера → % услуги → 50%).
+  const mechById = useMemo(() => {
+    const m = new Map<string, PayoutMechanic>();
+    mechanics.forEach((x) =>
+      m.set(x.id, {
+        default_payout_percent:
+          (x as { default_payout_percent?: number | null }).default_payout_percent ?? null,
+      }),
+    );
+    return m;
+  }, [mechanics]);
+  const svcById = useMemo(() => {
+    const m = new Map<string, PayoutService>();
+    servicesList.forEach((s) =>
+      m.set(s.id, {
+        default_payout_percent:
+          (s as { default_payout_percent?: number | null }).default_payout_percent ?? null,
+      }),
+    );
+    return m;
+  }, [servicesList]);
+  const effPayout = (
+    mechanicId: string | null,
+    price: number,
+    stored: number,
+    serviceId?: string | null,
+  ) =>
+    effectivePayout({
+      storedPayout: stored,
+      price,
+      mechanic: mechanicId ? mechById.get(mechanicId) ?? null : null,
+      service: serviceId ? svcById.get(serviceId) ?? null : null,
+    });
   const apptPayout = (a: ApptRow) =>
     (a.services ?? []).reduce(
-      (s, x) => s + effPayout(a.mechanic_id, Number(x.price ?? 0), Number(x.mechanic_payout ?? 0)),
+      (s, x) =>
+        s +
+        effPayout(
+          a.mechanic_id,
+          Number(x.price ?? 0),
+          Number(x.mechanic_payout ?? 0),
+          x.service_id,
+        ),
       0,
     );
 
@@ -142,17 +172,24 @@ function ExpensesPage() {
   );
   const expectedCount = upcomingAppts.length;
 
-  // Начислено мастерам (по всем выполненным работам месяца) — с учётом дефолтного %.
+  // Начислено мастерам (по всем выполненным работам месяца) — с учётом % мастера/услуги.
   const mechanicsAccrued = doneAppts.reduce((s, a) => s + apptPayout(a), 0);
   // Фактически выплачено мастерам за месяц (авансы)
   const mechanicsPaid = advances.reduce((s, a) => s + Number(a.amount ?? 0), 0);
+  // Оборот по выполненным работам (начисление, независимо от даты оплаты)
+  const accruedRevenue = doneAppts.reduce((s, a) => s + Number(a.total_price ?? 0), 0);
 
 
   const otherExpenses = expenses.reduce((s, e) => s + Number(e.amount ?? 0), 0);
-  // Чистая прибыль: оборот минус НАЧИСЛЕННАЯ ЗП мастерам (обязательство сервиса) и прочие расходы.
-  const profit = revenue - mechanicsAccrued - otherExpenses;
-  // Долг перед мастерами = начислено − уже выплачено авансами
-  const mechanicsDebt = Math.max(0, mechanicsAccrued - mechanicsPaid);
+  // Прибыль (кассовая) — только реальные деньги за месяц:
+  //   поступило на кассу − выплачено мастерам авансами − прочие расходы.
+  const cashProfit = revenue - mechanicsPaid - otherExpenses;
+  // Прибыль (начисленная) — по факту выполненных работ, независимо от даты оплат:
+  //   выполнено − начислено ЗП − прочие расходы.
+  const accruedProfit = accruedRevenue - mechanicsAccrued - otherExpenses;
+  // Долг перед мастерами = начислено − уже выплачено авансами.
+  // Отрицательное значение = мастеру переплатили авансами (аванс > начисления за месяц).
+  const mechanicsDebt = mechanicsAccrued - mechanicsPaid;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
