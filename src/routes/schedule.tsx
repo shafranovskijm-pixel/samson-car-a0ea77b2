@@ -64,6 +64,20 @@ const SORT_LABELS: Record<SortMode, string> = {
   "time-asc": "По времени: раньше → позже",
 };
 
+const STATUS_STRIPE: Record<AppointmentStatus, string> = {
+  scheduled: "bg-blue-400",
+  in_progress: "bg-amber-400",
+  done: "bg-green-500",
+  cancelled: "bg-gray-300",
+};
+
+function relativeDayLabel(d: Date): string | null {
+  if (isToday(d)) return "Сегодня";
+  if (isTomorrow(d)) return "Завтра";
+  if (isYesterday(d)) return "Вчера";
+  return null;
+}
+
 function SchedulePage() {
   const qc = useQueryClient();
   const confirmAction = useConfirm();
