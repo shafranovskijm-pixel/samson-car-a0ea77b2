@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Trash2, Pencil, UserCog, Wallet, CalendarClock, ArrowLeft } from "lucide-react";
+import { Plus, Trash2, Pencil, UserCog, Wallet, CalendarClock, ArrowLeft, ChevronDown, ChevronRight, Percent, BadgeDollarSign } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,9 +14,10 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  createMechanic, createMechanicShift, deleteMechanic, deleteMechanicShift,
-  listMechanicPayouts, listMechanicServiceRates, listMechanicShifts, listMechanics,
-  listServices, updateMechanic, upsertMechanicServiceRate,
+  createMechanic, createMechanicAdvance, createMechanicShift, deleteMechanic,
+  deleteMechanicAdvance, deleteMechanicShift, listMechanicAdvances, listMechanicPayouts,
+  listMechanicServiceRates, listMechanicShifts, listMechanics, listServices, updateMechanic,
+  updateMechanicDefaultPayoutPercent, upsertMechanicServiceRate,
 } from "@/lib/api";
 import type { Mechanic, MechanicShift } from "@/lib/types";
 import { STATUS_LABELS } from "@/lib/types";
@@ -186,7 +187,9 @@ function MechanicsPage() {
               </div>
             </div>
 
+            <MechanicDefaultPercent mechanic={selected} />
             <MechanicSalary mechanicId={selected.id} />
+            <MechanicAdvances mechanicId={selected.id} />
             <MechanicRates mechanicId={selected.id} />
             <MechanicShifts mechanicId={selected.id} color={selected.color} />
           </div>
@@ -257,16 +260,64 @@ function periodStart(p: Period): number {
   return now.getTime() - 30 * 24 * 60 * 60 * 1000;
 }
 
+function MechanicDefaultPercent({ mechanic }: { mechanic: Mechanic }) {
+  const qc = useQueryClient();
+  const [value, setValue] = useState<string>(String(mechanic.default_payout_percent ?? 50));
+
+  const saveM = useMutation({
+    mutationFn: async (n: number) => updateMechanicDefaultPayoutPercent(mechanic.id, n),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["mechanics"] });
+      toast.success("Процент сохранён");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card p-4">
+      <div className="flex items-center gap-2">
+        <Percent className="h-5 w-5 text-muted-foreground" />
+        <div>
+          <div className="text-sm font-medium">Процент по умолчанию</div>
+          <div className="text-xs text-muted-foreground">
+            Применяется, если нет индивидуальной ставки за услугу
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <Input
+          type="number"
+          className="h-9 w-24"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onBlur={() => {
+            const n = Number(value);
+            if (!Number.isFinite(n) || n < 0 || n > 100) {
+              setValue(String(mechanic.default_payout_percent ?? 50));
+              return;
+            }
+            if (n !== Number(mechanic.default_payout_percent ?? 50)) saveM.mutate(n);
+          }}
+        />
+        <span className="text-sm text-muted-foreground">%</span>
+      </div>
+    </div>
+  );
+}
+
 function MechanicSalary({ mechanicId }: { mechanicId: string }) {
   const { data: rows = [] } = useQuery({
     queryKey: ["mechanic-payouts", mechanicId],
     queryFn: () => listMechanicPayouts(mechanicId),
   });
   const [period, setPeriod] = useState<Period>("month");
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const filtered = useMemo(() => {
     const start = periodStart(period);
-    return rows.filter((r) => r.status === "done" && new Date(r.starts_at).getTime() >= start);
+    return rows
+      .filter((r) => r.status === "done" && new Date(r.starts_at).getTime() >= start)
+      .sort((a, b) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime());
   }, [rows, period]);
 
   const pending = useMemo(
@@ -274,8 +325,20 @@ function MechanicSalary({ mechanicId }: { mechanicId: string }) {
     [rows],
   );
 
-  const total = filtered.reduce((s, r) => s + r.mechanic_payout, 0);
+  const totalRevenue = filtered.reduce((s, r) => s + r.price, 0);
+  const totalPayout = filtered.reduce((s, r) => s + r.mechanic_payout, 0);
+  const avgPercent = totalRevenue > 0 ? Math.round((totalPayout / totalRevenue) * 100) : 0;
   const pendingTotal = pending.reduce((s, r) => s + r.mechanic_payout, 0);
+
+  const toggle = (key: string) =>
+    setExpanded((prev) => {
+      const n = new Set(prev);
+      if (n.has(key)) n.delete(key);
+      else n.add(key);
+      return n;
+    });
+
+  const fmt = (n: number) => `${n.toLocaleString("ru-RU")} ₽`;
 
   return (
     <div>
@@ -294,33 +357,256 @@ function MechanicSalary({ mechanicId }: { mechanicId: string }) {
         </Select>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-lg border bg-card p-4">
-          <div className="text-xs text-muted-foreground">Заработано ({PERIOD_LABELS[period].toLowerCase()})</div>
-          <div className="mt-1 text-2xl font-bold">{total.toLocaleString("ru-RU")} ₽</div>
+          <div className="text-xs text-muted-foreground">Оборот по услугам</div>
+          <div className="mt-1 text-2xl font-bold">{fmt(totalRevenue)}</div>
           <div className="mt-1 text-xs text-muted-foreground">{filtered.length} услуг</div>
         </div>
         <div className="rounded-lg border bg-card p-4">
+          <div className="text-xs text-muted-foreground">Зарплата мастера</div>
+          <div className="mt-1 text-2xl font-bold">{fmt(totalPayout)}</div>
+          <div className="mt-1 text-xs text-muted-foreground">≈ {avgPercent}% от оборота</div>
+        </div>
+        <div className="rounded-lg border bg-card p-4">
           <div className="text-xs text-muted-foreground">Ожидает (в работе / запланировано)</div>
-          <div className="mt-1 text-2xl font-bold">{pendingTotal.toLocaleString("ru-RU")} ₽</div>
+          <div className="mt-1 text-2xl font-bold">{fmt(pendingTotal)}</div>
           <div className="mt-1 text-xs text-muted-foreground">{pending.length} услуг</div>
         </div>
       </div>
+
       {filtered.length > 0 && (
         <div className="mt-3 space-y-1">
-          {filtered.slice(0, 20).map((r, i) => (
-            <div key={i} className="flex items-center justify-between rounded border bg-card px-3 py-1.5 text-xs">
-              <div>
-                <span className="font-medium">{r.service_name ?? "—"}</span>
-                <span className="ml-2 text-muted-foreground">
-                  {new Date(r.starts_at).toLocaleDateString("ru-RU")} · {STATUS_LABELS[r.status as keyof typeof STATUS_LABELS] ?? r.status}
-                </span>
+          {filtered.map((r, i) => {
+            const key = `${r.appointment_id}:${r.service_id}:${i}`;
+            const open = expanded.has(key);
+            const dt = new Date(r.starts_at);
+            const pct = r.price > 0 ? Math.round((r.mechanic_payout / r.price) * 100) : 0;
+            return (
+              <div key={key} className="rounded border bg-card">
+                <button
+                  type="button"
+                  onClick={() => toggle(key)}
+                  className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-xs hover:bg-muted/40"
+                >
+                  <div className="flex min-w-0 items-center gap-2">
+                    {open ? (
+                      <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    ) : (
+                      <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    )}
+                    <span className="truncate font-medium">{r.service_name ?? "—"}</span>
+                    <span className="hidden text-muted-foreground sm:inline">
+                      {dt.toLocaleDateString("ru-RU")}
+                    </span>
+                    {r.client_name && (
+                      <span className="hidden truncate text-muted-foreground md:inline">
+                        · {r.client_name}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <span className="text-muted-foreground">{r.price} ₽</span>
+                    <span className="font-semibold">{r.mechanic_payout} ₽</span>
+                    <span className="hidden w-10 text-right text-muted-foreground sm:inline">
+                      {pct}%
+                    </span>
+                  </div>
+                </button>
+                {open && (
+                  <div className="border-t bg-muted/20 px-3 py-2 text-xs">
+                    <div className="grid gap-1 sm:grid-cols-2">
+                      <div>
+                        <span className="text-muted-foreground">Клиент: </span>
+                        <span className="font-medium">{r.client_name ?? "—"}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Машина: </span>
+                        <span className="font-medium">
+                          {r.car_label ?? "—"}
+                          {r.license_plate ? ` · ${r.license_plate}` : ""}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Когда: </span>
+                        <span>
+                          {dt.toLocaleDateString("ru-RU")} ·{" "}
+                          {dt.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Статус: </span>
+                        <span>{STATUS_LABELS[r.status as keyof typeof STATUS_LABELS] ?? r.status}</span>
+                      </div>
+                      {r.appointment_comment && (
+                        <div className="sm:col-span-2">
+                          <span className="text-muted-foreground">Комментарий: </span>
+                          <span>{r.appointment_comment}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className="font-semibold">{r.mechanic_payout} ₽</div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MechanicAdvances({ mechanicId }: { mechanicId: string }) {
+  const qc = useQueryClient();
+  const [period, setPeriod] = useState<Period>("month");
+  const [open, setOpen] = useState(false);
+  const today = new Date().toISOString().slice(0, 10);
+  const [form, setForm] = useState({ paid_at: today, amount: "", note: "" });
+
+  const { data: advances = [] } = useQuery({
+    queryKey: ["mechanic-advances", mechanicId],
+    queryFn: () => listMechanicAdvances({ mechanic_id: mechanicId }),
+  });
+
+  const filtered = useMemo(() => {
+    const start = periodStart(period);
+    return advances.filter((a) => new Date(a.paid_at).getTime() >= start);
+  }, [advances, period]);
+
+  const total = filtered.reduce((s, a) => s + Number(a.amount ?? 0), 0);
+
+  const create = useMutation({
+    mutationFn: async () => {
+      const n = Number(form.amount);
+      if (!Number.isFinite(n) || n <= 0) throw new Error("Введите сумму");
+      await createMechanicAdvance({
+        mechanic_id: mechanicId,
+        paid_at: form.paid_at,
+        amount: n,
+        note: form.note.trim() || null,
+      });
+    },
+    onSuccess: () => {
+      toast.success("Аванс добавлен");
+      qc.invalidateQueries({ queryKey: ["mechanic-advances", mechanicId] });
+      qc.invalidateQueries({ queryKey: ["mechanic_advances"] });
+      setOpen(false);
+      setForm({ paid_at: today, amount: "", note: "" });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const del = useMutation({
+    mutationFn: (id: string) => deleteMechanicAdvance(id),
+    onSuccess: () => {
+      toast.success("Удалено");
+      qc.invalidateQueries({ queryKey: ["mechanic-advances", mechanicId] });
+      qc.invalidateQueries({ queryKey: ["mechanic_advances"] });
+    },
+  });
+
+  return (
+    <div>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <BadgeDollarSign className="h-5 w-5" />
+          <h2 className="text-lg font-semibold">Авансы</h2>
+        </div>
+        <div className="flex items-center gap-2">
+          <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
+            <SelectTrigger className="w-32 sm:w-40"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {(Object.keys(PERIOD_LABELS) as Period[]).map((p) => (
+                <SelectItem key={p} value={p}>{PERIOD_LABELS[p]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button size="sm" onClick={() => setOpen(true)}>
+            <Plus className="mr-1 h-4 w-4" />Аванс
+          </Button>
+        </div>
+      </div>
+
+      <div className="rounded-lg border bg-card p-4">
+        <div className="text-xs text-muted-foreground">
+          Выдано авансов ({PERIOD_LABELS[period].toLowerCase()})
+        </div>
+        <div className="mt-1 text-2xl font-bold">{total.toLocaleString("ru-RU")} ₽</div>
+        <div className="mt-1 text-xs text-muted-foreground">{filtered.length} выплат</div>
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="mt-3 rounded-lg border border-dashed py-6 text-center text-sm text-muted-foreground">
+          Авансов нет
+        </div>
+      ) : (
+        <div className="mt-3 space-y-1">
+          {filtered.map((a) => (
+            <div
+              key={a.id}
+              className="flex items-center justify-between gap-2 rounded border bg-card px-3 py-1.5 text-xs"
+            >
+              <div className="min-w-0">
+                <span className="font-medium">
+                  {new Date(a.paid_at).toLocaleDateString("ru-RU")}
+                </span>
+                {a.note && <span className="ml-2 text-muted-foreground">· {a.note}</span>}
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <span className="font-semibold">{Number(a.amount).toLocaleString("ru-RU")} ₽</span>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7"
+                  onClick={() => {
+                    if (confirm("Удалить аванс?")) del.mutate(a.id);
+                  }}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
             </div>
           ))}
         </div>
       )}
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Новый аванс</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-3">
+            <div>
+              <Label>Дата</Label>
+              <Input
+                type="date"
+                value={form.paid_at}
+                onChange={(e) => setForm({ ...form, paid_at: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>Сумма, ₽</Label>
+              <Input
+                type="number"
+                value={form.amount}
+                onChange={(e) => setForm({ ...form, amount: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>Примечание</Label>
+              <Input
+                value={form.note}
+                onChange={(e) => setForm({ ...form, note: e.target.value })}
+                placeholder="Необязательно"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)}>Отмена</Button>
+            <Button onClick={() => create.mutate()} disabled={create.isPending}>Сохранить</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

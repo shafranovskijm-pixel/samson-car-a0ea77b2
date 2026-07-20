@@ -679,6 +679,7 @@ export type Database = {
         Row: {
           color: string
           created_at: string
+          default_payout_percent: number
           deleted_at: string | null
           full_name: string
           id: string
@@ -689,6 +690,7 @@ export type Database = {
         Insert: {
           color?: string
           created_at?: string
+          default_payout_percent?: number
           deleted_at?: string | null
           full_name: string
           id?: string
@@ -699,6 +701,7 @@ export type Database = {
         Update: {
           color?: string
           created_at?: string
+          default_payout_percent?: number
           deleted_at?: string | null
           full_name?: string
           id?: string

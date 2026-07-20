@@ -1,0 +1,1 @@
+ALTER TABLE public.mechanics ADD COLUMN IF NOT EXISTS default_payout_percent NUMERIC NOT NULL DEFAULT 50;

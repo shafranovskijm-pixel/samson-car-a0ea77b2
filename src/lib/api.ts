@@ -476,6 +476,10 @@ export type MechanicPayoutRow = {
   starts_at: string;
   status: string;
   service_name: string | null;
+  client_name: string | null;
+  car_label: string | null;
+  license_plate: string | null;
+  appointment_comment: string | null;
 };
 
 export const listMechanicPayouts = async (
@@ -484,7 +488,7 @@ export const listMechanicPayouts = async (
   const { data, error } = await supabase
     .from("appointment_services")
     .select(
-      "appointment_id, service_id, price, mechanic_payout, service:services(name), appointment:appointments!inner(starts_at, status, mechanic_id)",
+      "appointment_id, service_id, price, mechanic_payout, service:services(name), appointment:appointments!inner(starts_at, status, mechanic_id, comment, car:cars(model, license_plate, brand:brands(name), client:clients(full_name)))",
     )
     .eq("appointment.mechanic_id", mechanic_id);
   if (error) throw error;
@@ -494,17 +498,45 @@ export const listMechanicPayouts = async (
     price: number;
     mechanic_payout: number;
     service: { name: string } | null;
-    appointment: { starts_at: string; status: string } | null;
+    appointment: {
+      starts_at: string;
+      status: string;
+      comment: string | null;
+      car: {
+        model: string | null;
+        license_plate: string | null;
+        brand: { name: string } | null;
+        client: { full_name: string } | null;
+      } | null;
+    } | null;
   };
-  return ((data ?? []) as unknown as Row[]).map((r) => ({
-    appointment_id: r.appointment_id,
-    service_id: r.service_id,
-    price: Number(r.price),
-    mechanic_payout: Number(r.mechanic_payout),
-    starts_at: r.appointment?.starts_at ?? "",
-    status: r.appointment?.status ?? "",
-    service_name: r.service?.name ?? null,
-  }));
+  return ((data ?? []) as unknown as Row[]).map((r) => {
+    const car = r.appointment?.car;
+    const brand = car?.brand?.name ?? "";
+    const model = car?.model ?? "";
+    const carLabel = [brand, model].filter(Boolean).join(" ") || null;
+    return {
+      appointment_id: r.appointment_id,
+      service_id: r.service_id,
+      price: Number(r.price),
+      mechanic_payout: Number(r.mechanic_payout),
+      starts_at: r.appointment?.starts_at ?? "",
+      status: r.appointment?.status ?? "",
+      service_name: r.service?.name ?? null,
+      client_name: car?.client?.full_name ?? null,
+      car_label: carLabel,
+      license_plate: car?.license_plate ?? null,
+      appointment_comment: r.appointment?.comment ?? null,
+    };
+  });
+};
+
+export const updateMechanicDefaultPayoutPercent = async (id: string, percent: number) => {
+  const { error } = await anySb
+    .from("mechanics")
+    .update({ default_payout_percent: percent })
+    .eq("id", id);
+  if (error) throw error;
 };
 
 // EXPENSES
