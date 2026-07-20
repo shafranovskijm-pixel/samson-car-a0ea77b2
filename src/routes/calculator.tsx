@@ -274,6 +274,25 @@ function LandingPage() {
     if (brandName && years.length && year == null) setYear(years[0]);
   }, [brandName, years, year]);
 
+  // Префилл авто из карточки клиента (?carId=...)
+  useEffect(() => {
+    if (!carId || prefillDone) return;
+    if (cars.length === 0) return;
+    const car = cars.find((c) => c.id === carId);
+    if (!car) {
+      setPrefillDone(true);
+      return;
+    }
+    const brand = brands.find((b) => b.id === car.brand_id);
+    if (!brand) return;
+    setBrandName(brand.name);
+    if (car.year) setYear(car.year);
+    if (car.model) setModelName(car.model);
+    setCarFromClient(true);
+    setPrefillDone(true);
+    setStep(2);
+  }, [carId, cars, brands, prefillDone]);
+
   // Услуги по категориям
   const byCategory = useMemo(() => {
     const map: Record<string, typeof services> = {};
