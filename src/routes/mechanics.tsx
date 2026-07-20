@@ -21,6 +21,8 @@ import {
 } from "@/lib/api";
 import type { Mechanic, MechanicShift } from "@/lib/types";
 import { STATUS_LABELS } from "@/lib/types";
+import { useConfirm } from "@/components/ConfirmDialog";
+import { effectivePayout, type PayoutMechanic, type PayoutService } from "@/lib/payouts";
 
 const COLORS = [
   "#ef4444", "#f97316", "#f59e0b", "#eab308", "#84cc16",
@@ -37,6 +39,7 @@ export const Route = createFileRoute("/mechanics")({
 
 function MechanicsPage() {
   const qc = useQueryClient();
+  const confirmAction = useConfirm();
   const { data: mechanics = [] } = useQuery({ queryKey: ["mechanics"], queryFn: listMechanics });
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -178,8 +181,14 @@ function MechanicsPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    if (confirm(`Удалить мастера «${selected.full_name}»?`)) delM.mutate(selected.id);
+                  onClick={async () => {
+                    const ok = await confirmAction({
+                      title: "Удалить мастера?",
+                      description: `«${selected.full_name}». Восстановить нельзя.`,
+                      destructive: true,
+                      confirmText: "Удалить",
+                    });
+                    if (ok) delM.mutate(selected.id);
                   }}
                 >
                   <Trash2 className="h-4 w-4" />
