@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -64,6 +64,8 @@ export const Route = createFileRoute("/clients")({
 
 function ClientsPage() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
+  const [pickCarOpen, setPickCarOpen] = useState(false);
   const { data: clients = [] } = useQuery({ queryKey: ["clients"], queryFn: listClients });
   const { data: cars = [] } = useQuery({ queryKey: ["cars"], queryFn: listCars });
   const { data: brands = [] } = useQuery({ queryKey: ["brands"], queryFn: listBrands });
@@ -508,6 +510,25 @@ function ClientsPage() {
               </div>
 
               <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    if (selectedCars.length === 0) {
+                      toast.info("Сначала добавьте машину клиенту");
+                      setCarDialog({ open: true, editing: null, clientId: selected.id });
+                      return;
+                    }
+                    if (selectedCars.length === 1) {
+                      navigate({ to: "/calculator", search: { carId: selectedCars[0].id } });
+                      return;
+                    }
+                    setPickCarOpen(true);
+                  }}
+                >
+                  <Plus className="mr-1 h-4 w-4" />
+                  <span className="hidden sm:inline">Добавить услугу</span>
+                  <span className="sm:hidden">Услуга</span>
+                </Button>
                 <Button variant="outline" size="sm" onClick={() => openEditClient(selected)}>
                   <Pencil className="mr-1 h-4 w-4" />Изменить
                 </Button>
@@ -640,7 +661,39 @@ function ClientsPage() {
       </section>
 
 
-      {/* CLIENT DIALOG */}
+      {/* PICK CAR FOR CALCULATOR */}
+      <Dialog open={pickCarOpen} onOpenChange={setPickCarOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Выберите машину</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-2">
+            {selectedCars.map((car) => {
+              const brand = brands.find((b) => b.id === car.brand_id);
+              return (
+                <button
+                  key={car.id}
+                  type="button"
+                  onClick={() => {
+                    setPickCarOpen(false);
+                    navigate({ to: "/calculator", search: { carId: car.id } });
+                  }}
+                  className="flex flex-col items-start gap-0.5 rounded-md border bg-card px-3 py-2 text-left hover:bg-accent"
+                >
+                  <span className="font-medium">
+                    {brand?.name ?? "—"} {car.model}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {[car.year, car.license_plate ?? "—"].filter(Boolean).join(" · ")}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+
       <Dialog
         open={clientDialog.open}
         onOpenChange={(o) => setClientDialog((s) => ({ ...s, open: o }))}
