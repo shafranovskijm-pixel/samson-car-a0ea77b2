@@ -61,6 +61,9 @@ import { useServiceUsage } from "@/hooks/useServiceUsage";
 
 import { STATUS_LABELS, type AppointmentStatus, type ReminderInterval } from "@/lib/types";
 import { Checkbox } from "@/components/ui/checkbox";
+import { effectivePayout, type PayoutMechanic, type PayoutService } from "@/lib/payouts";
+import { useConfirm } from "@/components/ConfirmDialog";
+
 
 type SvcRow = { service_id: string; price: number; mechanic_payout: number };
 
@@ -92,6 +95,7 @@ export function AppointmentDialog({
 }: Props) {
 
   const qc = useQueryClient();
+  const confirmAction = useConfirm();
   const isEdit = !!appointmentId;
 
   const { data: clients = [] } = useQuery({ queryKey: ["clients"], queryFn: listClients });
@@ -139,19 +143,13 @@ export function AppointmentDialog({
   });
   const rateFor = (svc_id: string, price: number) => {
     const override = rates.find((r) => r.service_id === svc_id)?.amount;
-    if (override != null && override > 0) return override;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const svc = services.find((s) => s.id === svc_id) as any;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const mech = mechanics.find((m) => m.id === mechanicId) as any;
-    const mechPct = Number(mech?.default_payout_percent);
-    const svcPct = Number(svc?.default_payout_percent);
-    const pct = Number.isFinite(mechPct) && mechPct > 0
-      ? mechPct
-      : Number.isFinite(svcPct) && svcPct > 0
-        ? svcPct
-        : 50;
-    return Math.round((price * pct) / 100);
+    if (override != null && override > 0) return Math.round(override);
+    return effectivePayout({
+      storedPayout: 0,
+      price,
+      mechanic: mechanics.find((m) => m.id === mechanicId) as PayoutMechanic,
+      service: services.find((s) => s.id === svc_id) as PayoutService,
+    });
   };
 
 
@@ -354,7 +352,13 @@ export function AppointmentDialog({
   };
 
   const removeSavedCustom = async (id: string) => {
-    if (!confirm("Удалить сохранённую услугу для этой машины?")) return;
+    const ok = await confirmAction({
+      title: "Удалить сохранённую услугу?",
+      description: "Услуга больше не будет предлагаться для этой машины.",
+      destructive: true,
+      confirmText: "Удалить",
+    });
+    if (!ok) return;
     try {
       await carCustom.remove(id);
     } catch (e) {
@@ -909,8 +913,14 @@ export function AppointmentDialog({
             <Button
               type="button"
               variant="destructive"
-              onClick={() => {
-                if (confirm("Удалить запись?")) delMutation.mutate();
+              onClick={async () => {
+                const ok = await confirmAction({
+                  title: "Удалить запись?",
+                  description: "Восстановить будет нельзя.",
+                  destructive: true,
+                  confirmText: "Удалить",
+                });
+                if (ok) delMutation.mutate();
               }}
             >
               <Trash2 className="mr-2 h-4 w-4" /> Удалить
@@ -1010,6 +1020,7 @@ function PaymentsSection({
   total: number;
 }) {
   const qc = useQueryClient();
+  const confirmAction = useConfirm();
   const { data: payments = [], isLoading } = useQuery({
     queryKey: ["appointment-payments", appointmentId],
     queryFn: () => listAppointmentPayments(appointmentId),
@@ -1087,7 +1098,15 @@ function PaymentsSection({
                 variant="ghost"
                 size="icon"
                 className="h-7 w-7"
-                onClick={() => delMut.mutate(p.id)}
+                onClick={async () => {
+                  const ok = await confirmAction({
+                    title: "Удалить платёж?",
+                    description: `${format(new Date(p.paid_at), "d MMM yyyy")} · ${Number(p.amount)} ₽`,
+                    destructive: true,
+                    confirmText: "Удалить",
+                  });
+                  if (ok) delMut.mutate(p.id);
+                }}
                 aria-label="Удалить платёж"
               >
                 <Trash2 className="h-3.5 w-3.5 text-red-600" />

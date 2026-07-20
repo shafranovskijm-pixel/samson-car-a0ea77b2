@@ -21,6 +21,8 @@ import {
 } from "@/lib/api";
 import type { Mechanic, MechanicShift } from "@/lib/types";
 import { STATUS_LABELS } from "@/lib/types";
+import { useConfirm } from "@/components/ConfirmDialog";
+import { effectivePayout, type PayoutMechanic, type PayoutService } from "@/lib/payouts";
 
 const COLORS = [
   "#ef4444", "#f97316", "#f59e0b", "#eab308", "#84cc16",
@@ -37,6 +39,7 @@ export const Route = createFileRoute("/mechanics")({
 
 function MechanicsPage() {
   const qc = useQueryClient();
+  const confirmAction = useConfirm();
   const { data: mechanics = [] } = useQuery({ queryKey: ["mechanics"], queryFn: listMechanics });
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -178,8 +181,14 @@ function MechanicsPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    if (confirm(`Удалить мастера «${selected.full_name}»?`)) delM.mutate(selected.id);
+                  onClick={async () => {
+                    const ok = await confirmAction({
+                      title: "Удалить мастера?",
+                      description: `«${selected.full_name}». Восстановить нельзя.`,
+                      destructive: true,
+                      confirmText: "Удалить",
+                    });
+                    if (ok) delM.mutate(selected.id);
                   }}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -310,12 +319,27 @@ function MechanicSalary({ mechanicId, defaultPercent }: { mechanicId: string; de
     queryKey: ["mechanic-payouts", mechanicId],
     queryFn: () => listMechanicPayouts(mechanicId),
   });
+  const { data: services = [] } = useQuery({ queryKey: ["services"], queryFn: listServices });
   const [period, setPeriod] = useState<Period>("month");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
-  const pct = defaultPercent > 0 ? defaultPercent : 50;
-  const effPayout = (r: { price: number; mechanic_payout: number }) =>
-    r.mechanic_payout > 0 ? r.mechanic_payout : Math.round((Number(r.price) * pct) / 100);
+  const mechForPayout: PayoutMechanic = {
+    default_payout_percent: defaultPercent > 0 ? defaultPercent : null,
+  };
+  const svcById = useMemo(() => {
+    const m = new Map<string, PayoutService>();
+    services.forEach((s) =>
+      m.set(s.id, { default_payout_percent: (s as { default_payout_percent?: number | null }).default_payout_percent ?? null }),
+    );
+    return m;
+  }, [services]);
+  const effPayout = (r: { service_id?: string; price: number; mechanic_payout: number }) =>
+    effectivePayout({
+      storedPayout: r.mechanic_payout,
+      price: r.price,
+      mechanic: mechForPayout,
+      service: r.service_id ? svcById.get(r.service_id) ?? null : null,
+    });
 
   const filtered = useMemo(() => {
     const start = periodStart(period);
@@ -463,6 +487,7 @@ function MechanicSalary({ mechanicId, defaultPercent }: { mechanicId: string; de
 
 function MechanicAdvances({ mechanicId }: { mechanicId: string }) {
   const qc = useQueryClient();
+  const confirmActionCtx = useConfirm();
   const [period, setPeriod] = useState<Period>("month");
   const [open, setOpen] = useState(false);
   const today = new Date().toISOString().slice(0, 10);
@@ -564,7 +589,15 @@ function MechanicAdvances({ mechanicId }: { mechanicId: string }) {
                   variant="ghost"
                   className="h-7 w-7"
                   onClick={() => {
-                    if (confirm("Удалить аванс?")) del.mutate(a.id);
+                    (async () => {
+                      const ok = await confirmActionCtx({
+                        title: "Удалить аванс?",
+                        description: `${new Date(a.paid_at).toLocaleDateString("ru-RU")} · ${Number(a.amount).toLocaleString("ru-RU")} ₽`,
+                        destructive: true,
+                        confirmText: "Удалить",
+                      });
+                      if (ok) del.mutate(a.id);
+                    })();
                   }}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -692,6 +725,7 @@ function MechanicRates({ mechanicId }: { mechanicId: string }) {
 // ================= SHIFTS =================
 function MechanicShifts({ mechanicId, color = "#64748b" }: { mechanicId: string; color?: string }) {
   const qc = useQueryClient();
+  const confirmActionCtx = useConfirm();
   const { data: shifts = [] } = useQuery({
     queryKey: ["mechanic-shifts", mechanicId],
     queryFn: () => listMechanicShifts(mechanicId),
@@ -768,18 +802,6 @@ function MechanicShifts({ mechanicId, color = "#64748b" }: { mechanicId: string;
           <CalendarClock className="h-5 w-5" />
           <h2 className="text-lg font-semibold">
             График смен{" "}
-            <span className="text-sm font-normal text-muted-foreground">· {shifts.length}</span>
-          </h2>
-        </div>
-        <Button size="sm" onClick={openNew}>
-          <Plus className="mr-1 h-4 w-4" />Смена
-        </Button>
-      </div>
-      <div className="mb-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <CalendarClock className="h-5 w-5" />
-          <h2 className="text-lg font-semibold">
-            График работы{" "}
             <span className="text-sm font-normal text-muted-foreground">· {shifts.length}</span>
           </h2>
         </div>
@@ -868,7 +890,14 @@ function MechanicShifts({ mechanicId, color = "#64748b" }: { mechanicId: string;
                             size="icon"
                             variant="ghost"
                             onClick={() => {
-                              if (confirm("Удалить смену?")) delM.mutate(s.id);
+                              (async () => {
+                                const ok = await confirmActionCtx({
+                                  title: "Удалить смену?",
+                                  destructive: true,
+                                  confirmText: "Удалить",
+                                });
+                                if (ok) delM.mutate(s.id);
+                              })();
                             }}
                           >
                             <Trash2 className="h-4 w-4" />

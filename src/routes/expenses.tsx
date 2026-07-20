@@ -47,9 +47,11 @@ import {
   createMechanicAdvance,
   deleteMechanicAdvance,
   listPaymentsRange,
+  listServices,
   type Expense,
   type MechanicAdvance,
 } from "@/lib/api";
+import { effectivePayout, type PayoutMechanic, type PayoutService } from "@/lib/payouts";
 
 
 export const Route = createFileRoute("/expenses")({
@@ -104,26 +106,54 @@ function ExpensesPage() {
     [appts],
   );
 
-  // Ставка по умолчанию для мастера: индивидуальный % → 50%.
-  const mechPct = useMemo(() => {
-    const map = new Map<string, number>();
-    mechanics.forEach((m) => {
-      const p = Number((m as { default_payout_percent?: number }).default_payout_percent ?? 50);
-      map.set(m.id, p > 0 ? p : 50);
-    });
-    return map;
-  }, [mechanics]);
+  const { data: servicesList = [] } = useQuery({
+    queryKey: ["services"],
+    queryFn: () => listServices(),
+  });
 
-  // Эффективная выплата по строке услуги: если стоит 0, считаем по % мастера (иначе 50%).
-  const effPayout = (mechanicId: string | null, price: number, stored: number) => {
-    if (stored > 0) return Number(stored);
-    if (!mechanicId) return 0;
-    const pct = mechPct.get(mechanicId) ?? 50;
-    return Math.round((Number(price) * pct) / 100);
-  };
+  // Единый расчёт выплаты за строку услуги (индивидуальный % мастера → % услуги → 50%).
+  const mechById = useMemo(() => {
+    const m = new Map<string, PayoutMechanic>();
+    mechanics.forEach((x) =>
+      m.set(x.id, {
+        default_payout_percent:
+          (x as { default_payout_percent?: number | null }).default_payout_percent ?? null,
+      }),
+    );
+    return m;
+  }, [mechanics]);
+  const svcById = useMemo(() => {
+    const m = new Map<string, PayoutService>();
+    servicesList.forEach((s) =>
+      m.set(s.id, {
+        default_payout_percent:
+          (s as { default_payout_percent?: number | null }).default_payout_percent ?? null,
+      }),
+    );
+    return m;
+  }, [servicesList]);
+  const effPayout = (
+    mechanicId: string | null,
+    price: number,
+    stored: number,
+    serviceId?: string | null,
+  ) =>
+    effectivePayout({
+      storedPayout: stored,
+      price,
+      mechanic: mechanicId ? mechById.get(mechanicId) ?? null : null,
+      service: serviceId ? svcById.get(serviceId) ?? null : null,
+    });
   const apptPayout = (a: ApptRow) =>
     (a.services ?? []).reduce(
-      (s, x) => s + effPayout(a.mechanic_id, Number(x.price ?? 0), Number(x.mechanic_payout ?? 0)),
+      (s, x) =>
+        s +
+        effPayout(
+          a.mechanic_id,
+          Number(x.price ?? 0),
+          Number(x.mechanic_payout ?? 0),
+          x.service_id,
+        ),
       0,
     );
 
@@ -142,17 +172,24 @@ function ExpensesPage() {
   );
   const expectedCount = upcomingAppts.length;
 
-  // Начислено мастерам (по всем выполненным работам месяца) — с учётом дефолтного %.
+  // Начислено мастерам (по всем выполненным работам месяца) — с учётом % мастера/услуги.
   const mechanicsAccrued = doneAppts.reduce((s, a) => s + apptPayout(a), 0);
   // Фактически выплачено мастерам за месяц (авансы)
   const mechanicsPaid = advances.reduce((s, a) => s + Number(a.amount ?? 0), 0);
+  // Оборот по выполненным работам (начисление, независимо от даты оплаты)
+  const accruedRevenue = doneAppts.reduce((s, a) => s + Number(a.total_price ?? 0), 0);
 
 
   const otherExpenses = expenses.reduce((s, e) => s + Number(e.amount ?? 0), 0);
-  // Чистая прибыль: оборот минус НАЧИСЛЕННАЯ ЗП мастерам (обязательство сервиса) и прочие расходы.
-  const profit = revenue - mechanicsAccrued - otherExpenses;
-  // Долг перед мастерами = начислено − уже выплачено авансами
-  const mechanicsDebt = Math.max(0, mechanicsAccrued - mechanicsPaid);
+  // Прибыль (кассовая) — только реальные деньги за месяц:
+  //   поступило на кассу − выплачено мастерам авансами − прочие расходы.
+  const cashProfit = revenue - mechanicsPaid - otherExpenses;
+  // Прибыль (начисленная) — по факту выполненных работ, независимо от даты оплат:
+  //   выполнено − начислено ЗП − прочие расходы.
+  const accruedProfit = accruedRevenue - mechanicsAccrued - otherExpenses;
+  // Долг перед мастерами = начислено − уже выплачено авансами.
+  // Отрицательное значение = мастеру переплатили авансами (аванс > начисления за месяц).
+  const mechanicsDebt = mechanicsAccrued - mechanicsPaid;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
@@ -167,24 +204,37 @@ function ExpensesPage() {
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {/* Чистая прибыль — герой */}
+        {/* Прибыль (кассовая) — герой */}
         <Card
-          className={`border-2 ${profit >= 0 ? "border-green-500/30" : "border-red-500/30"}`}
+          className={`border-2 ${cashProfit >= 0 ? "border-green-500/30" : "border-red-500/30"}`}
         >
           <CardContent className="p-5">
-            <div className="text-xs font-medium text-muted-foreground">Чистая прибыль</div>
+            <div className="text-xs font-medium text-muted-foreground">Прибыль (касса)</div>
             <div
               className={`mt-2 text-3xl font-bold tracking-tight ${
-                profit >= 0 ? "text-green-600" : "text-red-600"
+                cashProfit >= 0 ? "text-green-600" : "text-red-600"
               }`}
             >
-              {fmt(profit)}
+              {fmt(cashProfit)}
             </div>
             <div className="mt-4 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               Формула
             </div>
             <div className="mt-1 text-[11px] text-muted-foreground">
-              касса − начисл. ЗП − расходы
+              касса − авансы мастерам − расходы
+            </div>
+            <div className="mt-3 border-t pt-2">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-muted-foreground">Прибыль (начисление)</span>
+                <span
+                  className={`font-semibold ${accruedProfit >= 0 ? "text-green-700" : "text-red-700"}`}
+                >
+                  {fmt(accruedProfit)}
+                </span>
+              </div>
+              <div className="text-[10px] text-muted-foreground">
+                выполнено − начислено ЗП − расходы
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -248,12 +298,18 @@ function ExpensesPage() {
             <div className="mt-auto border-t pt-3">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                  Текущий долг
+                  {mechanicsDebt >= 0 ? "К выплате" : "Переплата"}
                 </span>
                 <span
-                  className={`text-sm font-semibold ${mechanicsDebt > 0 ? "text-amber-600" : "text-green-600"}`}
+                  className={`text-sm font-semibold ${
+                    mechanicsDebt > 0
+                      ? "text-amber-600"
+                      : mechanicsDebt < 0
+                        ? "text-red-600"
+                        : "text-green-600"
+                  }`}
                 >
-                  {fmt(mechanicsDebt)}
+                  {fmt(Math.abs(mechanicsDebt))}
                 </span>
               </div>
               <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-muted">
@@ -304,6 +360,7 @@ function ExpensesPage() {
           </CardContent>
         </Card>
       </div>
+
 
 
 

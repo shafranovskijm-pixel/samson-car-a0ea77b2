@@ -48,6 +48,7 @@ import {
 
 import { AppointmentDialog } from "@/components/AppointmentDialog";
 import { PrintDocument, type PrintKV } from "@/components/PrintDocument";
+import { useConfirm } from "@/components/ConfirmDialog";
 import type { AppointmentWithRelations } from "@/lib/api";
 
 export const Route = createFileRoute("/schedule")({
@@ -65,6 +66,7 @@ const SORT_LABELS: Record<SortMode, string> = {
 
 function SchedulePage() {
   const qc = useQueryClient();
+  const confirmAction = useConfirm();
   const [mechanicFilter, setMechanicFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [paymentFilter, setPaymentFilter] = useState<string>("all");
@@ -143,10 +145,14 @@ function SchedulePage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const confirmDelete = (id: string) => {
-    if (window.confirm("Удалить эту запись? Действие нельзя отменить.")) {
-      deleteMut.mutate(id);
-    }
+  const confirmDelete = async (id: string) => {
+    const ok = await confirmAction({
+      title: "Удалить запись?",
+      description: "Действие нельзя отменить.",
+      destructive: true,
+      confirmText: "Удалить",
+    });
+    if (ok) deleteMut.mutate(id);
   };
 
   const setStatus = (id: string, status: AppointmentStatus) => {
@@ -425,7 +431,15 @@ function SchedulePage() {
                               Записать платёж…
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              onClick={() => clearPayMut.mutate(a.id)}
+                              onClick={async () => {
+                                const ok = await confirmAction({
+                                  title: "Сбросить оплату?",
+                                  description: "Все платежи по этой записи будут удалены.",
+                                  destructive: true,
+                                  confirmText: "Сбросить",
+                                });
+                                if (ok) clearPayMut.mutate(a.id);
+                              }}
                               className="text-destructive"
                             >
                               Сбросить оплату
