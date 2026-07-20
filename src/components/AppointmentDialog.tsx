@@ -53,6 +53,7 @@ import {
   updateAppointment,
   updateService,
   upsertServiceByCategoryName,
+  humanizeSupabaseError,
 } from "@/lib/api";
 
 import { useCarCustomServices } from "@/hooks/useCarCustomServices";
