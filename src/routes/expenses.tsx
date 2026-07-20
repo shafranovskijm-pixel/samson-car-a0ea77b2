@@ -138,8 +138,18 @@ function ExpensesPage() {
       </div>
 
       <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-        <StatCard label="Оборот (оплачено)" value={fmt(revenue)} tone="neutral" />
-        <StatCard label="Не оплачено" value={fmt(unpaidBalance)} tone={unpaidBalance > 0 ? "warn" : "neutral"} />
+        <StatCard
+          label="Оборот кассы"
+          value={fmt(revenue)}
+          hint="платежи с датой в этом месяце"
+          tone="neutral"
+        />
+        <StatCard
+          label="Ждём оплату"
+          value={fmt(unpaidBalance)}
+          hint="по выполненным работам месяца"
+          tone={unpaidBalance > 0 ? "warn" : "neutral"}
+        />
         <StatCard
           label="ЗП мастерам (начислено)"
           value={fmt(mechanicsAccrued)}
@@ -155,9 +165,11 @@ function ExpensesPage() {
         <StatCard
           label="Чистая прибыль"
           value={fmt(profit)}
+          hint="касса − начисл. ЗП − расходы"
           tone={profit >= 0 ? "good" : "bad"}
         />
       </div>
+
 
       <Tabs defaultValue="summary">
         <TabsList>
