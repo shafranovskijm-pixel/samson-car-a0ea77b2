@@ -345,7 +345,8 @@ function LandingPage() {
     return r ? `${h} ч ${r} мин` : `${h} ч`;
   };
 
-  const carReady = !!brandName && year != null && !!modelName && modIndex != null;
+  const carReady =
+    !!brandName && year != null && !!modelName && (modIndex != null || carFromClient);
 
   const goStep = (s: Step) => {
     if (s === 1) setStep(1);
