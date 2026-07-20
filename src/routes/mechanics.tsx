@@ -319,12 +319,27 @@ function MechanicSalary({ mechanicId, defaultPercent }: { mechanicId: string; de
     queryKey: ["mechanic-payouts", mechanicId],
     queryFn: () => listMechanicPayouts(mechanicId),
   });
+  const { data: services = [] } = useQuery({ queryKey: ["services"], queryFn: listServices });
   const [period, setPeriod] = useState<Period>("month");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
-  const pct = defaultPercent > 0 ? defaultPercent : 50;
-  const effPayout = (r: { price: number; mechanic_payout: number }) =>
-    r.mechanic_payout > 0 ? r.mechanic_payout : Math.round((Number(r.price) * pct) / 100);
+  const mechForPayout: PayoutMechanic = {
+    default_payout_percent: defaultPercent > 0 ? defaultPercent : null,
+  };
+  const svcById = useMemo(() => {
+    const m = new Map<string, PayoutService>();
+    services.forEach((s) =>
+      m.set(s.id, { default_payout_percent: (s as { default_payout_percent?: number | null }).default_payout_percent ?? null }),
+    );
+    return m;
+  }, [services]);
+  const effPayout = (r: { service_id?: string; price: number; mechanic_payout: number }) =>
+    effectivePayout({
+      storedPayout: r.mechanic_payout,
+      price: r.price,
+      mechanic: mechForPayout,
+      service: r.service_id ? svcById.get(r.service_id) ?? null : null,
+    });
 
   const filtered = useMemo(() => {
     const start = periodStart(period);
