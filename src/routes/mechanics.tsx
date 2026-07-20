@@ -385,7 +385,8 @@ function MechanicSalary({ mechanicId, defaultPercent }: { mechanicId: string; de
             const key = `${r.appointment_id}:${r.service_id}:${i}`;
             const open = expanded.has(key);
             const dt = new Date(r.starts_at);
-            const pct = r.price > 0 ? Math.round((r.mechanic_payout / r.price) * 100) : 0;
+            const payout = effPayout(r);
+            const pctRow = r.price > 0 ? Math.round((payout / r.price) * 100) : 0;
             return (
               <div key={key} className="rounded border bg-card">
                 <button
@@ -411,9 +412,9 @@ function MechanicSalary({ mechanicId, defaultPercent }: { mechanicId: string; de
                   </div>
                   <div className="flex shrink-0 items-center gap-3">
                     <span className="text-muted-foreground">{r.price} ₽</span>
-                    <span className="font-semibold">{r.mechanic_payout} ₽</span>
+                    <span className="font-semibold">{payout} ₽</span>
                     <span className="hidden w-10 text-right text-muted-foreground sm:inline">
-                      {pct}%
+                      {pctRow}%
                     </span>
                   </div>
                 </button>
