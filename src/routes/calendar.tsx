@@ -76,6 +76,7 @@ const searchSchema = z.object({
   services: fallback(z.string(), "").default(""),
   brand: fallback(z.string(), "").default(""),
   model: fallback(z.string(), "").default(""),
+  carId: fallback(z.string(), "").default(""),
 });
 
 export const Route = createFileRoute("/calendar")({
