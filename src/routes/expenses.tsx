@@ -98,6 +98,34 @@ function ExpensesPage() {
 
   // Только выполненные записи участвуют в «начислении» ЗП и обязательств.
   const doneAppts = useMemo(() => appts.filter((a) => a.status === "done"), [appts]);
+  // Запланированные/в работе — потенциальные поступления (если не отменятся).
+  const upcomingAppts = useMemo(
+    () => appts.filter((a) => a.status !== "done" && a.status !== "cancelled"),
+    [appts],
+  );
+
+  // Ставка по умолчанию для мастера: индивидуальный % → 50%.
+  const mechPct = useMemo(() => {
+    const map = new Map<string, number>();
+    mechanics.forEach((m) => {
+      const p = Number((m as { default_payout_percent?: number }).default_payout_percent ?? 50);
+      map.set(m.id, p > 0 ? p : 50);
+    });
+    return map;
+  }, [mechanics]);
+
+  // Эффективная выплата по строке услуги: если стоит 0, считаем по % мастера (иначе 50%).
+  const effPayout = (mechanicId: string | null, price: number, stored: number) => {
+    if (stored > 0) return Number(stored);
+    if (!mechanicId) return 0;
+    const pct = mechPct.get(mechanicId) ?? 50;
+    return Math.round((Number(price) * pct) / 100);
+  };
+  const apptPayout = (a: ApptRow) =>
+    (a.services ?? []).reduce(
+      (s, x) => s + effPayout(a.mechanic_id, Number(x.price ?? 0), Number(x.mechanic_payout ?? 0)),
+      0,
+    );
 
   // Оборот кассы за месяц = все фактические платежи клиентов с paid_at в этом месяце
   // (независимо от того, в каком месяце сама запись).
@@ -107,20 +135,21 @@ function ExpensesPage() {
     (s, a) => s + Math.max(0, (a.total_price ?? 0) - Number(a.paid_amount ?? 0)),
     0,
   );
-
-  // Начислено мастерам (по всем выполненным работам месяца)
-  const mechanicsAccrued = doneAppts.reduce(
-    (s, a) => s + (a.services ?? []).reduce((ss, x) => ss + Number(x.mechanic_payout ?? 0), 0),
+  // Ожидается поступлений: неоплаченная часть по запланированным/в работе записям месяца.
+  const expectedIncome = upcomingAppts.reduce(
+    (s, a) => s + Math.max(0, (a.total_price ?? 0) - Number(a.paid_amount ?? 0)),
     0,
   );
+  const expectedCount = upcomingAppts.length;
+
+  // Начислено мастерам (по всем выполненным работам месяца) — с учётом дефолтного %.
+  const mechanicsAccrued = doneAppts.reduce((s, a) => s + apptPayout(a), 0);
   // Фактически выплачено мастерам за месяц (авансы)
   const mechanicsPaid = advances.reduce((s, a) => s + Number(a.amount ?? 0), 0);
 
 
   const otherExpenses = expenses.reduce((s, e) => s + Number(e.amount ?? 0), 0);
   // Чистая прибыль: оборот минус НАЧИСЛЕННАЯ ЗП мастерам (обязательство сервиса) и прочие расходы.
-  // Раньше вычитали фактически выплаченные авансы — из-за этого прибыль скакала: выплатил аванс —
-  // «прибыль» упала, не выплатил — «прибыль» завышена. Правильно учитывать начисление.
   const profit = revenue - mechanicsAccrued - otherExpenses;
   // Долг перед мастерами = начислено − уже выплачено авансами
   const mechanicsDebt = Math.max(0, mechanicsAccrued - mechanicsPaid);
@@ -137,12 +166,18 @@ function ExpensesPage() {
         <MonthPicker month={month} setMonth={setMonth} />
       </div>
 
-      <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+      <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-7">
         <StatCard
           label="Оборот кассы"
           value={fmt(revenue)}
           hint="платежи с датой в этом месяце"
           tone="neutral"
+        />
+        <StatCard
+          label="Ожидается поступлений"
+          value={fmt(expectedIncome)}
+          hint={`${expectedCount} запис${expectedCount === 1 ? "ь" : expectedCount > 1 && expectedCount < 5 ? "и" : "ей"} · если не отменятся`}
+          tone={expectedIncome > 0 ? "neutral" : "neutral"}
         />
         <StatCard
           label="Ждём оплату"
@@ -169,6 +204,7 @@ function ExpensesPage() {
           tone={profit >= 0 ? "good" : "bad"}
         />
       </div>
+
 
 
       <Tabs defaultValue="summary">
