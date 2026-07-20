@@ -221,26 +221,9 @@ function ExpensesPage() {
             >
               {fmt(cashProfit)}
             </div>
-            <div className="mt-1 text-[10px] leading-tight text-muted-foreground">
-              касса − авансы мастерам − расходы
-            </div>
-            <div className="mt-auto border-t pt-3">
-              <div className="flex items-center justify-between gap-2 text-[11px]">
-                <span className="min-w-0 truncate text-muted-foreground">
-                  Прибыль (начисление)
-                </span>
-                <span
-                  className={`shrink-0 font-semibold ${accruedProfit >= 0 ? "text-green-700" : "text-red-700"}`}
-                >
-                  {fmt(accruedProfit)}
-                </span>
-              </div>
-              <div className="mt-0.5 text-[10px] text-muted-foreground">
-                выполнено − начислено ЗП − расходы
-              </div>
-            </div>
           </CardContent>
         </Card>
+
 
         {/* Доходы */}
         <Card>
