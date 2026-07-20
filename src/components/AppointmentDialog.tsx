@@ -61,6 +61,9 @@ import { useServiceUsage } from "@/hooks/useServiceUsage";
 
 import { STATUS_LABELS, type AppointmentStatus, type ReminderInterval } from "@/lib/types";
 import { Checkbox } from "@/components/ui/checkbox";
+import { effectivePayout, type PayoutMechanic, type PayoutService } from "@/lib/payouts";
+import { useConfirm } from "@/components/ConfirmDialog";
+
 
 type SvcRow = { service_id: string; price: number; mechanic_payout: number };
 
@@ -139,19 +142,13 @@ export function AppointmentDialog({
   });
   const rateFor = (svc_id: string, price: number) => {
     const override = rates.find((r) => r.service_id === svc_id)?.amount;
-    if (override != null && override > 0) return override;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const svc = services.find((s) => s.id === svc_id) as any;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const mech = mechanics.find((m) => m.id === mechanicId) as any;
-    const mechPct = Number(mech?.default_payout_percent);
-    const svcPct = Number(svc?.default_payout_percent);
-    const pct = Number.isFinite(mechPct) && mechPct > 0
-      ? mechPct
-      : Number.isFinite(svcPct) && svcPct > 0
-        ? svcPct
-        : 50;
-    return Math.round((price * pct) / 100);
+    if (override != null && override > 0) return Math.round(override);
+    return effectivePayout({
+      storedPayout: 0,
+      price,
+      mechanic: mechanics.find((m) => m.id === mechanicId) as PayoutMechanic,
+      service: services.find((s) => s.id === svc_id) as PayoutService,
+    });
   };
 
 
