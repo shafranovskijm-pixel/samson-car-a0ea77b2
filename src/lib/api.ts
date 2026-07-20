@@ -310,6 +310,15 @@ export const listClientComments = async (client_id: string): Promise<ClientComme
   return (data ?? []) as ClientComment[];
 };
 
+export const listAllClientComments = async (): Promise<ClientComment[]> => {
+  const { data, error } = await anySb
+    .from("client_comments")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as ClientComment[];
+};
+
 export const createClientComment = async (client_id: string, body: string) => {
   const { data, error } = await anySb
     .from("client_comments")
