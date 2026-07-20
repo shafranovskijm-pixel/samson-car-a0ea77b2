@@ -1050,8 +1050,6 @@ function LiveClock() {
     return () => clearInterval(id);
   }, []);
   const timeStr = format(now, "HH:mm:ss");
-  const dateStr = format(now, "EEE, d MMM", { locale: undefined as never }); // fallback below
-  // date-fns без locale — покажем ISO-подобно; ниже собираем русскую дату вручную
   const dow = ["вс", "пн", "вт", "ср", "чт", "пт", "сб"][now.getDay()];
   const months = ["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
   const ruDate = `${dow}, ${now.getDate()} ${months[now.getMonth()]}`;
@@ -1060,7 +1058,7 @@ function LiveClock() {
       <div className="font-mono text-sm font-semibold tabular-nums text-foreground sm:text-base">
         {timeStr}
       </div>
-      <div className="text-[10px] text-muted-foreground sm:text-xs" title={dateStr}>
+      <div className="text-[10px] text-muted-foreground sm:text-xs">
         {ruDate}
       </div>
     </div>
