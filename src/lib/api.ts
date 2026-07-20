@@ -625,3 +625,72 @@ export const updateServiceDefaultPayoutPercent = async (id: string, percent: num
     .eq("id", id);
   if (error) throw error;
 };
+
+// APPOINTMENT PAYMENTS (журнал платежей клиента)
+export type AppointmentPayment = {
+  id: string;
+  appointment_id: string;
+  paid_at: string; // YYYY-MM-DD
+  amount: number;
+  method: string | null;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export const listAppointmentPayments = async (
+  appointment_id: string,
+): Promise<AppointmentPayment[]> => {
+  const { data, error } = await anySb
+    .from("appointment_payments")
+    .select("*")
+    .eq("appointment_id", appointment_id)
+    .order("paid_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as AppointmentPayment[];
+};
+
+export const createAppointmentPayment = async (input: {
+  appointment_id: string;
+  paid_at: string;
+  amount: number;
+  method?: string | null;
+  note?: string | null;
+}): Promise<AppointmentPayment> => {
+  const { data, error } = await anySb
+    .from("appointment_payments")
+    .insert(input)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as AppointmentPayment;
+};
+
+export const deleteAppointmentPayment = async (id: string) => {
+  const { error } = await anySb.from("appointment_payments").delete().eq("id", id);
+  if (error) throw error;
+};
+
+export const clearAppointmentPayments = async (appointment_id: string) => {
+  const { error } = await anySb
+    .from("appointment_payments")
+    .delete()
+    .eq("appointment_id", appointment_id);
+  if (error) throw error;
+};
+
+// Сумма платежей за диапазон дат (по фактической дате оплаты).
+export const listPaymentsRange = async (
+  from: string,
+  to: string,
+): Promise<AppointmentPayment[]> => {
+  const { data, error } = await anySb
+    .from("appointment_payments")
+    .select("*")
+    .gte("paid_at", from)
+    .lte("paid_at", to)
+    .order("paid_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as AppointmentPayment[];
+};
+
