@@ -166,43 +166,143 @@ function ExpensesPage() {
         <MonthPicker month={month} setMonth={setMonth} />
       </div>
 
-      <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-7">
-        <StatCard
-          label="Оборот кассы"
-          value={fmt(revenue)}
-          hint="платежи с датой в этом месяце"
-          tone="neutral"
-        />
-        <StatCard
-          label="Ожидается поступлений"
-          value={fmt(expectedIncome)}
-          hint={`${expectedCount} запис${expectedCount === 1 ? "ь" : expectedCount > 1 && expectedCount < 5 ? "и" : "ей"} · если не отменятся`}
-          tone={expectedIncome > 0 ? "neutral" : "neutral"}
-        />
-        <StatCard
-          label="Ждём оплату"
-          value={fmt(unpaidBalance)}
-          hint="по выполненным работам месяца"
-          tone={unpaidBalance > 0 ? "warn" : "neutral"}
-        />
-        <StatCard
-          label="ЗП мастерам (начислено)"
-          value={fmt(mechanicsAccrued)}
-          hint={`выплачено ${fmt(mechanicsPaid)}`}
-          tone="warn"
-        />
-        <StatCard
-          label="Долг мастерам"
-          value={fmt(mechanicsDebt)}
-          tone={mechanicsDebt > 0 ? "warn" : "good"}
-        />
-        <StatCard label="Прочие расходы" value={fmt(otherExpenses)} tone="warn" />
-        <StatCard
-          label="Чистая прибыль"
-          value={fmt(profit)}
-          hint="касса − начисл. ЗП − расходы"
-          tone={profit >= 0 ? "good" : "bad"}
-        />
+      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {/* Чистая прибыль — герой */}
+        <Card
+          className={`border-2 ${profit >= 0 ? "border-green-500/30" : "border-red-500/30"}`}
+        >
+          <CardContent className="p-5">
+            <div className="text-xs font-medium text-muted-foreground">Чистая прибыль</div>
+            <div
+              className={`mt-2 text-3xl font-bold tracking-tight ${
+                profit >= 0 ? "text-green-600" : "text-red-600"
+              }`}
+            >
+              {fmt(profit)}
+            </div>
+            <div className="mt-4 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Формула
+            </div>
+            <div className="mt-1 text-[11px] text-muted-foreground">
+              касса − начисл. ЗП − расходы
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Доходы */}
+        <Card>
+          <CardContent className="flex h-full flex-col p-5">
+            <div>
+              <div className="text-xs font-medium text-muted-foreground">Доходы</div>
+              <div className="mt-2 text-2xl font-bold">{fmt(revenue)}</div>
+              <div className="mt-1 text-[11px] text-muted-foreground">
+                Оборот кассы (платежи за месяц)
+              </div>
+            </div>
+            <div className="mt-auto grid grid-cols-2 gap-2 border-t pt-3">
+              <div className="min-w-0">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Ожидается
+                </div>
+                <div className="mt-0.5 truncate text-sm font-semibold">
+                  {fmt(expectedIncome)}
+                </div>
+                <div className="text-[10px] text-muted-foreground">
+                  {expectedCount} запис
+                  {expectedCount === 1
+                    ? "ь"
+                    : expectedCount > 1 && expectedCount < 5
+                      ? "и"
+                      : "ей"}
+                </div>
+              </div>
+              <div className="min-w-0">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Ждём оплату
+                </div>
+                <div
+                  className={`mt-0.5 truncate text-sm font-semibold ${unpaidBalance > 0 ? "text-amber-600" : ""}`}
+                >
+                  {fmt(unpaidBalance)}
+                </div>
+                <div className="text-[10px] text-muted-foreground">по работам месяца</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* ЗП мастерам */}
+        <Card>
+          <CardContent className="flex h-full flex-col p-5">
+            <div>
+              <div className="text-xs font-medium text-muted-foreground">
+                Зарплаты (мастера)
+              </div>
+              <div className="mt-2 text-2xl font-bold text-amber-600">
+                {fmt(mechanicsAccrued)}
+              </div>
+              <div className="mt-1 text-[11px] text-muted-foreground">
+                Начислено в этом периоде
+              </div>
+            </div>
+            <div className="mt-auto border-t pt-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Текущий долг
+                </span>
+                <span
+                  className={`text-sm font-semibold ${mechanicsDebt > 0 ? "text-amber-600" : "text-green-600"}`}
+                >
+                  {fmt(mechanicsDebt)}
+                </span>
+              </div>
+              <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full bg-amber-500 transition-all"
+                  style={{
+                    width: `${
+                      mechanicsAccrued > 0
+                        ? Math.min(100, Math.round((mechanicsPaid / mechanicsAccrued) * 100))
+                        : 0
+                    }%`,
+                  }}
+                />
+              </div>
+              <div className="mt-1 text-[10px] text-muted-foreground">
+                выплачено {fmt(mechanicsPaid)}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Прочие расходы */}
+        <Card>
+          <CardContent className="flex h-full flex-col p-5">
+            <div>
+              <div className="text-xs font-medium text-muted-foreground">Прочие расходы</div>
+              <div className="mt-2 text-2xl font-bold text-amber-600">
+                {fmt(otherExpenses)}
+              </div>
+              <div className="mt-1 text-[11px] text-muted-foreground">
+                Аренда, налоги, расходники
+              </div>
+            </div>
+            <div className="mt-auto pt-3">
+              <button
+                type="button"
+                onClick={() =>
+                  document
+                    .getElementById("expenses-block")
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                }
+                className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground transition-colors hover:text-amber-600"
+              >
+                Подробнее
+                <ChevronRight className="h-3 w-3" />
+              </button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
 
