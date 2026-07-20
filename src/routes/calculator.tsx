@@ -105,6 +105,7 @@ type Step = 1 | 2 | 3;
 
 function LandingPage() {
   const { carId } = Route.useSearch();
+  const navigate = useNavigate();
   const { data: brands = [] } = useQuery({ queryKey: ["brands"], queryFn: listBrands });
   const { data: services = [] } = useQuery({ queryKey: ["services"], queryFn: listServices });
   const { data: cars = [] } = useQuery({
@@ -1316,20 +1317,38 @@ function LandingPage() {
                   <Button
                     className="w-full bg-red-600 text-white hover:bg-red-700"
                     size="lg"
-                    asChild
+                    onClick={async () => {
+                      // Собираем обычные услуги
+                      const parts: string[] = [];
+                      services.forEach((s) => {
+                        if (selected.has(s.id))
+                          parts.push(`${s.id}:${priceOf(s.id, s.base_price)}`);
+                      });
+                      // Материализуем «свои» услуги авто — иначе в записи их не будет
+                      for (const c of customServices.items) {
+                        if (!selected.has(customId(c.id))) continue;
+                        try {
+                          const svc = await upsertServiceByCategoryName({
+                            category: c.category,
+                            name: c.name,
+                            price: Number(c.price) || 0,
+                          });
+                          parts.push(`${svc.id}:${Number(c.price) || 0}`);
+                        } catch (e) {
+                          console.warn("materialize custom failed", e);
+                        }
+                      }
+                      navigate({
+                        to: "/calendar",
+                        search: {
+                          services: parts.join(","),
+                          brand: brandId || undefined,
+                          carId: carId || undefined,
+                        },
+                      });
+                    }}
                   >
-                    <Link
-                      to="/calendar"
-                      search={{
-                        services: services
-                          .filter((s) => selected.has(s.id))
-                          .map((s) => `${s.id}:${priceOf(s.id, s.base_price)}`)
-                          .join(","),
-                        brand: brandId || undefined,
-                      }}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" /> Записаться на сервис
-                    </Link>
+                    <CalendarIcon className="mr-2 h-4 w-4" /> Записаться на сервис
                   </Button>
                   <Button
                     variant="outline"
