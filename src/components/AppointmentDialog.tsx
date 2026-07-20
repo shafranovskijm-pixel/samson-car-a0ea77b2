@@ -123,7 +123,15 @@ export function AppointmentDialog({
     if (override != null && override > 0) return override;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const svc = services.find((s) => s.id === svc_id) as any;
-    const pct = Number(svc?.default_payout_percent ?? 50);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const mech = mechanics.find((m) => m.id === mechanicId) as any;
+    const mechPct = Number(mech?.default_payout_percent);
+    const svcPct = Number(svc?.default_payout_percent);
+    const pct = Number.isFinite(mechPct) && mechPct > 0
+      ? mechPct
+      : Number.isFinite(svcPct) && svcPct > 0
+        ? svcPct
+        : 50;
     return Math.round((price * pct) / 100);
   };
 
