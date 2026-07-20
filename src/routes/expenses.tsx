@@ -804,7 +804,13 @@ function MechanicDetails({
 }
 
 // -------- Services block --------
-function ServicesBlock({ appts }: { appts: ApptRow[] }) {
+function ServicesBlock({
+  appts,
+  effPayout,
+}: {
+  appts: ApptRow[];
+  effPayout: (mechanicId: string | null, price: number, stored: number) => number;
+}) {
   const rows = useMemo(() => {
     const map = new Map<
       string,
@@ -821,12 +827,13 @@ function ServicesBlock({ appts }: { appts: ApptRow[] }) {
         };
         cur.count += 1;
         cur.revenue += Number(s.price ?? 0);
-        cur.payout += Number(s.mechanic_payout ?? 0);
+        cur.payout += effPayout(a.mechanic_id, Number(s.price ?? 0), Number(s.mechanic_payout ?? 0));
         map.set(key, cur);
       });
     });
     return [...map.values()].sort((a, b) => b.revenue - a.revenue);
-  }, [appts]);
+  }, [appts, effPayout]);
+
 
   return (
     <Card>
