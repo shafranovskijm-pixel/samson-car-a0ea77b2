@@ -48,6 +48,7 @@ import {
   listMechanics,
   listServices,
   updateAppointment,
+  updateService,
   upsertServiceByCategoryName,
 } from "@/lib/api";
 import { useCarCustomServices } from "@/hooks/useCarCustomServices";
