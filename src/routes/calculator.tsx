@@ -987,17 +987,26 @@ function LandingPage() {
                           onClick={async () => {
                             setSavingCustom(true);
                             try {
-                              await customServices.add({
+                              const res = await customServices.add({
                                 category: activeCategory!,
                                 name: customDraft.name.trim(),
                                 price: Number(customDraft.price) || 0,
                                 duration_minutes: Number(customDraft.minutes) || 30,
                               });
+                              if (res?.wasUpdate) {
+                                toast.success(
+                                  `Цена обновлена: ${res.row.name} — ${res.row.price} ₽`,
+                                );
+                              } else if (res) {
+                                toast.success(
+                                  `Добавлено для ${brandName} ${modelName} ${year}: ${res.row.name}`,
+                                );
+                              }
                               setCustomDraft({ name: "", price: "", minutes: "30" });
                               setAddingCustom(false);
                             } catch (e) {
                               console.error(e);
-                              alert("Не удалось сохранить (нужно войти).");
+                              toast.error(humanizeSupabaseError(e));
                             } finally {
                               setSavingCustom(false);
                             }
