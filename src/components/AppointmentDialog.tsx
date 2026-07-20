@@ -591,18 +591,11 @@ export function AppointmentDialog({
           <div>
             <Label>Услуги</Label>
             <div className="mt-2 flex gap-2">
-              <Select value={addServiceId} onValueChange={setAddServiceId}>
-                <SelectTrigger className="flex-1"><SelectValue placeholder="Добавить услугу" /></SelectTrigger>
-                <SelectContent>
-                  {services
-                    .filter((s) => !selected.some((x) => x.service_id === s.id))
-                    .map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.category} — {s.name} · {s.base_price} ₽
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+              <ServicePicker
+                services={services.filter((s) => !selected.some((x) => x.service_id === s.id))}
+                value={addServiceId}
+                onChange={setAddServiceId}
+              />
               <Button type="button" onClick={addService} disabled={!addServiceId}>
                 <Plus className="h-4 w-4" />
               </Button>
@@ -646,7 +639,7 @@ export function AppointmentDialog({
             <div className="mt-3 rounded-md border border-dashed p-3">
               <div className="mb-2 text-xs font-medium text-muted-foreground">
                 Добавить свою услугу
-                {!carCustom.enabled && " (выберите машину с указанным годом)"}
+                {!carCustom.enabled && " (без сохранения для машины — выберите машину с годом, чтобы запомнить)"}
               </div>
               <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_100px_auto]">
                 <Select value={customCat} onValueChange={setCustomCat}>
@@ -684,8 +677,8 @@ export function AppointmentDialog({
                 />
                 <Button
                   type="button"
-                  onClick={addCustomService}
-                  disabled={!carCustom.enabled || savingCustom}
+                  onClick={() => addCustomService()}
+                  disabled={savingCustom}
                 >
                   <Plus className="mr-1 h-4 w-4" />
                   Добавить
@@ -698,6 +691,79 @@ export function AppointmentDialog({
                     value={customName}
                     onChange={(e) => setCustomName(e.target.value)}
                   />
+                </div>
+              )}
+
+              {/* Точное совпадение */}
+              {duplicates.exact && (
+                <div className="mt-3 rounded-md border border-amber-400/60 bg-amber-50 p-2 text-xs dark:bg-amber-950/30">
+                  <div className="mb-1.5 font-medium text-amber-900 dark:text-amber-200">
+                    Такая услуга уже есть в справочнике
+                  </div>
+                  <div className="mb-2 text-muted-foreground">
+                    {duplicates.exact.category} — {duplicates.exact.name} ·{" "}
+                    {duplicates.exact.base_price} ₽
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      disabled={savingCustom}
+                      onClick={() => {
+                        addExistingToRecord(duplicates.exact!);
+                        toast.success("Добавлено в запись");
+                        setCustomName("");
+                        setCustomPrice("");
+                      }}
+                    >
+                      <Check className="mr-1 h-3.5 w-3.5" />
+                      Добавить в запись
+                    </Button>
+                    {Number(customPrice) > 0 &&
+                      Number(customPrice) !== duplicates.exact.base_price && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={savingCustom}
+                          onClick={() =>
+                            addCustomService({ updatePriceOf: duplicates.exact!.id })
+                          }
+                        >
+                          Обновить цену на {Number(customPrice)} ₽ и добавить
+                        </Button>
+                      )}
+                  </div>
+                </div>
+              )}
+
+              {/* Похожие */}
+              {!duplicates.exact && duplicates.similar.length > 0 && (
+                <div className="mt-3 rounded-md border bg-muted/30 p-2 text-xs">
+                  <div className="mb-1.5 flex items-center gap-1 font-medium text-muted-foreground">
+                    <Search className="h-3.5 w-3.5" />
+                    Похоже, есть уже такие:
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {duplicates.similar.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5 hover:border-primary hover:text-primary"
+                        onClick={() => {
+                          addExistingToRecord(s);
+                          toast.success("Добавлено в запись");
+                          setCustomName("");
+                          setCustomPrice("");
+                        }}
+                      >
+                        {s.category} — {s.name} · {s.base_price} ₽
+                      </button>
+                    ))}
+                  </div>
+                  <div className="mt-1.5 text-[11px] text-muted-foreground">
+                    Не подходит? Тогда нажмите «Добавить» — создастся новая услуга.
+                  </div>
                 </div>
               )}
             </div>
