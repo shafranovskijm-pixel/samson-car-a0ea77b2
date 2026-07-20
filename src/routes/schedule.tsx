@@ -449,47 +449,67 @@ function SchedulePage() {
       />
 
       <Dialog
-        open={prepaidDlg.open}
-        onOpenChange={(o) => setPrepaidDlg((d) => ({ ...d, open: o }))}
+        open={payDlg.open}
+        onOpenChange={(o) => setPayDlg((d) => ({ ...d, open: o }))}
       >
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Предоплата</DialogTitle>
+            <DialogTitle>Записать платёж</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div className="text-sm text-muted-foreground">
-              Итого по записи: <span className="font-medium text-foreground">{prepaidDlg.total} ₽</span>
+              Итого: <span className="font-medium text-foreground">{payDlg.total} ₽</span>
+              {payDlg.paid > 0 && (
+                <> · уже внесено <span className="font-medium text-foreground">{payDlg.paid} ₽</span></>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="pay-date">Дата</Label>
+                <Input
+                  id="pay-date"
+                  type="date"
+                  value={payDlg.paid_at}
+                  onChange={(e) => setPayDlg((d) => ({ ...d, paid_at: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="pay-amount">Сумма, ₽</Label>
+                <Input
+                  id="pay-amount"
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  value={payDlg.amount}
+                  onChange={(e) => setPayDlg((d) => ({ ...d, amount: e.target.value }))}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") submitPayDialog();
+                  }}
+                  autoFocus
+                />
+              </div>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="prepaid-amount">Сколько внесли, ₽</Label>
+              <Label htmlFor="pay-note">Заметка (необязательно)</Label>
               <Input
-                id="prepaid-amount"
-                type="number"
-                inputMode="numeric"
-                min={0}
-                max={prepaidDlg.total}
-                value={prepaidDlg.amount}
-                onChange={(e) => setPrepaidDlg((d) => ({ ...d, amount: e.target.value }))}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") submitPrepaid();
-                }}
-                autoFocus
+                id="pay-note"
+                value={payDlg.note}
+                onChange={(e) => setPayDlg((d) => ({ ...d, note: e.target.value }))}
+                placeholder="Например: наличными"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setPrepaidDlg((d) => ({ ...d, open: false }))}
-            >
+            <Button variant="outline" onClick={() => setPayDlg((d) => ({ ...d, open: false }))}>
               Отмена
             </Button>
-            <Button onClick={submitPrepaid} disabled={paymentMut.isPending}>
+            <Button onClick={submitPayDialog} disabled={addPayMut.isPending}>
               Сохранить
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
 
       {printApptId && (
         <ApptPrint
