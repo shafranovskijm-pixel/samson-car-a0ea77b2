@@ -409,22 +409,29 @@ function SchedulePage() {
                             </button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            {(Object.keys(PAYMENT_LABELS) as PaymentStatus[]).map((p) => (
-                              <DropdownMenuItem
-                                key={p}
-                                onClick={() =>
-                                  setPayment(a.id, p, a.total_price ?? 0, a.paid_amount ?? 0)
-                                }
-                                className="gap-2"
-                              >
-                                <Check
-                                  className={`h-3.5 w-3.5 ${p === payment ? "opacity-100" : "opacity-0"}`}
-                                />
-                                {PAYMENT_LABELS[p]}
-                              </DropdownMenuItem>
-                            ))}
+                            <DropdownMenuItem
+                              onClick={() =>
+                                payFullNow(a.id, a.total_price ?? 0, a.paid_amount ?? 0)
+                              }
+                            >
+                              Оплачено полностью
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                openPayDialog(a.id, a.total_price ?? 0, a.paid_amount ?? 0)
+                              }
+                            >
+                              Записать платёж…
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => clearPayMut.mutate(a.id)}
+                              className="text-destructive"
+                            >
+                              Сбросить оплату
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
+
                       </div>
                     </div>
                   </div>
