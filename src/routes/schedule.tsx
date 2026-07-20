@@ -231,6 +231,14 @@ function SchedulePage() {
             ))}
           </SelectContent>
         </Select>
+        <Select value={sortMode} onValueChange={(v) => changeSort(v as SortMode)}>
+          <SelectTrigger className="w-64"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {(Object.keys(SORT_LABELS) as SortMode[]).map((k) => (
+              <SelectItem key={k} value={k}>{SORT_LABELS[k]}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {grouped.length === 0 && (
