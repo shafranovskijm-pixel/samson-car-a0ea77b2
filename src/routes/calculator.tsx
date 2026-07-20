@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
@@ -23,7 +23,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 
-import { listBrands, listCars, listServices } from "@/lib/api";
+import { listBrands, listCars, listServices, upsertServiceByCategoryName } from "@/lib/api";
 import {
   TIER_COEFFICIENT,
   TIER_LABEL,
@@ -49,6 +49,8 @@ import { BrandLogo } from "@/components/BrandLogo";
 import { PrintDocument, type PrintKV } from "@/components/PrintDocument";
 import { useServiceUsage } from "@/hooks/useServiceUsage";
 import { useCarCustomServices } from "@/hooks/useCarCustomServices";
+import { useConfirm } from "@/components/ConfirmDialog";
+import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
 import { usePriceOverrides } from "@/hooks/usePriceOverrides";
 import { useQueryClient } from "@tanstack/react-query";
@@ -105,6 +107,8 @@ type Step = 1 | 2 | 3;
 
 function LandingPage() {
   const { carId } = Route.useSearch();
+  const navigate = useNavigate();
+  const confirm = useConfirm();
   const { data: brands = [] } = useQuery({ queryKey: ["brands"], queryFn: listBrands });
   const { data: services = [] } = useQuery({ queryKey: ["services"], queryFn: listServices });
   const { data: cars = [] } = useQuery({
@@ -1043,12 +1047,13 @@ function LandingPage() {
                                   <button
                                     type="button"
                                     onClick={async () => {
-                                      if (
-                                        !confirm(
-                                          `Удалить услугу «${c.name}» для ${brandName} ${modelName} ${year}?`,
-                                        )
-                                      )
-                                        return;
+                                      const ok = await confirm({
+                                        title: "Удалить услугу?",
+                                        description: `Услуга «${c.name}» будет удалена только для ${brandName} ${modelName} ${year}.`,
+                                        destructive: true,
+                                        confirmText: "Удалить",
+                                      });
+                                      if (!ok) return;
                                       try {
                                         await customServices.remove(c.id);
                                         setSelected((prev) => {
@@ -1058,7 +1063,7 @@ function LandingPage() {
                                         });
                                       } catch (e) {
                                         console.error(e);
-                                        alert("Не удалось удалить.");
+                                        toast.error("Не удалось удалить.");
                                       }
                                     }}
                                     className="rounded p-1 text-white/40 hover:bg-red-500/20 hover:text-red-400"
@@ -1316,20 +1321,38 @@ function LandingPage() {
                   <Button
                     className="w-full bg-red-600 text-white hover:bg-red-700"
                     size="lg"
-                    asChild
+                    onClick={async () => {
+                      // Собираем обычные услуги
+                      const parts: string[] = [];
+                      services.forEach((s) => {
+                        if (selected.has(s.id))
+                          parts.push(`${s.id}:${priceOf(s.id, s.base_price)}`);
+                      });
+                      // Материализуем «свои» услуги авто — иначе в записи их не будет
+                      for (const c of customServices.items) {
+                        if (!selected.has(customId(c.id))) continue;
+                        try {
+                          const svc = await upsertServiceByCategoryName({
+                            category: c.category,
+                            name: c.name,
+                            price: Number(c.price) || 0,
+                          });
+                          parts.push(`${svc.id}:${Number(c.price) || 0}`);
+                        } catch (e) {
+                          console.warn("materialize custom failed", e);
+                        }
+                      }
+                      navigate({
+                        to: "/calendar",
+                        search: {
+                          services: parts.join(","),
+                          brand: brandId || undefined,
+                          carId: carId || undefined,
+                        },
+                      });
+                    }}
                   >
-                    <Link
-                      to="/calendar"
-                      search={{
-                        services: services
-                          .filter((s) => selected.has(s.id))
-                          .map((s) => `${s.id}:${priceOf(s.id, s.base_price)}`)
-                          .join(","),
-                        brand: brandId || undefined,
-                      }}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" /> Записаться на сервис
-                    </Link>
+                    <CalendarIcon className="mr-2 h-4 w-4" /> Записаться на сервис
                   </Button>
                   <Button
                     variant="outline"

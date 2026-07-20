@@ -76,6 +76,7 @@ const searchSchema = z.object({
   services: fallback(z.string(), "").default(""),
   brand: fallback(z.string(), "").default(""),
   model: fallback(z.string(), "").default(""),
+  carId: fallback(z.string(), "").default(""),
 });
 
 export const Route = createFileRoute("/calendar")({
@@ -114,6 +115,7 @@ function CalendarPage() {
       services: { service_id: string; price: number }[];
       brand: string;
       model: string;
+      carId: string;
     } | null;
   }>({ open: false, id: null, start: null, prefill: null });
 
@@ -179,12 +181,13 @@ function CalendarPage() {
 
   const events = mode === "appointments" ? appointmentEvents : shiftEvents;
 
-  const hasPrefill = !!(search.services || search.brand || search.model);
+  const hasPrefill = !!(search.services || search.brand || search.model || search.carId);
   const currentPrefill = hasPrefill
     ? {
         services: parseServices(search.services),
         brand: search.brand,
         model: search.model,
+        carId: search.carId,
       }
     : null;
 
@@ -556,6 +559,7 @@ function CalendarPage() {
         defaultServices={dialog.prefill?.services}
         defaultBrandId={dialog.prefill?.brand}
         defaultModelId={dialog.prefill?.model}
+        defaultCarId={dialog.prefill?.carId || null}
       />
 
       <Dialog

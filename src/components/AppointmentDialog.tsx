@@ -405,15 +405,12 @@ export function AppointmentDialog({
     }
   }, [carId, clientId, cars]);
 
-  // when mechanic changes, refill mechanic_payout from rates for services with 0 payout
+  // При смене мастера пересчитываем выплату для ВСЕХ услуг —
+  // прежняя ставка от другого мастера не должна «залипать».
   useEffect(() => {
     if (!mechanicId) return;
     setSelected((prev) =>
-      prev.map((s) =>
-        s.mechanic_payout === 0
-          ? { ...s, mechanic_payout: rateFor(s.service_id, s.price) }
-          : s,
-      ),
+      prev.map((s) => ({ ...s, mechanic_payout: rateFor(s.service_id, s.price) })),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mechanicId, rates]);
@@ -803,7 +800,9 @@ export function AppointmentDialog({
                             const p = Number(e.target.value);
                             setSelected((prev) =>
                               prev.map((x) =>
-                                x.service_id === row.service_id ? { ...x, price: p } : x,
+                                x.service_id === row.service_id
+                                  ? { ...x, price: p, mechanic_payout: rateFor(x.service_id, p) }
+                                  : x,
                               ),
                             );
                           }}

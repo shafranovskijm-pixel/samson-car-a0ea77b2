@@ -49,7 +49,7 @@ export const useCarCustomServices = (
     setItems(enabled ? readLocal(k) : []);
   }, [k, enabled]);
 
-  // fetch cloud + merge
+  // fetch cloud + merge с локальным (оффлайн-запись не должна перетираться)
   useEffect(() => {
     if (!enabled) return;
     let cancelled = false;
@@ -62,8 +62,15 @@ export const useCarCustomServices = (
         .eq("year", year!);
       if (error || cancelled) return;
       const cloud = (data ?? []) as CarCustomService[];
-      setItems(cloud);
-      writeLocal(k, cloud);
+      setItems((prev) => {
+        // Merge by id: cloud wins on conflicts, локальные (ещё не синхронизированные) сохраняются.
+        const byId = new Map<string, CarCustomService>();
+        prev.forEach((x) => byId.set(x.id, x));
+        cloud.forEach((x) => byId.set(x.id, x));
+        const merged = Array.from(byId.values());
+        writeLocal(k, merged);
+        return merged;
+      });
     })();
     return () => {
       cancelled = true;
