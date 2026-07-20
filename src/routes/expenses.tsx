@@ -46,9 +46,11 @@ import {
   listMechanicAdvances,
   createMechanicAdvance,
   deleteMechanicAdvance,
+  listPaymentsRange,
   type Expense,
   type MechanicAdvance,
 } from "@/lib/api";
+
 
 export const Route = createFileRoute("/expenses")({
   ssr: false,
