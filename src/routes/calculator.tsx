@@ -104,8 +104,14 @@ const CATEGORIES: { name: string; img: string }[] = [
 type Step = 1 | 2 | 3;
 
 function LandingPage() {
+  const { carId } = Route.useSearch();
   const { data: brands = [] } = useQuery({ queryKey: ["brands"], queryFn: listBrands });
   const { data: services = [] } = useQuery({ queryKey: ["services"], queryFn: listServices });
+  const { data: cars = [] } = useQuery({
+    queryKey: ["cars"],
+    queryFn: listCars,
+    enabled: !!carId,
+  });
 
   const [step, setStep] = useState<Step>(1);
 
@@ -118,6 +124,8 @@ function LandingPage() {
   const [modelInput, setModelInput] = useState("");
   const [yearInput, setYearInput] = useState("");
   const [addingMod, setAddingMod] = useState(false);
+  const [carFromClient, setCarFromClient] = useState(false);
+  const [prefillDone, setPrefillDone] = useState(false);
   const [addForm, setAddForm] = useState({
     body_code: "",
     engine_code: "",
