@@ -305,13 +305,17 @@ function MechanicDefaultPercent({ mechanic }: { mechanic: Mechanic }) {
   );
 }
 
-function MechanicSalary({ mechanicId }: { mechanicId: string }) {
+function MechanicSalary({ mechanicId, defaultPercent }: { mechanicId: string; defaultPercent: number }) {
   const { data: rows = [] } = useQuery({
     queryKey: ["mechanic-payouts", mechanicId],
     queryFn: () => listMechanicPayouts(mechanicId),
   });
   const [period, setPeriod] = useState<Period>("month");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  const pct = defaultPercent > 0 ? defaultPercent : 50;
+  const effPayout = (r: { price: number; mechanic_payout: number }) =>
+    r.mechanic_payout > 0 ? r.mechanic_payout : Math.round((Number(r.price) * pct) / 100);
 
   const filtered = useMemo(() => {
     const start = periodStart(period);
@@ -326,9 +330,9 @@ function MechanicSalary({ mechanicId }: { mechanicId: string }) {
   );
 
   const totalRevenue = filtered.reduce((s, r) => s + r.price, 0);
-  const totalPayout = filtered.reduce((s, r) => s + r.mechanic_payout, 0);
+  const totalPayout = filtered.reduce((s, r) => s + effPayout(r), 0);
   const avgPercent = totalRevenue > 0 ? Math.round((totalPayout / totalRevenue) * 100) : 0;
-  const pendingTotal = pending.reduce((s, r) => s + r.mechanic_payout, 0);
+  const pendingTotal = pending.reduce((s, r) => s + effPayout(r), 0);
 
   const toggle = (key: string) =>
     setExpanded((prev) => {
