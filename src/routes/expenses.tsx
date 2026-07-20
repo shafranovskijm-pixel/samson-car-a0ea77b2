@@ -493,13 +493,17 @@ function MechanicsBlock({
   advances,
   fromIso,
   toIso,
+  apptPayout,
 }: {
   mechanics: { id: string; full_name: string }[];
   appts: ApptRow[];
   advances: MechanicAdvance[];
   fromIso: string;
   toIso: string;
+  apptPayout: (a: ApptRow) => number;
+  effPayout: (mechanicId: string | null, price: number, stored: number) => number;
 }) {
+
   const byMech = useMemo(() => {
     const map = new Map<string, { payout: number; rows: ApptRow[] }>();
     appts.forEach((a) => {
