@@ -230,12 +230,15 @@ function ExpensesPage() {
             advances={advances}
             fromIso={fromIso}
             toIso={toIso}
+            apptPayout={apptPayout}
+            effPayout={effPayout}
           />
         </TabsContent>
 
         <TabsContent value="services" className="mt-4">
-          <ServicesBlock appts={doneAppts} />
+          <ServicesBlock appts={doneAppts} effPayout={effPayout} />
         </TabsContent>
+
       </Tabs>
     </div>
   );
