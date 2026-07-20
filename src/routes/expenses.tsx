@@ -193,46 +193,49 @@ function ExpensesPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Расходы</h1>
-          <p className="text-sm text-muted-foreground">
+      <header className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:mb-8">
+        <div className="min-w-0">
+          <h1 className="truncate text-xl font-bold sm:text-2xl">Расходы</h1>
+          <p className="mt-0.5 truncate text-xs text-muted-foreground sm:text-sm">
             Оборот, прибыль, ЗП мастеров и авансы за месяц
           </p>
         </div>
-        <MonthPicker month={month} setMonth={setMonth} />
-      </div>
+        <div className="shrink-0">
+          <MonthPicker month={month} setMonth={setMonth} />
+        </div>
+      </header>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
         {/* Прибыль (кассовая) — герой */}
         <Card
-          className={`border-2 ${cashProfit >= 0 ? "border-green-500/30" : "border-red-500/30"}`}
+          className={`border-2 ${cashProfit >= 0 ? "border-green-500/30" : "border-red-500/30"} sm:col-span-2 lg:col-span-1`}
         >
-          <CardContent className="p-5">
-            <div className="text-xs font-medium text-muted-foreground">Прибыль (касса)</div>
+          <CardContent className="flex h-full flex-col p-4 sm:p-5">
+            <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              Прибыль (касса)
+            </div>
             <div
-              className={`mt-2 text-3xl font-bold tracking-tight ${
+              className={`mt-1.5 truncate text-2xl font-bold tracking-tight sm:text-3xl ${
                 cashProfit >= 0 ? "text-green-600" : "text-red-600"
               }`}
             >
               {fmt(cashProfit)}
             </div>
-            <div className="mt-4 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Формула
-            </div>
             <div className="mt-1 text-[11px] text-muted-foreground">
               касса − авансы мастерам − расходы
             </div>
-            <div className="mt-3 border-t pt-2">
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="text-muted-foreground">Прибыль (начисление)</span>
+            <div className="mt-auto border-t pt-3">
+              <div className="flex items-center justify-between gap-2 text-[11px]">
+                <span className="min-w-0 truncate text-muted-foreground">
+                  Прибыль (начисление)
+                </span>
                 <span
-                  className={`font-semibold ${accruedProfit >= 0 ? "text-green-700" : "text-red-700"}`}
+                  className={`shrink-0 font-semibold ${accruedProfit >= 0 ? "text-green-700" : "text-red-700"}`}
                 >
                   {fmt(accruedProfit)}
                 </span>
               </div>
-              <div className="text-[10px] text-muted-foreground">
+              <div className="mt-0.5 text-[10px] text-muted-foreground">
                 выполнено − начислено ЗП − расходы
               </div>
             </div>
@@ -241,15 +244,15 @@ function ExpensesPage() {
 
         {/* Доходы */}
         <Card>
-          <CardContent className="flex h-full flex-col p-5">
-            <div>
-              <div className="text-xs font-medium text-muted-foreground">Доходы</div>
-              <div className="mt-2 text-2xl font-bold">{fmt(revenue)}</div>
-              <div className="mt-1 text-[11px] text-muted-foreground">
-                Оборот кассы (платежи за месяц)
-              </div>
+          <CardContent className="flex h-full flex-col p-4 sm:p-5">
+            <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              Доходы
             </div>
-            <div className="mt-auto grid grid-cols-2 gap-2 border-t pt-3">
+            <div className="mt-1.5 truncate text-2xl font-bold">{fmt(revenue)}</div>
+            <div className="mt-1 text-[11px] text-muted-foreground">
+              Оборот кассы (платежи за месяц)
+            </div>
+            <div className="mt-auto grid grid-cols-2 gap-3 border-t pt-3">
               <div className="min-w-0">
                 <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                   Ожидается
@@ -257,7 +260,7 @@ function ExpensesPage() {
                 <div className="mt-0.5 truncate text-sm font-semibold">
                   {fmt(expectedIncome)}
                 </div>
-                <div className="text-[10px] text-muted-foreground">
+                <div className="truncate text-[10px] text-muted-foreground">
                   {expectedCount} запис
                   {expectedCount === 1
                     ? "ь"
@@ -275,7 +278,9 @@ function ExpensesPage() {
                 >
                   {fmt(unpaidBalance)}
                 </div>
-                <div className="text-[10px] text-muted-foreground">по работам месяца</div>
+                <div className="truncate text-[10px] text-muted-foreground">
+                  по работам месяца
+                </div>
               </div>
             </div>
           </CardContent>
@@ -283,25 +288,23 @@ function ExpensesPage() {
 
         {/* ЗП мастерам */}
         <Card>
-          <CardContent className="flex h-full flex-col p-5">
-            <div>
-              <div className="text-xs font-medium text-muted-foreground">
-                Зарплаты (мастера)
-              </div>
-              <div className="mt-2 text-2xl font-bold text-amber-600">
-                {fmt(mechanicsAccrued)}
-              </div>
-              <div className="mt-1 text-[11px] text-muted-foreground">
-                Начислено в этом периоде
-              </div>
+          <CardContent className="flex h-full flex-col p-4 sm:p-5">
+            <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              Зарплаты (мастера)
+            </div>
+            <div className="mt-1.5 truncate text-2xl font-bold text-amber-600">
+              {fmt(mechanicsAccrued)}
+            </div>
+            <div className="mt-1 text-[11px] text-muted-foreground">
+              Начислено в этом периоде
             </div>
             <div className="mt-auto border-t pt-3">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                <span className="min-w-0 truncate text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                   {mechanicsDebt >= 0 ? "К выплате" : "Переплата"}
                 </span>
                 <span
-                  className={`text-sm font-semibold ${
+                  className={`shrink-0 text-sm font-semibold ${
                     mechanicsDebt > 0
                       ? "text-amber-600"
                       : mechanicsDebt < 0
@@ -324,7 +327,7 @@ function ExpensesPage() {
                   }}
                 />
               </div>
-              <div className="mt-1 text-[10px] text-muted-foreground">
+              <div className="mt-1 truncate text-[10px] text-muted-foreground">
                 выплачено {fmt(mechanicsPaid)}
               </div>
             </div>
@@ -333,15 +336,15 @@ function ExpensesPage() {
 
         {/* Прочие расходы */}
         <Card>
-          <CardContent className="flex h-full flex-col p-5">
-            <div>
-              <div className="text-xs font-medium text-muted-foreground">Прочие расходы</div>
-              <div className="mt-2 text-2xl font-bold text-amber-600">
-                {fmt(otherExpenses)}
-              </div>
-              <div className="mt-1 text-[11px] text-muted-foreground">
-                Аренда, налоги, расходники
-              </div>
+          <CardContent className="flex h-full flex-col p-4 sm:p-5">
+            <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              Прочие расходы
+            </div>
+            <div className="mt-1.5 truncate text-2xl font-bold text-amber-600">
+              {fmt(otherExpenses)}
+            </div>
+            <div className="mt-1 text-[11px] text-muted-foreground">
+              Аренда, налоги, расходники
             </div>
             <div className="mt-auto pt-3">
               <button
@@ -351,7 +354,7 @@ function ExpensesPage() {
                     .getElementById("expenses-block")
                     ?.scrollIntoView({ behavior: "smooth", block: "start" })
                 }
-                className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground transition-colors hover:text-amber-600"
+                className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground transition-colors hover:text-amber-600"
               >
                 Подробнее
                 <ChevronRight className="h-3 w-3" />
@@ -360,6 +363,8 @@ function ExpensesPage() {
           </CardContent>
         </Card>
       </div>
+
+
 
 
 
