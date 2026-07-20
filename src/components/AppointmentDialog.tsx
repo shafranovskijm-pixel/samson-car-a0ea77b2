@@ -95,6 +95,7 @@ export function AppointmentDialog({
 }: Props) {
 
   const qc = useQueryClient();
+  const confirmAction = useConfirm();
   const isEdit = !!appointmentId;
 
   const { data: clients = [] } = useQuery({ queryKey: ["clients"], queryFn: listClients });
@@ -351,7 +352,13 @@ export function AppointmentDialog({
   };
 
   const removeSavedCustom = async (id: string) => {
-    if (!confirm("Удалить сохранённую услугу для этой машины?")) return;
+    const ok = await confirmAction({
+      title: "Удалить сохранённую услугу?",
+      description: "Услуга больше не будет предлагаться для этой машины.",
+      destructive: true,
+      confirmText: "Удалить",
+    });
+    if (!ok) return;
     try {
       await carCustom.remove(id);
     } catch (e) {
