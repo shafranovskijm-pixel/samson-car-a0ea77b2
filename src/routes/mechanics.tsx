@@ -188,7 +188,7 @@ function MechanicsPage() {
             </div>
 
             <MechanicDefaultPercent mechanic={selected} />
-            <MechanicSalary mechanicId={selected.id} />
+            <MechanicSalary mechanicId={selected.id} defaultPercent={Number(selected.default_payout_percent ?? 50)} />
             <MechanicAdvances mechanicId={selected.id} />
             <MechanicRates mechanicId={selected.id} />
             <MechanicShifts mechanicId={selected.id} color={selected.color} />
