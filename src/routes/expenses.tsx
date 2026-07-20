@@ -46,9 +46,11 @@ import {
   listMechanicAdvances,
   createMechanicAdvance,
   deleteMechanicAdvance,
+  listPaymentsRange,
   type Expense,
   type MechanicAdvance,
 } from "@/lib/api";
+
 
 export const Route = createFileRoute("/expenses")({
   ssr: false,
@@ -89,22 +91,31 @@ function ExpensesPage() {
     queryKey: ["mechanic_advances", fromIso, toIso],
     queryFn: () => listMechanicAdvances({ from: fromIso, to: toIso }),
   });
+  const { data: payments = [] } = useQuery({
+    queryKey: ["payments-range", fromIso, toIso],
+    queryFn: () => listPaymentsRange(fromIso, toIso),
+  });
 
-  // Only completed appointments count towards revenue
+  // Только выполненные записи участвуют в «начислении» ЗП и обязательств.
   const doneAppts = useMemo(() => appts.filter((a) => a.status === "done"), [appts]);
 
-  // Оборот = только фактически оплаченные суммы
-  const revenue = doneAppts.reduce((s, a) => s + Number(a.paid_amount ?? 0), 0);
-  const accrued = doneAppts.reduce((s, a) => s + (a.total_price ?? 0), 0);
-  const unpaidBalance = accrued - revenue;
+  // Оборот кассы за месяц = все фактические платежи клиентов с paid_at в этом месяце
+  // (независимо от того, в каком месяце сама запись).
+  const revenue = payments.reduce((s, p) => s + Number(p.amount ?? 0), 0);
+  // Дебиторка по выполненным работам этого месяца: сколько ещё не оплачено.
+  const unpaidBalance = doneAppts.reduce(
+    (s, a) => s + Math.max(0, (a.total_price ?? 0) - Number(a.paid_amount ?? 0)),
+    0,
+  );
 
-  // Начислено мастерам (по всем выполненным работам)
+  // Начислено мастерам (по всем выполненным работам месяца)
   const mechanicsAccrued = doneAppts.reduce(
     (s, a) => s + (a.services ?? []).reduce((ss, x) => ss + Number(x.mechanic_payout ?? 0), 0),
     0,
   );
   // Фактически выплачено мастерам за месяц (авансы)
   const mechanicsPaid = advances.reduce((s, a) => s + Number(a.amount ?? 0), 0);
+
 
   const otherExpenses = expenses.reduce((s, e) => s + Number(e.amount ?? 0), 0);
   // Чистая прибыль: оборот минус НАЧИСЛЕННАЯ ЗП мастерам (обязательство сервиса) и прочие расходы.
@@ -127,8 +138,18 @@ function ExpensesPage() {
       </div>
 
       <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-        <StatCard label="Оборот (оплачено)" value={fmt(revenue)} tone="neutral" />
-        <StatCard label="Не оплачено" value={fmt(unpaidBalance)} tone={unpaidBalance > 0 ? "warn" : "neutral"} />
+        <StatCard
+          label="Оборот кассы"
+          value={fmt(revenue)}
+          hint="платежи с датой в этом месяце"
+          tone="neutral"
+        />
+        <StatCard
+          label="Ждём оплату"
+          value={fmt(unpaidBalance)}
+          hint="по выполненным работам месяца"
+          tone={unpaidBalance > 0 ? "warn" : "neutral"}
+        />
         <StatCard
           label="ЗП мастерам (начислено)"
           value={fmt(mechanicsAccrued)}
@@ -144,9 +165,11 @@ function ExpensesPage() {
         <StatCard
           label="Чистая прибыль"
           value={fmt(profit)}
+          hint="касса − начисл. ЗП − расходы"
           tone={profit >= 0 ? "good" : "bad"}
         />
       </div>
+
 
       <Tabs defaultValue="summary">
         <TabsList>
