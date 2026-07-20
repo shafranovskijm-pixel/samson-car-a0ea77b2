@@ -107,8 +107,12 @@ function ExpensesPage() {
   const mechanicsPaid = advances.reduce((s, a) => s + Number(a.amount ?? 0), 0);
 
   const otherExpenses = expenses.reduce((s, e) => s + Number(e.amount ?? 0), 0);
-  // Чистая прибыль: только по деньгам, реально прошедшим через кассу
-  const profit = revenue - mechanicsPaid - otherExpenses;
+  // Чистая прибыль: оборот минус НАЧИСЛЕННАЯ ЗП мастерам (обязательство сервиса) и прочие расходы.
+  // Раньше вычитали фактически выплаченные авансы — из-за этого прибыль скакала: выплатил аванс —
+  // «прибыль» упала, не выплатил — «прибыль» завышена. Правильно учитывать начисление.
+  const profit = revenue - mechanicsAccrued - otherExpenses;
+  // Долг перед мастерами = начислено − уже выплачено авансами
+  const mechanicsDebt = Math.max(0, mechanicsAccrued - mechanicsPaid);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
@@ -122,14 +126,19 @@ function ExpensesPage() {
         <MonthPicker month={month} setMonth={setMonth} />
       </div>
 
-      <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+      <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
         <StatCard label="Оборот (оплачено)" value={fmt(revenue)} tone="neutral" />
         <StatCard label="Не оплачено" value={fmt(unpaidBalance)} tone={unpaidBalance > 0 ? "warn" : "neutral"} />
         <StatCard
-          label="ЗП мастерам"
-          value={fmt(mechanicsPaid)}
-          hint={`начислено ${fmt(mechanicsAccrued)}`}
+          label="ЗП мастерам (начислено)"
+          value={fmt(mechanicsAccrued)}
+          hint={`выплачено ${fmt(mechanicsPaid)}`}
           tone="warn"
+        />
+        <StatCard
+          label="Долг мастерам"
+          value={fmt(mechanicsDebt)}
+          tone={mechanicsDebt > 0 ? "warn" : "good"}
         />
         <StatCard label="Прочие расходы" value={fmt(otherExpenses)} tone="warn" />
         <StatCard
