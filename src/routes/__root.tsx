@@ -114,34 +114,70 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const router = useRouter();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const [authed, setAuthed] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    setAuthed(isLoggedIn());
+  }, [pathname]);
+
+  const isLoginRoute = pathname === "/login";
+
   return (
     <QueryClientProvider client={queryClient}>
       <ConfirmProvider>
-        <SidebarProvider>
-          <div className="flex min-h-screen w-full overflow-x-hidden">
-            <AppSidebar />
-
-            <div className="flex min-w-0 flex-1 flex-col">
-              <header className="flex h-12 items-center gap-2 border-b bg-background px-2 sm:gap-3 sm:px-3">
-                <SidebarTrigger />
-                <div className="truncate text-sm font-medium">
-                  <span className="sm:hidden">Samson Auto</span>
-                  <span className="hidden sm:inline">Samson Auto — CRM</span>
-                </div>
-                <div className="ml-auto">
-                  <UssuriyskClock />
-                </div>
-              </header>
-
-              <main className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
-                <Outlet />
-              </main>
+        {authed === null ? (
+          <div className="min-h-screen" />
+        ) : !authed && !isLoginRoute ? (
+          <RedirectToLogin />
+        ) : isLoginRoute ? (
+          <Outlet />
+        ) : (
+          <SidebarProvider>
+            <div className="flex min-h-screen w-full overflow-x-hidden">
+              <AppSidebar />
+              <div className="flex min-w-0 flex-1 flex-col">
+                <header className="flex h-12 items-center gap-2 border-b bg-background px-2 sm:gap-3 sm:px-3">
+                  <SidebarTrigger />
+                  <div className="truncate text-sm font-medium">
+                    <span className="sm:hidden">Samson Auto</span>
+                    <span className="hidden sm:inline">Samson Auto — CRM</span>
+                  </div>
+                  <div className="ml-auto flex items-center gap-2">
+                    <UssuriyskClock />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      title="Выйти"
+                      onClick={() => {
+                        logout();
+                        setAuthed(false);
+                        router.navigate({ to: "/login" });
+                      }}
+                    >
+                      <LogOut className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </header>
+                <main className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
+                  <Outlet />
+                </main>
+              </div>
             </div>
-
-          </div>
-        </SidebarProvider>
+          </SidebarProvider>
+        )}
         <Toaster />
       </ConfirmProvider>
     </QueryClientProvider>
   );
 }
+
+function RedirectToLogin() {
+  const router = useRouter();
+  useEffect(() => {
+    router.navigate({ to: "/login" });
+  }, [router]);
+  return <div className="min-h-screen" />;
+}
+
