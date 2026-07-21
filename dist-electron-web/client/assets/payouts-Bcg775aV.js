@@ -1,0 +1,1 @@
+function e(e,t){let n=Number(e?.default_payout_percent);if(Number.isFinite(n)&&n>0)return n;let r=Number(t?.default_payout_percent);return Number.isFinite(r)&&r>0?r:50}function t(t){let n=Number(t.storedPayout??0);if(Number.isFinite(n)&&n>0)return Math.round(n);let r=Number(t.price??0)||0,i=e(t.mechanic,t.service);return Math.round(r*i/100)}export{t};
