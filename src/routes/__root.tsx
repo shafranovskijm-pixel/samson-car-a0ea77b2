@@ -20,7 +20,7 @@ import { ConfirmProvider } from "@/components/ConfirmDialog";
 import { UssuriyskClock } from "@/components/UssuriyskClock";
 import { Button } from "@/components/ui/button";
 import { isLoggedIn, logout } from "@/lib/authGate";
-import LoginPage from "./login";
+
 
 
 function NotFoundComponent() {
