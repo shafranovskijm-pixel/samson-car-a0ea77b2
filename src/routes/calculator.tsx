@@ -1051,13 +1051,13 @@ function LandingPage() {
                                 : "border-white/10 bg-white/[0.03] hover:border-white/20"
                             }`}
                           >
-                            <div className="flex items-start gap-3">
-                              <button type="button" onClick={() => toggle(sid)} className="mt-1">
+                              <div className="flex items-start gap-3">
+                              <div onClick={() => toggle(sid)} className="mt-1">
                                 <Checkbox
                                   checked={active}
                                   className="border-white/30 data-[state=checked]:border-red-500 data-[state=checked]:bg-red-500"
                                 />
-                              </button>
+                              </div>
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-start justify-between gap-2">
                                   <button
