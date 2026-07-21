@@ -1,13 +1,16 @@
 {
-  "name": "tanstack_start_ts",
+  "name": "samson-crm",
   "private": true,
   "sideEffects": false,
   "type": "module",
+  "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "build:static": "vite build --config vite.static.config.ts && cp dist/client/_shell.html dist/client/index.html",
+    "build:electron": "vite build --config vite.electron.config.ts",
+    "package:win": "npm run build:electron && electron-packager . SamsonCRM --platform=win32 --arch=x64 --out=electron-release --overwrite --ignore='^/node_modules' --ignore='^/src' --ignore='^/public' --ignore='^/dist' --ignore='^/electron-release'",
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write ."
