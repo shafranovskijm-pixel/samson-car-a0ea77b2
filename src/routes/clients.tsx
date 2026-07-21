@@ -1088,6 +1088,20 @@ function CarDialog({
             <Input value={form.license_plate} onChange={(e) => setForm({ ...form, license_plate: e.target.value })} />
           </div>
           <div className="col-span-2">
+            <ModificationPicker
+              brand={selectedBrand?.name ?? ""}
+              modelName={form.model}
+              year={form.year ? Number(form.year) : null}
+              onPick={(m) => {
+                setForm((f) => ({
+                  ...f,
+                  engine_volume: m.displacement_cc ? (m.displacement_cc / 1000).toFixed(1) : f.engine_volume,
+                  engine_power: m.horsepower ? String(m.horsepower) : f.engine_power,
+                }));
+              }}
+            />
+          </div>
+          <div className="col-span-2">
             <Label>VIN</Label>
             <Input value={form.vin} onChange={(e) => setForm({ ...form, vin: e.target.value })} />
           </div>
