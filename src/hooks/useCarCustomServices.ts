@@ -91,7 +91,7 @@ export const useCarCustomServices = (
       if (!enabled) return null;
       const nameNorm = input.name.trim().toLowerCase();
       const catNorm = input.category.trim().toLowerCase();
-      const existing = items.find(
+      let existing = items.find(
         (x) =>
           x.name.trim().toLowerCase() === nameNorm &&
           x.category.trim().toLowerCase() === catNorm,
@@ -105,6 +105,20 @@ export const useCarCustomServices = (
         price: input.price,
         duration_minutes: input.duration_minutes,
       };
+      if (!existing) {
+        const { data: dbExisting, error: lookupError } = await supabase
+          .from("car_custom_services")
+          .select("*")
+          .ilike("brand_name", brand)
+          .ilike("model_name", model)
+          .eq("year", year!)
+          .ilike("category", input.category.trim())
+          .ilike("name", input.name.trim())
+          .maybeSingle();
+        if (lookupError) throw lookupError;
+        existing = (dbExisting as CarCustomService | null) ?? undefined;
+      }
+
       const query = existing
         ? supabase
             .from("car_custom_services")
