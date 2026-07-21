@@ -80,6 +80,7 @@ export function useServiceUsage() {
       // Отправляем в облако в фоне.
       (async () => {
         for (const id of serviceIds) {
+          if (id.startsWith("custom:")) continue;
           const c = next[id].count;
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           await (supabase as any)
