@@ -28,11 +28,19 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import {
-  createCar, createClient, createClientComment, createClientReminder, deleteCar, deleteClient,
-  deleteClientComment, deleteClientReminder, listAllClientComments, listAppointmentsByClient,
+  createBrand, createCar, createClient, createClientComment, createClientReminder, deleteCar, deleteClient,
+  deleteClientComment, deleteClientReminder, humanizeSupabaseError, listAllClientComments, listAppointmentsByClient,
   listBrands, listCarModels, listCars, listClientComments, listClientReminders, listClients,
   updateCar, updateClient, updateClientComment, updateClientReminder,
 } from "@/lib/api";
+import { dbAddModification, dbEnsureModel } from "@/lib/carsCatalogDb";
+import {
+  Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
+} from "@/components/ui/command";
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from "@/components/ui/popover";
+
 import type {
   Car, Client, ClientCategory, ClientComment, ClientReminder, ReminderInterval,
 } from "@/lib/types";
