@@ -194,6 +194,8 @@ function ModelsManager({ brand }: { brand: Brand }) {
   const [editId, setEditId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editTier, setEditTier] = useState<string>("inherit");
+  const [modsOfModel, setModsOfModel] = useState<string | null>(null);
+
 
   const invalidate = () => qc.invalidateQueries({ queryKey: key });
   const createM = useMutation({
@@ -276,6 +278,13 @@ function ModelsManager({ brand }: { brand: Brand }) {
                     {m.tier ? "" : " · по марке"}
                   </span>
                   <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setModsOfModel(m.name)}
+                  >
+                    <Settings2 className="mr-1 h-4 w-4" />Модификации
+                  </Button>
+                  <Button
                     size="icon"
                     variant="ghost"
                     onClick={() => {
@@ -302,6 +311,138 @@ function ModelsManager({ brand }: { brand: Brand }) {
           <div className="p-6 text-center text-muted-foreground">Нет моделей</div>
         )}
       </div>
+
+      <Dialog open={!!modsOfModel} onOpenChange={(v) => !v && setModsOfModel(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Модификации · {brand.name} {modsOfModel}</DialogTitle>
+          </DialogHeader>
+          {modsOfModel && <ModificationsManager brand={brand.name} modelName={modsOfModel} />}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function ModificationsManager({ brand, modelName }: { brand: string; modelName: string }) {
+  const qc = useQueryClient();
+  const confirm = useConfirm();
+  const currentYear = new Date().getFullYear();
+  const [year, setYear] = useState<number>(currentYear);
+  const [yearInput, setYearInput] = useState<string>(String(currentYear));
+  const [adding, setAdding] = useState(false);
+
+  const { data: years = [] } = useQuery({
+    queryKey: ["catalog-years", brand],
+    queryFn: () => dbListYearsForBrand(brand),
+  });
+
+  const { data: mods = [] } = useQuery({
+    queryKey: ["catalog-mods", brand, year, modelName],
+    queryFn: () => dbListModifications(brand, year, modelName),
+  });
+
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ["catalog-mods", brand, year, modelName] });
+    qc.invalidateQueries({ queryKey: ["catalog-years", brand] });
+    qc.invalidateQueries({ queryKey: ["catalog-models", brand, year] });
+  };
+
+  const removeMod = async (m: DbModification) => {
+    const ok = await confirm({
+      title: "Удалить модификацию?",
+      description: `${m.body_code ?? ""} ${m.engine_code ?? ""} ${m.displacement_cc ?? ""}`.trim() || "Модификация будет удалена без возможности восстановления.",
+      confirmText: "Удалить",
+      destructive: true,
+    });
+    if (!ok) return;
+    try {
+      await dbDeleteModification(m.id);
+      toast.success("Удалено");
+      invalidate();
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  };
+
+  return (
+    <div>
+      <div className="mb-3 flex flex-wrap items-end gap-2">
+        <div>
+          <Label>Год</Label>
+          <Input
+            type="number"
+            className="w-28"
+            value={yearInput}
+            onChange={(e) => {
+              setYearInput(e.target.value);
+              const n = Number(e.target.value);
+              if (n >= 1900 && n <= 2100) setYear(n);
+            }}
+          />
+        </div>
+        {years.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {years.map((y) => (
+              <Button
+                key={y}
+                size="sm"
+                variant={y === year ? "default" : "outline"}
+                onClick={() => { setYear(y); setYearInput(String(y)); }}
+              >
+                {y}
+              </Button>
+            ))}
+          </div>
+        )}
+        <div className="ml-auto">
+          <Button size="sm" onClick={() => setAdding((v) => !v)}>
+            <Plus className="mr-1 h-4 w-4" />
+            {adding ? "Отмена" : "Добавить модификацию"}
+          </Button>
+        </div>
+      </div>
+
+      {adding && (
+        <div className="mb-3">
+          <ModificationForm
+            brand={brand}
+            modelName={modelName}
+            year={year}
+            onCancel={() => setAdding(false)}
+            onSaved={() => { setAdding(false); invalidate(); }}
+          />
+        </div>
+      )}
+
+      <div className="max-h-96 divide-y overflow-auto rounded border">
+        {mods.map((m) => (
+          <div key={m.id} className="flex items-center gap-2 p-2 text-sm">
+            <div className="flex-1">
+              <div className="font-medium">
+                {m.body_code ?? "—"} {m.engine_code ? `· ${m.engine_code}` : ""}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {m.displacement_cc ? `${m.displacement_cc} cc` : ""}
+                {m.horsepower ? ` · ${m.horsepower} л.с.` : ""}
+                {m.fuel ? ` · ${m.fuel}` : ""}
+                {m.hybrid ? " · гибрид" : ""}
+                {m.steering ? ` · ${m.steering}` : ""}
+              </div>
+              {m.note && <div className="text-xs text-muted-foreground/80">{m.note}</div>}
+            </div>
+            <Button size="icon" variant="ghost" onClick={() => removeMod(m)}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        ))}
+        {mods.length === 0 && (
+          <div className="p-6 text-center text-muted-foreground">
+            Нет модификаций за {year} год
+          </div>
+        )}
+      </div>
+
     </div>
   );
 }
