@@ -1,9 +1,10 @@
-import { QueryClient } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
+import { makeQueryClient, attachOfflinePersistence } from "./lib/offlineCache";
 
 export const getRouter = () => {
-  const queryClient = new QueryClient();
+  const queryClient = makeQueryClient();
+  attachOfflinePersistence(queryClient);
 
   const router = createRouter({
     routeTree,
