@@ -2,7 +2,16 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Trash2, Pencil, Save, X, Car as CarIcon } from "lucide-react";
+import { Plus, Trash2, Pencil, Save, X, Car as CarIcon, Settings2 } from "lucide-react";
+import {
+  dbListYearsForBrand,
+  dbListModifications,
+  dbDeleteModification,
+  type DbModification,
+} from "@/lib/carsCatalogDb";
+import { ModificationForm } from "@/components/ModificationForm";
+import { useConfirm } from "@/components/ConfirmDialog";
+
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
