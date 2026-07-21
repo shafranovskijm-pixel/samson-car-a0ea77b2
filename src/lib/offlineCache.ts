@@ -36,7 +36,7 @@ export function attachOfflinePersistence(client: QueryClient) {
       throttleTime: 1000,
     });
     persistQueryClient({
-      queryClient: client,
+      queryClient: client as unknown as Parameters<typeof persistQueryClient>[0]["queryClient"],
       persister,
       maxAge: 1000 * 60 * 60 * 24 * 30, // 30 дней
     });
