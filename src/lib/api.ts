@@ -22,6 +22,9 @@ export function humanizeSupabaseError(e: unknown): string {
   if (code === "23505" || /duplicate key|already exists/i.test(msg)) {
     return "Такая услуга уже есть";
   }
+  if (/no unique or exclusion constraint matching the ON CONFLICT specification/i.test(msg)) {
+    return "Не удалось обновить уже сохранённую услугу. Обновите страницу и попробуйте ещё раз";
+  }
   if (code === "42501" || code === "PGRST301" || code === 401 || code === 403) {
     return "Нет доступа для этого действия";
   }
