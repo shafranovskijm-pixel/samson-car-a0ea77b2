@@ -22,7 +22,7 @@ function createWindow() {
     return { action: "deny" };
   });
 
-  const indexPath = path.join(__dirname, "..", "dist-electron-web", "_shell.html");
+  const indexPath = path.join(__dirname, "..", "dist-electron-web", "client", "_shell.html");
   win.loadFile(indexPath);
 }
 
