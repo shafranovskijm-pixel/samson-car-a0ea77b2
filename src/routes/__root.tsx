@@ -20,6 +20,7 @@ import { ConfirmProvider } from "@/components/ConfirmDialog";
 import { UssuriyskClock } from "@/components/UssuriyskClock";
 import { Button } from "@/components/ui/button";
 import { isLoggedIn, logout } from "@/lib/authGate";
+import { OnlineStatus } from "@/components/OnlineStatus";
 
 
 
@@ -145,6 +146,7 @@ function RootComponent() {
                     <span className="hidden sm:inline">Samson Auto — CRM</span>
                   </div>
                   <div className="ml-auto flex items-center gap-2">
+                    <OnlineStatus />
                     <UssuriyskClock />
                     <Button
                       variant="ghost"
