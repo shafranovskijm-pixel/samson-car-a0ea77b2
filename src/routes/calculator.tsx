@@ -1128,16 +1128,12 @@ function LandingPage() {
                           }`}
                         >
                           <div className="flex items-start gap-3">
-                            <button
-                              type="button"
-                              onClick={() => toggle(s.id)}
-                              className="mt-1"
-                            >
+                            <div onClick={() => toggle(s.id)} className="mt-1">
                               <Checkbox
                                 checked={active}
                                 className="border-white/30 data-[state=checked]:border-red-500 data-[state=checked]:bg-red-500"
                               />
-                            </button>
+                            </div>
                             <div className="min-w-0 flex-1">
                               <button
                                 type="button"
