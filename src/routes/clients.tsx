@@ -6,7 +6,7 @@ import {
   Plus, Trash2, Pencil, Search, Car as CarIcon, Phone, Mail, User,
   Bell, History as HistoryIcon, Check, Archive, ArchiveRestore,
   Crown, Sparkles, AlertTriangle, Briefcase, Heart, MessageSquare, ArrowLeft,
-  ChevronDown, Filter, Calculator as CalculatorIcon,
+  ChevronDown, Filter, Calculator as CalculatorIcon, Check as CheckIcon, ChevronsUpDown,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -28,11 +28,19 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import {
-  createCar, createClient, createClientComment, createClientReminder, deleteCar, deleteClient,
-  deleteClientComment, deleteClientReminder, listAllClientComments, listAppointmentsByClient,
+  createBrand, createCar, createClient, createClientComment, createClientReminder, deleteCar, deleteClient,
+  deleteClientComment, deleteClientReminder, humanizeSupabaseError, listAllClientComments, listAppointmentsByClient,
   listBrands, listCarModels, listCars, listClientComments, listClientReminders, listClients,
   updateCar, updateClient, updateClientComment, updateClientReminder,
 } from "@/lib/api";
+import { dbAddModification, dbEnsureModel } from "@/lib/carsCatalogDb";
+import {
+  Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
+} from "@/components/ui/command";
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from "@/components/ui/popover";
+
 import type {
   Car, Client, ClientCategory, ClientComment, ClientReminder, ReminderInterval,
 } from "@/lib/types";
@@ -867,7 +875,10 @@ function CarDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const qc = useQueryClient();
   const [form, setForm] = useState(emptyCarForm);
+  const [brandOpen, setBrandOpen] = useState(false);
+  const [brandQuery, setBrandQuery] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -888,16 +899,39 @@ function CarDialog({
     } else {
       setForm(emptyCarForm);
     }
+    setBrandQuery("");
   }, [open, editing]);
+
+  const selectedBrand = brands.find((b) => b.id === form.brand_id);
+
+  const createBrandInline = async () => {
+    const name = brandQuery.trim();
+    if (!name) return;
+    try {
+      const created = await createBrand(name);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const id = (created as any).id as string;
+      setForm((f) => ({ ...f, brand_id: id }));
+      setBrandQuery("");
+      setBrandOpen(false);
+      await qc.invalidateQueries({ queryKey: ["brands"] });
+      toast.success(`Марка «${name}» добавлена`);
+    } catch (e) {
+      toast.error(humanizeSupabaseError(e));
+    }
+  };
 
   const saveM = useMutation({
     mutationFn: async () => {
       if (!form.model.trim()) throw new Error("Введите модель");
+      const modelName = form.model.trim();
+      const brandName = selectedBrand?.name;
+      const yearNum = form.year ? Number(form.year) : null;
       const payload = {
         client_id: clientId,
         brand_id: form.brand_id || null,
-        model: form.model.trim(),
-        year: form.year ? Number(form.year) : null,
+        model: modelName,
+        year: yearNum,
         license_plate: form.license_plate.trim() || null,
         vin: form.vin.trim() || null,
         color: form.color.trim() || null,
@@ -909,14 +943,58 @@ function CarDialog({
       };
       if (editing) await updateCar(editing.id, payload);
       else await createCar(payload);
+
+      // Синхронизируем каталог калькулятора: модель + модификация.
+      if (brandName) {
+        try {
+          await dbEnsureModel(brandName, modelName);
+          if (
+            yearNum &&
+            (payload.engine_volume ||
+              payload.engine_power ||
+              payload.transmission ||
+              payload.drive_type)
+          ) {
+            const cc = payload.engine_volume
+              ? Math.round(payload.engine_volume * 1000)
+              : null;
+            const noteParts = [
+              payload.transmission,
+              payload.drive_type ? `привод ${payload.drive_type}` : null,
+            ].filter(Boolean);
+            await dbAddModification({
+              brand: brandName,
+              modelName,
+              year: yearNum,
+              displacement_cc: cc,
+              horsepower: payload.engine_power,
+              note: noteParts.length ? noteParts.join(" · ") : null,
+            });
+          }
+          await Promise.all([
+            qc.invalidateQueries({ queryKey: ["catalog-years", brandName] }),
+            qc.invalidateQueries({ queryKey: ["catalog-models", brandName] }),
+            qc.invalidateQueries({ queryKey: ["catalog-mods", brandName] }),
+          ]);
+        } catch (e) {
+          console.warn("catalog sync failed", e);
+        }
+      }
     },
     onSuccess: () => {
       toast.success("Сохранено");
       onSaved();
       onClose();
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(humanizeSupabaseError(e)),
   });
+
+  const filteredBrands = brandQuery.trim()
+    ? brands.filter((b) => b.name.toLowerCase().includes(brandQuery.trim().toLowerCase()))
+    : brands;
+  const exactExists = brands.some(
+    (b) => b.name.toLowerCase() === brandQuery.trim().toLowerCase(),
+  );
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -927,14 +1005,68 @@ function CarDialog({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label>Марка</Label>
-            <Select value={form.brand_id} onValueChange={(v) => setForm({ ...form, brand_id: v })}>
-              <SelectTrigger><SelectValue placeholder="Марка" /></SelectTrigger>
-              <SelectContent>
-                {brands.map((b) => (
-                  <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover open={brandOpen} onOpenChange={setBrandOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  role="combobox"
+                  className="w-full justify-between font-normal"
+                >
+                  <span className={selectedBrand ? "" : "text-muted-foreground"}>
+                    {selectedBrand?.name ?? "Марка"}
+                  </span>
+                  <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                <Command shouldFilter={false}>
+                  <CommandInput
+                    placeholder="Поиск или новая марка…"
+                    value={brandQuery}
+                    onValueChange={setBrandQuery}
+                  />
+                  <CommandList>
+                    <CommandEmpty>
+                      {brandQuery.trim() ? "Ничего не найдено" : "Нет марок"}
+                    </CommandEmpty>
+                    {filteredBrands.length > 0 && (
+                      <CommandGroup>
+                        {filteredBrands.map((b) => (
+                          <CommandItem
+                            key={b.id}
+                            value={b.name}
+                            onSelect={() => {
+                              setForm((f) => ({ ...f, brand_id: b.id }));
+                              setBrandOpen(false);
+                              setBrandQuery("");
+                            }}
+                          >
+                            <CheckIcon
+                              className={`mr-2 h-4 w-4 ${
+                                form.brand_id === b.id ? "opacity-100" : "opacity-0"
+                              }`}
+                            />
+                            {b.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    )}
+                    {brandQuery.trim() && !exactExists && (
+                      <CommandGroup>
+                        <CommandItem
+                          value={`__add_${brandQuery}`}
+                          onSelect={createBrandInline}
+                        >
+                          <Plus className="mr-2 h-4 w-4" />
+                          Добавить марку «{brandQuery.trim()}»
+                        </CommandItem>
+                      </CommandGroup>
+                    )}
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
           <div>
             <Label>Модель</Label>
@@ -1006,6 +1138,7 @@ function CarDialog({
     </Dialog>
   );
 }
+
 
 function ModelsDatalist({ brandId }: { brandId: string }) {
   const { data: models = [] } = useQuery({
