@@ -156,3 +156,10 @@ export const dbAddModification = async (input: NewModificationInput): Promise<Db
   if (error) throw error;
   return data as DbModification;
 };
+
+/** Удалить модификацию по id. */
+export const dbDeleteModification = async (id: string): Promise<void> => {
+  const { error } = await supabase.from("car_catalog_modifications").delete().eq("id", id);
+  if (error) throw error;
+};
+
