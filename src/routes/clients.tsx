@@ -1153,6 +1153,94 @@ function CarDialog({
     </Dialog>
   );
 }
+function ModificationPicker({
+  brand, modelName, year, onPick,
+}: {
+  brand: string;
+  modelName: string;
+  year: number | null;
+  onPick: (m: DbModification) => void;
+}) {
+  const qc = useQueryClient();
+  const ready = !!(brand && modelName.trim() && year);
+  const { data: mods = [], isFetching } = useQuery({
+    queryKey: ["catalog-mods", brand, modelName, year],
+    queryFn: () => dbListModifications(brand, year as number, modelName),
+    enabled: ready,
+  });
+  const [addOpen, setAddOpen] = useState(false);
+
+  if (!ready) {
+    return (
+      <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
+        Выберите марку, модель и год, чтобы указать модификацию.
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between">
+        <Label className="text-xs">Модификация</Label>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2 text-xs"
+          onClick={() => setAddOpen(true)}
+        >
+          <Plus className="mr-1 h-3 w-3" /> Новая
+        </Button>
+      </div>
+      {mods.length === 0 ? (
+        <div className="rounded-md border border-dashed p-2 text-xs text-muted-foreground">
+          {isFetching ? "Загрузка…" : "Модификаций пока нет — добавьте вручную или заполните объём/мощность ниже."}
+        </div>
+      ) : (
+        <div className="flex flex-wrap gap-1.5">
+          {mods.map((m) => {
+            const label = [
+              m.displacement_cc ? `${(m.displacement_cc / 1000).toFixed(1)}л` : null,
+              m.horsepower ? `${m.horsepower}л.с.` : null,
+              m.body_code,
+              m.note,
+            ].filter(Boolean).join(" · ") || m.raw || "модификация";
+            return (
+              <Button
+                key={m.id}
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs"
+                onClick={() => onPick(m)}
+              >
+                {label}
+              </Button>
+            );
+          })}
+        </div>
+      )}
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Новая модификация</DialogTitle>
+          </DialogHeader>
+          <ModificationForm
+            brand={brand}
+            modelName={modelName}
+            year={year as number}
+            onCancel={() => setAddOpen(false)}
+            onSaved={() => {
+              setAddOpen(false);
+              qc.invalidateQueries({ queryKey: ["catalog-mods", brand, modelName, year] });
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 
 
 function ModelsDatalist({ brandId }: { brandId: string }) {
