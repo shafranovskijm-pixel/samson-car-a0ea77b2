@@ -181,9 +181,9 @@ function ExpensesPage() {
 
 
   const otherExpenses = expenses.reduce((s, e) => s + Number(e.amount ?? 0), 0);
-  // Прибыль (кассовая) — только реальные деньги за месяц:
-  //   поступило на кассу − выплачено мастерам авансами − прочие расходы.
-  const cashProfit = revenue - mechanicsPaid - otherExpenses;
+  // Чистая прибыль — доходы месяца минус все расходы (начисленная ЗП + прочие),
+  // независимо от того, выплачены ли уже авансы мастерам.
+  const cashProfit = revenue - mechanicsAccrued - otherExpenses;
   // Прибыль (начисленная) — по факту выполненных работ, независимо от даты оплат:
   //   выполнено − начислено ЗП − прочие расходы.
   const accruedProfit = accruedRevenue - mechanicsAccrued - otherExpenses;
