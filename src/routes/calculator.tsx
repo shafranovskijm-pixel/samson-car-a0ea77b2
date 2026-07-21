@@ -364,7 +364,7 @@ function LandingPage() {
 
   const goToSummary = () => {
     if (selected.size === 0) return;
-    bump(Array.from(selected));
+    bump(Array.from(selected).filter((id) => !id.startsWith("custom:")));
     setStep(3);
   };
 
