@@ -474,7 +474,7 @@ export function AppointmentDialog({
     },
     onSuccess: () => {
       toast.success(isEdit ? "Запись обновлена" : "Запись создана");
-      bump(selected.map((s) => s.service_id).filter(Boolean));
+      bump(selected.map((s) => s.service_id).filter((id) => id && !id.startsWith("custom:")));
       qc.invalidateQueries({ queryKey: ["appointments"] });
       qc.invalidateQueries({ queryKey: ["client-reminders"] });
       onOpenChange(false);

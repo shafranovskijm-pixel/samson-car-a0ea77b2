@@ -33,6 +33,10 @@ const writeLocal = (k: string, list: CarCustomService[]) => {
   }
 };
 
+const sameServiceKey = (a: Pick<CarCustomService, "category" | "name">, b: { category: string; name: string }) =>
+  a.category.trim().toLowerCase() === b.category.trim().toLowerCase() &&
+  a.name.trim().toLowerCase() === b.name.trim().toLowerCase();
+
 export const useCarCustomServices = (
   brand: string,
   model: string,
@@ -87,7 +91,7 @@ export const useCarCustomServices = (
       if (!enabled) return null;
       const nameNorm = input.name.trim().toLowerCase();
       const catNorm = input.category.trim().toLowerCase();
-      const existing = items.find(
+      let existing = items.find(
         (x) =>
           x.name.trim().toLowerCase() === nameNorm &&
           x.category.trim().toLowerCase() === catNorm,
@@ -101,18 +105,45 @@ export const useCarCustomServices = (
         price: input.price,
         duration_minutes: input.duration_minutes,
       };
-      const { data, error } = await supabase
-        .from("car_custom_services")
-        .upsert(payload, {
-          onConflict: "brand_name,model_name,year,category,name",
-          ignoreDuplicates: false,
-        })
-        .select("*")
-        .single();
+      if (!existing) {
+        const { data: dbExisting, error: lookupError } = await supabase
+          .from("car_custom_services")
+          .select("*")
+          .ilike("brand_name", brand)
+          .ilike("model_name", model)
+          .eq("year", year!)
+          .ilike("category", input.category.trim())
+          .ilike("name", input.name.trim())
+          .maybeSingle();
+        if (lookupError) throw lookupError;
+        existing = (dbExisting as CarCustomService | null) ?? undefined;
+      }
+
+      const query = existing
+        ? supabase
+            .from("car_custom_services")
+            .update({
+              category: input.category,
+              name: input.name,
+              price: input.price,
+              duration_minutes: input.duration_minutes,
+            })
+            .eq("id", existing.id)
+        : supabase
+            .from("car_custom_services")
+            .upsert(payload, {
+              onConflict: "brand_name,model_name,year,category,name",
+              ignoreDuplicates: false,
+            });
+
+      const { data, error } = await query.select("*").single();
       if (error) throw error;
       const row = data as CarCustomService;
       setItems((prev) => {
-        const next = [...prev.filter((x) => x.id !== row.id), row];
+        const next = [
+          ...prev.filter((x) => x.id !== row.id && !sameServiceKey(x, row)),
+          row,
+        ];
         writeLocal(k, next);
         return next;
       });
