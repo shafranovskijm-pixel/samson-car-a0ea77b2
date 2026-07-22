@@ -52,6 +52,20 @@ function LoginPage() {
           </form>
         </CardContent>
       </Card>
+
+      <a
+        href={winDownload.url}
+        download="SamsonCRM-windows.zip"
+        className="mt-4 flex w-full max-w-sm items-center justify-center gap-2 rounded-md border border-border bg-card px-4 py-3 text-sm text-foreground shadow-sm transition hover:bg-accent"
+      >
+        <Download className="h-4 w-4" />
+        <div className="text-left">
+          <div className="font-medium">Скачать для Windows (оффлайн)</div>
+          <div className="text-xs text-muted-foreground">
+            ZIP ~146 МБ · распакуйте и запустите SamsonCRM.exe · логин тот же
+          </div>
+        </div>
+      </a>
     </div>
   );
 }
