@@ -1093,7 +1093,7 @@ function PaymentsSection({
   const paid = payments.reduce((s, p) => s + Number(p.amount ?? 0), 0);
   const due = Math.max(0, total - paid);
 
-  const [paidAt, setPaidAt] = useState(() => format(new Date(), "yyyy-MM-dd"));
+  const [paidAt, setPaidAt] = useState(() => ussDateISO());
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
 
