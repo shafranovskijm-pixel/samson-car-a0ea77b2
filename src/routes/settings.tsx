@@ -2,7 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Trash2, Pencil, Save, X, Car as CarIcon, Settings2 } from "lucide-react";
+import { Plus, Trash2, Pencil, Save, X, Car as CarIcon, Settings2, Download } from "lucide-react";
+import winDownload from "@/assets/downloads/SamsonCRM-windows.zip.asset.json";
 import {
   dbListYearsForBrand,
   dbListModifications,
@@ -163,6 +164,20 @@ function AccountTab() {
           Данные хранятся локально в этом браузере/приложении.
         </p>
       </form>
+
+      <a
+        href={winDownload.url}
+        download="SamsonCRM-windows.zip"
+        className="mt-4 flex items-center gap-3 rounded-lg border bg-card p-4 shadow-sm transition hover:bg-accent"
+      >
+        <Download className="h-5 w-5 shrink-0" />
+        <div className="text-left">
+          <div className="font-medium">Скачать для Windows (оффлайн)</div>
+          <div className="text-xs text-muted-foreground">
+            ZIP ~138 МБ · распакуйте и запустите SamsonCRM.exe · логин тот же
+          </div>
+        </div>
+      </a>
     </div>
   );
 }
