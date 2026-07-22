@@ -13,6 +13,7 @@ import {
 import { ModificationForm } from "@/components/ModificationForm";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { getCredentials, changeCredentials, logout } from "@/lib/authGate";
+import { useLoginHero, setLoginHero, resetLoginHero, DEFAULT_LOGIN_HERO } from "@/hooks/useLoginHero";
 
 
 import { Button } from "@/components/ui/button";
@@ -165,6 +166,8 @@ function AccountTab() {
         </p>
       </form>
 
+      <LoginHeroCard />
+
       <a
         href={winDownload.url}
         download="SamsonCRM-windows.zip"
@@ -178,6 +181,59 @@ function AccountTab() {
           </div>
         </div>
       </a>
+    </div>
+  );
+}
+
+function LoginHeroCard() {
+  const hero = useLoginHero();
+  const isCustom = hero !== DEFAULT_LOGIN_HERO;
+
+  function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f) return;
+    if (!f.type.startsWith("image/")) {
+      toast.error("Нужен файл изображения");
+      return;
+    }
+    if (f.size > 2 * 1024 * 1024) {
+      toast.error("Максимум 2 МБ");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        setLoginHero(String(reader.result));
+        toast.success("Картинка входа обновлена");
+      } catch {
+        toast.error("Не удалось сохранить (переполнено хранилище)");
+      }
+    };
+    reader.onerror = () => toast.error("Не удалось прочитать файл");
+    reader.readAsDataURL(f);
+  }
+
+  return (
+    <div className="mt-4 rounded-lg border bg-card p-4">
+      <div className="mb-2 font-medium">Картинка на экране входа</div>
+      <div className="mb-3 overflow-hidden rounded-md border">
+        <img src={hero} alt="Login hero" className="h-40 w-full object-cover" />
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <label className="inline-flex cursor-pointer items-center rounded-md border bg-background px-3 py-2 text-sm hover:bg-accent">
+          <input type="file" accept="image/*" className="hidden" onChange={onFile} />
+          Загрузить свою
+        </label>
+        {isCustom && (
+          <Button variant="outline" size="sm" onClick={() => { resetLoginHero(); toast.success("Возвращена стандартная"); }}>
+            Сбросить к стандартной
+          </Button>
+        )}
+      </div>
+      <p className="mt-2 text-xs text-muted-foreground">
+        До 2 МБ. Хранится локально в этом браузере/приложении.
+      </p>
     </div>
   );
 }
