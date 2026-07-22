@@ -133,6 +133,7 @@ export function AppointmentDialog({
   const [mileage, setMileage] = useState<string>("");
   const [comment, setComment] = useState<string>("");
   const [selected, setSelected] = useState<SvcRow[]>([]);
+  const [manualPayouts, setManualPayouts] = useState<Set<string>>(new Set());
   const [addServiceId, setAddServiceId] = useState<string>("");
   const [reminderOn, setReminderOn] = useState<boolean>(false);
   const [reminderInterval, setReminderInterval] = useState<ReminderInterval>("half_year");
@@ -202,6 +203,7 @@ export function AppointmentDialog({
       );
     }
     setAddServiceId("");
+    setManualPayouts(new Set());
     setReminderOn(false);
     setReminderInterval("half_year");
     setReminderTitle("");
@@ -448,13 +450,15 @@ export function AppointmentDialog({
       if (!startDate || !startTime) throw new Error("Укажите дату и время");
       const starts_at = ussLocalToInstant(startDate, startTime).toISOString();
 
-      // Страховка: если выплата 0 (наследие старых записей) — пересчитать по %
-      // (индивидуальный мастера/услуги, иначе 50%). Так «Механики» и «Расходы»
-      // видят корректный оборот/ЗП после любых правок старых записей.
+      // Принудительный пересчёт по текущим правилам:
+      // всегда пересчитываем выплату мастеру по актуальным ставкам,
+      // КРОМЕ строк, где пользователь вручную поправил сумму в этом окне.
+      // Так «Механики»/«Расходы» видят корректный оборот/ЗП после любых
+      // правок старых записей (цена, услуги, мастер, ставки).
       const servicesPayload = selected.map((s) =>
-        !(s.mechanic_payout > 0)
-          ? { ...s, mechanic_payout: rateFor(s.service_id, s.price) }
-          : s,
+        manualPayouts.has(s.service_id)
+          ? s
+          : { ...s, mechanic_payout: rateFor(s.service_id, s.price) },
       );
 
       const payload = {
@@ -883,6 +887,11 @@ export function AppointmentDialog({
                             disabled={!mechanicId}
                             onChange={(e) => {
                               const p = Number(e.target.value);
+                              setManualPayouts((prev) => {
+                                const next = new Set(prev);
+                                next.add(row.service_id);
+                                return next;
+                              });
                               setSelected((prev) =>
                                 prev.map((x) =>
                                   x.service_id === row.service_id
@@ -899,7 +908,26 @@ export function AppointmentDialog({
                   );
                 })}
               </div>
-              <div className="mt-3 flex justify-end">
+              <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+                {isEdit && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setManualPayouts(new Set());
+                      setSelected((prev) =>
+                        prev.map((x) => ({
+                          ...x,
+                          mechanic_payout: rateFor(x.service_id, x.price),
+                        })),
+                      );
+                      toast.success("Пересчитано по текущим ставкам");
+                    }}
+                  >
+                    Пересчитать по текущим ставкам
+                  </Button>
+                )}
                 <Badge variant="secondary" className="text-base">Итого: {total} ₽</Badge>
               </div>
             </Section>
