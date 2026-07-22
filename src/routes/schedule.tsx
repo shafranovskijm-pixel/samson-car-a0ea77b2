@@ -243,7 +243,7 @@ function SchedulePage() {
     );
     const map = new Map<string, typeof filtered>();
     for (const a of filtered) {
-      const key = format(startOfDay(parseISO(a.starts_at)), "yyyy-MM-dd");
+      const key = ussDayKey(parseISO(a.starts_at));
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(a);
     }
