@@ -189,8 +189,8 @@ export function AppointmentDialog({
       setClientId(autoClientId);
       setCarId(autoCarId);
       setMechanicId("");
-      setStartDate(format(d, "yyyy-MM-dd"));
-      setStartTime(format(d, "HH:mm"));
+      setStartDate(ussDateISO(d));
+      setStartTime(ussTimeHM(d));
       setDuration(60);
       setStatus("scheduled");
       setMileage("");
