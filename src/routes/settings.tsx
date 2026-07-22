@@ -2,7 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Trash2, Pencil, Save, X, Car as CarIcon, Settings2 } from "lucide-react";
+import { Plus, Trash2, Pencil, Save, X, Car as CarIcon, Settings2, Download } from "lucide-react";
+import winDownload from "@/assets/downloads/SamsonCRM-windows.zip.asset.json";
 import {
   dbListYearsForBrand,
   dbListModifications,
