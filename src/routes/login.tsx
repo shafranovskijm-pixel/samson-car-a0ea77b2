@@ -62,7 +62,7 @@ function LoginPage() {
         <div className="text-left">
           <div className="font-medium">Скачать для Windows (оффлайн)</div>
           <div className="text-xs text-muted-foreground">
-            ZIP ~146 МБ · распакуйте и запустите SamsonCRM.exe · логин тот же
+            ZIP ~138 МБ · распакуйте и запустите SamsonCRM.exe · логин тот же
           </div>
         </div>
       </a>
