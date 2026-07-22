@@ -446,15 +446,13 @@ export function AppointmentDialog({
     mutationFn: async () => {
       if (!carId) throw new Error("Выберите машину");
       if (!startDate || !startTime) throw new Error("Укажите дату и время");
-      const startsDate = new Date(`${startDate}T${startTime}:00`);
-      const starts_at = startsDate.toISOString();
+      const starts_at = ussLocalToInstant(startDate, startTime).toISOString();
 
-      // Страховка: если мастер выбран, а выплата у услуги 0 — считаем по %
-      // (индивидуальный мастера/услуги, иначе 50%). Так в разделе «Механики»
-      // корректно считаются оборот и зарплата, даже если пользователь не
-      // трогал строку услуги вручную.
+      // Страховка: если выплата 0 (наследие старых записей) — пересчитать по %
+      // (индивидуальный мастера/услуги, иначе 50%). Так «Механики» и «Расходы»
+      // видят корректный оборот/ЗП после любых правок старых записей.
       const servicesPayload = selected.map((s) =>
-        mechanicId && !(s.mechanic_payout > 0)
+        !(s.mechanic_payout > 0)
           ? { ...s, mechanic_payout: rateFor(s.service_id, s.price) }
           : s,
       );
