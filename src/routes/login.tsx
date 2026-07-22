@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { isLoggedIn, login } from "@/lib/authGate";
+import { Download } from "lucide-react";
+import winDownload from "@/assets/downloads/SamsonCRM-windows.zip.asset.json";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
