@@ -1217,7 +1217,7 @@ function PaymentsSection({
             size="sm"
             variant="secondary"
             onClick={() => {
-              setPaidAt(format(new Date(), "yyyy-MM-dd"));
+              setPaidAt(ussDateISO());
               setAmount(String(due));
             }}
           >
