@@ -73,9 +73,9 @@ const STATUS_STRIPE: Record<AppointmentStatus, string> = {
 };
 
 function relativeDayLabel(d: Date): string | null {
-  if (isToday(d)) return "Сегодня";
-  if (isTomorrow(d)) return "Завтра";
-  if (isYesterday(d)) return "Вчера";
+  if (isTodayUss(d)) return "Сегодня";
+  if (isTomorrowUss(d)) return "Завтра";
+  if (isYesterdayUss(d)) return "Вчера";
   return null;
 }
 
