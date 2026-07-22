@@ -2,7 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { format, parseISO, startOfDay, isToday, isTomorrow, isYesterday } from "date-fns";
+import { format, parseISO } from "date-fns";
+import { isTodayUss, isTomorrowUss, isYesterdayUss, ussDayKey } from "@/lib/tz";
 import { ru } from "date-fns/locale";
 import { Check, ChevronDown, Plus, Printer, Trash2 } from "lucide-react";
 
@@ -72,9 +73,9 @@ const STATUS_STRIPE: Record<AppointmentStatus, string> = {
 };
 
 function relativeDayLabel(d: Date): string | null {
-  if (isToday(d)) return "Сегодня";
-  if (isTomorrow(d)) return "Завтра";
-  if (isYesterday(d)) return "Вчера";
+  if (isTodayUss(d)) return "Сегодня";
+  if (isTomorrowUss(d)) return "Завтра";
+  if (isYesterdayUss(d)) return "Вчера";
   return null;
 }
 
@@ -242,7 +243,7 @@ function SchedulePage() {
     );
     const map = new Map<string, typeof filtered>();
     for (const a of filtered) {
-      const key = format(startOfDay(parseISO(a.starts_at)), "yyyy-MM-dd");
+      const key = ussDayKey(parseISO(a.starts_at));
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(a);
     }
@@ -357,7 +358,7 @@ function SchedulePage() {
                               {rel && (
                                 <span
                                   className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
-                                    isToday(d)
+                                    isTodayUss(d)
                                       ? "bg-primary/10 text-primary"
                                       : "bg-muted text-muted-foreground"
                                   }`}

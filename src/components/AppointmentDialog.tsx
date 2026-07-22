@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { ussDateISO, ussTimeHM, ussLocalToInstant } from "@/lib/tz";
 import { Trash2, Plus, X, ChevronsUpDown, Search, Check, Calculator, User, Car, CalendarClock, Wrench, ClipboardList, Bell, MessageSquare, ExternalLink } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 
@@ -161,8 +162,8 @@ export function AppointmentDialog({
       setCarId(existing.car_id);
       setMechanicId(existing.mechanic_id ?? "");
       const d = new Date(existing.starts_at);
-      setStartDate(format(d, "yyyy-MM-dd"));
-      setStartTime(format(d, "HH:mm"));
+      setStartDate(ussDateISO(d));
+      setStartTime(ussTimeHM(d));
       setDuration(existing.duration_minutes);
       setStatus(existing.status as AppointmentStatus);
       setMileage(existing.mileage?.toString() ?? "");
@@ -188,8 +189,8 @@ export function AppointmentDialog({
       setClientId(autoClientId);
       setCarId(autoCarId);
       setMechanicId("");
-      setStartDate(format(d, "yyyy-MM-dd"));
-      setStartTime(format(d, "HH:mm"));
+      setStartDate(ussDateISO(d));
+      setStartTime(ussTimeHM(d));
       setDuration(60);
       setStatus("scheduled");
       setMileage("");
@@ -445,15 +446,13 @@ export function AppointmentDialog({
     mutationFn: async () => {
       if (!carId) throw new Error("Выберите машину");
       if (!startDate || !startTime) throw new Error("Укажите дату и время");
-      const startsDate = new Date(`${startDate}T${startTime}:00`);
-      const starts_at = startsDate.toISOString();
+      const starts_at = ussLocalToInstant(startDate, startTime).toISOString();
 
-      // Страховка: если мастер выбран, а выплата у услуги 0 — считаем по %
-      // (индивидуальный мастера/услуги, иначе 50%). Так в разделе «Механики»
-      // корректно считаются оборот и зарплата, даже если пользователь не
-      // трогал строку услуги вручную.
+      // Страховка: если выплата 0 (наследие старых записей) — пересчитать по %
+      // (индивидуальный мастера/услуги, иначе 50%). Так «Механики» и «Расходы»
+      // видят корректный оборот/ЗП после любых правок старых записей.
       const servicesPayload = selected.map((s) =>
-        mechanicId && !(s.mechanic_payout > 0)
+        !(s.mechanic_payout > 0)
           ? { ...s, mechanic_payout: rateFor(s.service_id, s.price) }
           : s,
       );
@@ -1094,7 +1093,7 @@ function PaymentsSection({
   const paid = payments.reduce((s, p) => s + Number(p.amount ?? 0), 0);
   const due = Math.max(0, total - paid);
 
-  const [paidAt, setPaidAt] = useState(() => format(new Date(), "yyyy-MM-dd"));
+  const [paidAt, setPaidAt] = useState(() => ussDateISO());
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
 
@@ -1218,7 +1217,7 @@ function PaymentsSection({
             size="sm"
             variant="secondary"
             onClick={() => {
-              setPaidAt(format(new Date(), "yyyy-MM-dd"));
+              setPaidAt(ussDateISO());
               setAmount(String(due));
             }}
           >
