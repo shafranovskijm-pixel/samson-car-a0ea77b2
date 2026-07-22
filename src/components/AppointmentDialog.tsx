@@ -162,8 +162,8 @@ export function AppointmentDialog({
       setCarId(existing.car_id);
       setMechanicId(existing.mechanic_id ?? "");
       const d = new Date(existing.starts_at);
-      setStartDate(format(d, "yyyy-MM-dd"));
-      setStartTime(format(d, "HH:mm"));
+      setStartDate(ussDateISO(d));
+      setStartTime(ussTimeHM(d));
       setDuration(existing.duration_minutes);
       setStatus(existing.status as AppointmentStatus);
       setMileage(existing.mileage?.toString() ?? "");
