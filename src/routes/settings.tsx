@@ -164,6 +164,20 @@ function AccountTab() {
           Данные хранятся локально в этом браузере/приложении.
         </p>
       </form>
+
+      <a
+        href={winDownload.url}
+        download="SamsonCRM-windows.zip"
+        className="mt-4 flex items-center gap-3 rounded-lg border bg-card p-4 shadow-sm transition hover:bg-accent"
+      >
+        <Download className="h-5 w-5 shrink-0" />
+        <div className="text-left">
+          <div className="font-medium">Скачать для Windows (оффлайн)</div>
+          <div className="text-xs text-muted-foreground">
+            ZIP ~138 МБ · распакуйте и запустите SamsonCRM.exe · логин тот же
+          </div>
+        </div>
+      </a>
     </div>
   );
 }
