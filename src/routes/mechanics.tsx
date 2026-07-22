@@ -320,6 +320,10 @@ function MechanicSalary({ mechanicId, defaultPercent }: { mechanicId: string; de
     queryFn: () => listMechanicPayouts(mechanicId),
   });
   const { data: services = [] } = useQuery({ queryKey: ["services"], queryFn: listServices });
+  const { data: advances = [] } = useQuery({
+    queryKey: ["mechanic-advances", mechanicId],
+    queryFn: () => listMechanicAdvances({ mechanic_id: mechanicId }),
+  });
   const [period, setPeriod] = useState<Period>("month");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
@@ -348,6 +352,11 @@ function MechanicSalary({ mechanicId, defaultPercent }: { mechanicId: string; de
       .sort((a, b) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime());
   }, [rows, period]);
 
+  const advancesInPeriod = useMemo(() => {
+    const start = periodStart(period);
+    return advances.filter((a) => new Date(a.paid_at).getTime() >= start);
+  }, [advances, period]);
+
   const pending = useMemo(
     () => rows.filter((r) => r.status !== "done" && r.status !== "cancelled"),
     [rows],
@@ -357,6 +366,8 @@ function MechanicSalary({ mechanicId, defaultPercent }: { mechanicId: string; de
   const totalPayout = filtered.reduce((s, r) => s + effPayout(r), 0);
   const avgPercent = totalRevenue > 0 ? Math.round((totalPayout / totalRevenue) * 100) : 0;
   const pendingTotal = pending.reduce((s, r) => s + effPayout(r), 0);
+  const advTotal = advancesInPeriod.reduce((s, a) => s + Number(a.amount ?? 0), 0);
+  const toPay = totalPayout - advTotal;
 
   const toggle = (key: string) =>
     setExpanded((prev) => {
@@ -385,16 +396,26 @@ function MechanicSalary({ mechanicId, defaultPercent }: { mechanicId: string; de
         </Select>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-lg border bg-card p-4">
           <div className="text-xs text-muted-foreground">Оборот по услугам</div>
           <div className="mt-1 text-2xl font-bold">{fmt(totalRevenue)}</div>
           <div className="mt-1 text-xs text-muted-foreground">{filtered.length} услуг</div>
         </div>
         <div className="rounded-lg border bg-card p-4">
-          <div className="text-xs text-muted-foreground">Зарплата мастера</div>
+          <div className="text-xs text-muted-foreground">Начислено ЗП</div>
           <div className="mt-1 text-2xl font-bold">{fmt(totalPayout)}</div>
           <div className="mt-1 text-xs text-muted-foreground">≈ {avgPercent}% от оборота</div>
+        </div>
+        <div className="rounded-lg border bg-card p-4">
+          <div className="text-xs text-muted-foreground">К выплате</div>
+          <div className={`mt-1 text-2xl font-bold ${toPay < 0 ? "text-destructive" : ""}`}>
+            {fmt(toPay)}
+          </div>
+          <div className="mt-1 text-xs text-muted-foreground">
+            {fmt(totalPayout)} начислено − {fmt(advTotal)} аванс
+            {toPay < 0 ? " · переплата авансами" : ""}
+          </div>
         </div>
         <div className="rounded-lg border bg-card p-4">
           <div className="text-xs text-muted-foreground">Ожидает (в работе / запланировано)</div>
@@ -402,6 +423,7 @@ function MechanicSalary({ mechanicId, defaultPercent }: { mechanicId: string; de
           <div className="mt-1 text-xs text-muted-foreground">{pending.length} услуг</div>
         </div>
       </div>
+
 
       {filtered.length > 0 && (
         <div className="mt-3 space-y-1">
