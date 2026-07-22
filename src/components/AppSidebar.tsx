@@ -52,7 +52,7 @@ const DEFAULT_ITEMS: Item[] = [
   { title: "Расходы", url: "/expenses", icon: Wallet },
   { title: "Клиенты", url: "/clients", icon: Users },
   { title: "Мастера", url: "/mechanics", icon: UserCog },
-  { title: "Настройки калькулятора", url: "/settings", icon: Settings },
+  { title: "Настройки", url: "/settings", icon: Settings },
 ];
 
 const STORAGE_KEY = "sidebar-order-v1";
