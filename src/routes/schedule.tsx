@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
-import { isTodayUss, isTomorrowUss, isYesterdayUss, ussDayKey, ussDateISO } from "@/lib/tz";
+import { isTodayUss, isTomorrowUss, isYesterdayUss, ussDayKey } from "@/lib/tz";
 import { ru } from "date-fns/locale";
 import { Check, ChevronDown, Plus, Printer, Trash2 } from "lucide-react";
 
