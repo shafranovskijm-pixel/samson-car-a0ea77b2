@@ -11,6 +11,7 @@ import {
 } from "@/lib/carsCatalogDb";
 import { ModificationForm } from "@/components/ModificationForm";
 import { useConfirm } from "@/components/ConfirmDialog";
+import { getCredentials, changeCredentials, logout } from "@/lib/authGate";
 
 
 import { Button } from "@/components/ui/button";
