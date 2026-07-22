@@ -48,14 +48,15 @@ export const Route = createFileRoute("/settings")({
 function SettingsPage() {
   const { tab } = Route.useSearch();
   const navigate = Route.useNavigate();
-  const activeTab = tab === "services" ? "services" : "brands";
+  const activeTab =
+    tab === "services" ? "services" : tab === "account" ? "account" : "brands";
 
   return (
     <div className="p-4">
       <div className="mb-4">
-        <h1 className="text-2xl font-bold">Настройки калькулятора</h1>
+        <h1 className="text-2xl font-bold">Настройки</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Марки и модели авто, услуги и цены — всё, что участвует в расчёте.
+          Марки и модели авто, услуги и цены, аккаунт.
         </p>
       </div>
 
@@ -67,6 +68,7 @@ function SettingsPage() {
         <TabsList>
           <TabsTrigger value="brands">Марки авто</TabsTrigger>
           <TabsTrigger value="services">Услуги и цены</TabsTrigger>
+          <TabsTrigger value="account">Аккаунт</TabsTrigger>
         </TabsList>
 
         <TabsContent value="brands" className="mt-4">
@@ -75,7 +77,91 @@ function SettingsPage() {
         <TabsContent value="services" className="mt-4">
           <ServicesTab />
         </TabsContent>
+        <TabsContent value="account" className="mt-4">
+          <AccountTab />
+        </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+function AccountTab() {
+  const navigate = Route.useNavigate();
+  const current = getCredentials();
+  const [curPass, setCurPass] = useState("");
+  const [newLogin, setNewLogin] = useState(current.login);
+  const [newPass, setNewPass] = useState("");
+  const [newPass2, setNewPass2] = useState("");
+
+  function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (newPass !== newPass2) {
+      toast.error("Пароли не совпадают");
+      return;
+    }
+    const res = changeCredentials(curPass, newLogin, newPass);
+    if (!res.ok) {
+      toast.error(res.error);
+      return;
+    }
+    toast.success("Логин и пароль обновлены. Войдите заново.");
+    logout();
+    setTimeout(() => {
+      window.location.href = "/login";
+    }, 400);
+  }
+
+  return (
+    <div className="mx-auto max-w-md">
+      <form onSubmit={onSubmit} className="space-y-3 rounded-lg border bg-card p-4">
+        <div>
+          <div className="mb-1 text-sm text-muted-foreground">Текущий логин</div>
+          <div className="font-medium">{current.login}</div>
+        </div>
+        <div>
+          <Label htmlFor="curPass">Текущий пароль</Label>
+          <Input
+            id="curPass"
+            type="password"
+            value={curPass}
+            onChange={(e) => setCurPass(e.target.value)}
+            autoComplete="current-password"
+          />
+        </div>
+        <div>
+          <Label htmlFor="newLogin">Новый логин</Label>
+          <Input
+            id="newLogin"
+            value={newLogin}
+            onChange={(e) => setNewLogin(e.target.value)}
+            autoComplete="username"
+          />
+        </div>
+        <div>
+          <Label htmlFor="newPass">Новый пароль</Label>
+          <Input
+            id="newPass"
+            type="password"
+            value={newPass}
+            onChange={(e) => setNewPass(e.target.value)}
+            autoComplete="new-password"
+          />
+        </div>
+        <div>
+          <Label htmlFor="newPass2">Повторите новый пароль</Label>
+          <Input
+            id="newPass2"
+            type="password"
+            value={newPass2}
+            onChange={(e) => setNewPass2(e.target.value)}
+            autoComplete="new-password"
+          />
+        </div>
+        <Button type="submit" className="w-full">Сохранить</Button>
+        <p className="text-xs text-muted-foreground">
+          Данные хранятся локально в этом браузере/приложении.
+        </p>
+      </form>
     </div>
   );
 }
