@@ -386,6 +386,17 @@ function ExpensesPage() {
           <ServicesBlock appts={doneAppts} effPayout={effPayout} />
         </TabsContent>
 
+        <TabsContent value="table" className="mt-4">
+          <ExpensesMonthlyTable
+            month={month}
+            appts={doneAppts}
+            mechanics={mechanics}
+            advances={advances}
+            mechById={mechById}
+            svcById={svcById}
+          />
+        </TabsContent>
+
       </Tabs>
     </div>
   );
