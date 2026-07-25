@@ -191,3 +191,19 @@
     font-size: 11pt;
   }
 }
+
+/* Monthly expenses table — печать */
+.print-only { display: none; }
+@media print {
+  body * { visibility: hidden; }
+  .print-area, .print-area * { visibility: visible; }
+  .print-area { position: absolute; left: 0; top: 0; width: 100%; padding: 12pt; }
+  .no-print { display: none !important; }
+  .print-only { display: block; }
+  .expense-table { width: 100%; border-collapse: collapse; font-size: 10pt; }
+  .expense-table th, .expense-table td {
+    border: 1px solid #333; padding: 3pt 5pt; text-align: left;
+  }
+  .expense-table th { background: #eee; }
+  .expense-table tfoot td { border-top: 2px solid #000; font-weight: bold; }
+}
