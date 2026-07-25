@@ -13,6 +13,12 @@ if (!fs.existsSync(shellPath)) {
   process.exit(1);
 }
 
+function fail(message, details) {
+  console.error(`[fix-electron-paths] ${message}`);
+  if (details) console.error(details);
+  process.exit(1);
+}
+
 let html = fs.readFileSync(shellPath, "utf8");
 
 // Порядок важен: сначала более длинные варианты.
@@ -33,7 +39,28 @@ console.log("[fix-electron-paths] index.html записан (", indexPath, ")");
 // Быстрая проверка — не осталось ли абсолютных путей к ассетам.
 const bad = html.match(/["'](\/\.?\/?assets\/[^"']+)/g);
 if (bad && bad.length) {
-  console.error("[fix-electron-paths] Остались абсолютные пути:", bad.slice(0, 5));
-  process.exit(1);
+  fail("Остались абсолютные пути:", bad.slice(0, 5).join("\n"));
 }
+
+if (!fs.existsSync(indexPath)) {
+  fail("index.html не создан");
+}
+
+const assetRefs = new Set();
+for (const match of html.matchAll(/(?:src|href)=["']\.\/(assets\/[^"']+)["']/g)) {
+  assetRefs.add(match[1]);
+}
+for (const match of html.matchAll(/["']\.\/(assets\/[^"']+)["']/g)) {
+  assetRefs.add(match[1]);
+}
+
+if (assetRefs.size === 0) {
+  fail("В index.html не найдены ссылки на assets — сборка выглядит неполной");
+}
+
+const missing = [...assetRefs].filter((assetPath) => !fs.existsSync(path.join(clientDir, assetPath)));
+if (missing.length) {
+  fail("Некоторые assets из index.html отсутствуют:", missing.slice(0, 20).join("\n"));
+}
+
 console.log("[fix-electron-paths] OK, все пути относительные.");
