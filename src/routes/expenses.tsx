@@ -354,10 +354,11 @@ function ExpensesPage() {
 
 
       <Tabs defaultValue="summary">
-        <TabsList>
+        <TabsList className="no-print">
           <TabsTrigger value="summary">Сводка</TabsTrigger>
           <TabsTrigger value="mechanics">По мастерам</TabsTrigger>
           <TabsTrigger value="services">По услугам</TabsTrigger>
+          <TabsTrigger value="table">Сводная таблица</TabsTrigger>
         </TabsList>
 
         <TabsContent value="summary" className="mt-4">
