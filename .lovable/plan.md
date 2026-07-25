@@ -1,25 +1,24 @@
 ## Проблема
-Кнопка «Скачать для Windows» на странице входа ссылается на asset `SamsonCRM-windows.zip` (asset_id `4966b9bd…`), но по этому URL сейчас отдаётся SPA-заглушка `index.html` (~4 КБ) вместо архива. Проверка: загруженный вами файл — это HTML, а не ZIP. Значит, оригинальный ассет в R2 недоступен/удалён.
+Electron-сборка грузит `_shell.html` через `file://`, но пути к ассетам в HTML/манифесте пишутся с ведущим `/` (`/./assets/...js`). Браузер Electron ищет их в корне файловой системы Windows и не находит → белый экран. NGINX здесь не нужен, .exe работает локально.
 
-## План исправления
+## Что сделать
 
-1. **Пересобрать Windows-сборку Electron** заново из актуального кода:
-   - `bun run build` (веб-часть под Electron: `vite.electron.config.ts` → `dist-electron-web/`)
-   - `npx @electron/packager . "SamsonCRM" --platform=win32 --arch=x64 --out=electron-release --overwrite` с исключением `node_modules/src/public/electron-release`
-   - Упаковать результат: `cd electron-release && zip -r /tmp/SamsonCRM-windows.zip SamsonCRM-win32-x64/`
+1. **Пост-обработка `_shell.html` после `build:electron`**
+   Добавить в `package.json` шаг, который:
+   - переименовывает `_shell.html` → `index.html`
+   - заменяет в HTML все `"/./assets/` и `"/assets/` на `"./assets/`
+   - заменяет `"/favicon` на `"./favicon`
+   Реализовать маленьким Node-скриптом `scripts/fix-electron-paths.cjs`, вызвать его в скрипте `build:electron`.
 
-2. **Залить архив как Lovable-ассет** через `lovable-assets create --file /tmp/SamsonCRM-windows.zip --filename SamsonCRM-windows.zip > src/assets/downloads/SamsonCRM-windows.zip.asset.json`. Это создаст новый постоянный URL в R2.
+2. **Обновить `electron/main.cjs`**
+   Загружать `dist-electron-web/client/index.html` (после переименования).
 
-3. **Обновить ссылку в UI**:
-   - В `src/routes/login.tsx` и `src/routes/settings.tsx` импортировать `SamsonCRM-windows.zip.asset.json` из `src/assets/downloads/` (сейчас `login.tsx` вообще не показывает кнопку — по прошлой правке её убрали; кнопка живёт в Настройках → Аккаунт; проверю оба места и подключу актуальный asset JSON).
-   - Заменить старую загрузку через `<a href download>` на fetch+blob (по правилу превью — прямые `href` к статике требуют авторизации и падают).
+3. **Пересобрать и упаковать**
+   `npm run package:win` → положить свежий ZIP в CDN, чтобы кнопка «Скачать для Windows» в Настройках отдавала рабочую версию. Проверить, что архив валидный (curl + unzip -l).
 
-4. **Проверить размер и content-type** нового asset JSON (`size` должен быть ~140–150 МБ, `content_type: application/zip`), убедиться, что скачивание работает и на preview, и на published.
+4. **Локальная проверка**
+   Запустить electron из собранной папки в sandbox headless-режиме нельзя, поэтому валидируем косвенно: убеждаемся, что в получившемся `index.html` нет `"/./` и `"/assets`, и все файлы из `<script src>` реально существуют в `dist-electron-web/client/assets/`.
 
 ## Технические детали
-- Старый файл `src/assets/downloads/SamsonCRM-windows.zip.asset.json` перезапишется новым `asset_id`/`url`.
-- Файл в `dist-electron-web/server/assets/login-FHINjCph.js` — это уже собранный артефакт, править не нужно, пересоберётся автоматически.
-- Кнопка на login-странице сейчас в коде отсутствует (мы её убирали) — если хотите вернуть её на экран входа, скажите; иначе оставлю только в Настройки → Аккаунт.
-
-## Вопрос перед реализацией
-Куда должна вести кнопка скачивания — только в **Настройки → Аккаунт** (как сейчас) или вернуть её и на страницу **входа** тоже?
+- Никакой NGINX/интернет для .exe не требуется — приложение полностью локальное, синхронизация с облаком идёт отдельно, когда есть сеть.
+- Причина именно в base-путях, не в CSP и не в отсутствии сервера.
