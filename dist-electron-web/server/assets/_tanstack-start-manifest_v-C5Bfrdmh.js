@@ -16,7 +16,7 @@ var tsrStartManifest = () => ({ routes: {
 		],
 		css: ["/./assets/index-BmGKuEuj.css"],
 		preloads: [
-			"/./assets/index-DOjhfeAz.js",
+			"/./assets/index-C1Hqrdku.js",
 			"/./assets/utils-CXOPvuNg.js",
 			"/./assets/api-H9Th6sEP.js",
 			"/./assets/dist-U65BaAAg.js",
@@ -28,14 +28,14 @@ var tsrStartManifest = () => ({ routes: {
 		scripts: [{ attrs: {
 			type: "module",
 			async: !0,
-			src: "/./assets/index-DOjhfeAz.js"
+			src: "/./assets/index-C1Hqrdku.js"
 		} }]
 	},
 	"/calculator": {
 		filePath: "/dev-server/src/routes/calculator.tsx",
 		children: void 0,
 		preloads: [
-			"/./assets/calculator-DzisPzWE.js",
+			"/./assets/calculator-Ct3pJEuC.js",
 			"/./assets/useQuery-BhntOjjW.js",
 			"/./assets/car-CA2P4ebD.js",
 			"/./assets/chevron-left-BqWSDjEr.js",
@@ -53,11 +53,11 @@ var tsrStartManifest = () => ({ routes: {
 		filePath: "/dev-server/src/routes/calendar.tsx",
 		children: void 0,
 		preloads: [
-			"/./assets/calendar-DlgmhUgP.js",
-			"/./assets/useMutation-wOt5jKAJ.js",
+			"/./assets/calendar-sXelX4ym.js",
+			"/./assets/useMutation-CJvhKMxf.js",
 			"/./assets/useQuery-BhntOjjW.js",
 			"/./assets/badge-8GsVQTcK.js",
-			"/./assets/AppointmentDialog-BOE-YlKL.js",
+			"/./assets/AppointmentDialog-Dqa9bIZf.js",
 			"/./assets/trash-2-CVoWsJf7.js"
 		]
 	},
@@ -65,17 +65,17 @@ var tsrStartManifest = () => ({ routes: {
 		filePath: "/dev-server/src/routes/clients.tsx",
 		children: void 0,
 		preloads: [
-			"/./assets/clients-DKYgIYtU.js",
-			"/./assets/dropdown-menu-DtYM3Av4.js",
-			"/./assets/command-BU54p9hC.js",
-			"/./assets/useMutation-wOt5jKAJ.js",
+			"/./assets/clients-D102ILDf.js",
+			"/./assets/dropdown-menu-CzJmRDYm.js",
+			"/./assets/command-CxIqS-lx.js",
+			"/./assets/useMutation-CJvhKMxf.js",
 			"/./assets/useQuery-BhntOjjW.js",
 			"/./assets/arrow-left-BiGc-5A0.js",
 			"/./assets/car-CA2P4ebD.js",
 			"/./assets/pencil-DSbZFWBc.js",
 			"/./assets/trash-2-CVoWsJf7.js",
 			"/./assets/search-C46IyKU3.js",
-			"/./assets/ModificationForm-C8XLYSm_.js",
+			"/./assets/ModificationForm-C058S7gS.js",
 			"/./assets/carsCatalogDb-XzFgn_lu.js"
 		]
 	},
@@ -83,9 +83,9 @@ var tsrStartManifest = () => ({ routes: {
 		filePath: "/dev-server/src/routes/expenses.tsx",
 		children: void 0,
 		preloads: [
-			"/./assets/expenses-CmzaoNk4.js",
-			"/./assets/tabs-HYbxzYB_.js",
-			"/./assets/useMutation-wOt5jKAJ.js",
+			"/./assets/expenses-a6nrIPXv.js",
+			"/./assets/tabs-MYn0y3g6.js",
+			"/./assets/useMutation-CJvhKMxf.js",
 			"/./assets/useQuery-BhntOjjW.js",
 			"/./assets/badge-8GsVQTcK.js",
 			"/./assets/parseISO-BiH2Q19P.js",
@@ -99,14 +99,14 @@ var tsrStartManifest = () => ({ routes: {
 	"/login": {
 		filePath: "/dev-server/src/routes/login.tsx",
 		children: void 0,
-		preloads: ["/./assets/login-B8YiD0mk.js", "/./assets/useLoginHero-CG871O3t.js"]
+		preloads: ["/./assets/login-DgDmepKK.js", "/./assets/useLoginHero-CG871O3t.js"]
 	},
 	"/mechanics": {
 		filePath: "/dev-server/src/routes/mechanics.tsx",
 		children: void 0,
 		preloads: [
-			"/./assets/mechanics-CluNQhgz.js",
-			"/./assets/useMutation-wOt5jKAJ.js",
+			"/./assets/mechanics-BHlkEIPH.js",
+			"/./assets/useMutation-CJvhKMxf.js",
 			"/./assets/useQuery-BhntOjjW.js",
 			"/./assets/arrow-left-BiGc-5A0.js",
 			"/./assets/calendar-clock-3gWW6lDW.js",
@@ -120,13 +120,13 @@ var tsrStartManifest = () => ({ routes: {
 		filePath: "/dev-server/src/routes/schedule.tsx",
 		children: void 0,
 		preloads: [
-			"/./assets/schedule-iByBH5C-.js",
-			"/./assets/dropdown-menu-DtYM3Av4.js",
-			"/./assets/useMutation-wOt5jKAJ.js",
+			"/./assets/schedule--ZoqB974.js",
+			"/./assets/dropdown-menu-CzJmRDYm.js",
+			"/./assets/useMutation-CJvhKMxf.js",
 			"/./assets/useQuery-BhntOjjW.js",
 			"/./assets/badge-8GsVQTcK.js",
 			"/./assets/parseISO-BiH2Q19P.js",
-			"/./assets/AppointmentDialog-BOE-YlKL.js",
+			"/./assets/AppointmentDialog-Dqa9bIZf.js",
 			"/./assets/trash-2-CVoWsJf7.js",
 			"/./assets/printer-9FV0u7_R.js",
 			"/./assets/PrintDocument-DQ2uMfl8.js"
@@ -136,15 +136,15 @@ var tsrStartManifest = () => ({ routes: {
 		filePath: "/dev-server/src/routes/settings.tsx",
 		children: void 0,
 		preloads: [
-			"/./assets/settings-CmUZFs0i.js",
-			"/./assets/tabs-HYbxzYB_.js",
-			"/./assets/useMutation-wOt5jKAJ.js",
+			"/./assets/settings-Ctp6ea4b.js",
+			"/./assets/tabs-MYn0y3g6.js",
+			"/./assets/useMutation-CJvhKMxf.js",
 			"/./assets/useQuery-BhntOjjW.js",
 			"/./assets/car-CA2P4ebD.js",
 			"/./assets/pencil-DSbZFWBc.js",
 			"/./assets/trash-2-CVoWsJf7.js",
 			"/./assets/useLoginHero-CG871O3t.js",
-			"/./assets/ModificationForm-C8XLYSm_.js",
+			"/./assets/ModificationForm-C058S7gS.js",
 			"/./assets/carsCatalogDb-XzFgn_lu.js"
 		]
 	},
@@ -152,7 +152,7 @@ var tsrStartManifest = () => ({ routes: {
 		filePath: "/dev-server/src/routes/stats.tsx",
 		children: void 0,
 		preloads: [
-			"/./assets/stats-D1t3KJHw.js",
+			"/./assets/stats-Cc9L7tzr.js",
 			"/./assets/useQuery-BhntOjjW.js",
 			"/./assets/badge-8GsVQTcK.js",
 			"/./assets/parseISO-BiH2Q19P.js",
