@@ -95,6 +95,7 @@ function AccountTab() {
   const [newLogin, setNewLogin] = useState(current.login);
   const [newPass, setNewPass] = useState("");
   const [newPass2, setNewPass2] = useState("");
+  const windowsArchiveUrl = new URL(winDownload.url, "https://samson-car.lovable.app").href;
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -168,24 +169,9 @@ function AccountTab() {
 
       <LoginHeroCard />
 
-      <button
-        type="button"
-        onClick={async () => {
-          try {
-            const res = await fetch(winDownload.url);
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const blob = await res.blob();
-            const a = document.createElement("a");
-            a.href = URL.createObjectURL(blob);
-            a.download = "SamsonCRM-windows.zip";
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-          } catch (e) {
-            alert("Не удалось скачать архив: " + (e as Error).message);
-          }
-        }}
+      <a
+        href={windowsArchiveUrl}
+        download="SamsonCRM-windows.zip"
         className="mt-4 flex w-full items-center gap-3 rounded-lg border bg-card p-4 text-left shadow-sm transition hover:bg-accent"
       >
         <Download className="h-5 w-5 shrink-0" />
@@ -195,7 +181,7 @@ function AccountTab() {
             ZIP ~138 МБ · распакуйте и запустите SamsonCRM.exe · логин тот же
           </div>
         </div>
-      </button>
+      </a>
 
     </div>
   );
