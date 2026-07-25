@@ -3,7 +3,7 @@ import { t as cn } from "./utils-C_uf36nf.js";
 import { n as Button, t as Input } from "./input-CEMa6_Eh.js";
 import { n as useConfirm } from "./ConfirmDialog-ClPPfBvs.js";
 import { a as logout, n as getCredentials, t as changeCredentials } from "./authGate-Bd0wCx6i.js";
-import { t as Route } from "./settings-E4KsAyWP.js";
+import { t as Route } from "./settings-DsCOK4eM.js";
 import { t as Label } from "./label-DBD1bRRP.js";
 import { a as DialogTitle, i as DialogHeader, n as DialogContent, r as DialogFooter, t as Dialog } from "./dialog-CzUx__WV.js";
 import { a as SelectValue, i as SelectTrigger, n as SelectContent, r as SelectItem, t as Select } from "./select-Dg1urBTx.js";
@@ -20,14 +20,14 @@ import { Car, Download, Pencil, Plus, Save, Settings2, Trash2, X } from "lucide-
 import { toast } from "sonner";
 var SamsonCRM_windows_zip_asset_default = {
 	version: 1,
-	asset_id: "5b06687c-b73e-446c-8c08-fb5054b9be5a",
+	asset_id: "80ee0d1a-f03f-4017-9a34-39b1321c8fd7",
 	project_id: "ddf217c8-3d5f-4fe6-9180-c8a9b5a16136",
-	url: "/__l5e/assets-v1/5b06687c-b73e-446c-8c08-fb5054b9be5a/SamsonCRM-windows.zip",
-	r2_key: "a/v1/ddf217c8-3d5f-4fe6-9180-c8a9b5a16136/5b06687c-b73e-446c-8c08-fb5054b9be5a/SamsonCRM-windows.zip",
-	original_filename: "SamsonCRM-windows.zip",
-	size: 144429032,
+	url: "/__l5e/assets-v1/80ee0d1a-f03f-4017-9a34-39b1321c8fd7/SamsonCRM-win32-x64.zip",
+	r2_key: "a/v1/ddf217c8-3d5f-4fe6-9180-c8a9b5a16136/80ee0d1a-f03f-4017-9a34-39b1321c8fd7/SamsonCRM-win32-x64.zip",
+	original_filename: "SamsonCRM-win32-x64.zip",
+	size: 144493658,
 	content_type: "application/zip",
-	created_at: "2026-07-22T10:37:39Z"
+	created_at: "2026-07-25T07:03:11Z"
 };
 //#endregion
 //#region src/components/ui/table.tsx

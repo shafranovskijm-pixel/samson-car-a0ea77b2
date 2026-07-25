@@ -10,7 +10,8 @@
     "build:dev": "vite build --mode development",
     "build:static": "vite build --config vite.static.config.ts && cp dist/client/_shell.html dist/client/index.html",
     "build:electron": "vite build --config vite.electron.config.ts && node scripts/fix-electron-paths.cjs",
-    "package:win": "npm run build:electron && electron-packager . SamsonCRM --platform=win32 --arch=x64 --out=electron-release --overwrite --ignore='^/node_modules' --ignore='^/src' --ignore='^/public' --ignore='^/dist' --ignore='^/electron-release'",
+    "package:win": "npm run build:electron && electron-packager . SamsonCRM --platform=win32 --arch=x64 --out=electron-release --overwrite --ignore='^/node_modules' --ignore='^/src' --ignore='^/public' --ignore='^/dist($|/)' --ignore='^/electron-release' && node scripts/verify-electron-package.cjs electron-release/SamsonCRM-win32-x64/resources/app.asar",
+    "package:linux": "npm run build:electron && electron-packager . SamsonCRM --platform=linux --arch=x64 --out=electron-release --overwrite --ignore='^/node_modules' --ignore='^/src' --ignore='^/public' --ignore='^/dist($|/)' --ignore='^/electron-release' && node scripts/verify-electron-package.cjs electron-release/SamsonCRM-linux-x64/resources/app.asar",
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write ."

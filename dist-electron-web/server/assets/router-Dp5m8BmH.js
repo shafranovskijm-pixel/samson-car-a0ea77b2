@@ -2,12 +2,12 @@ import { t as cn } from "./utils-C_uf36nf.js";
 import { n as Button, t as Input } from "./input-CEMa6_Eh.js";
 import { t as ConfirmProvider } from "./ConfirmDialog-ClPPfBvs.js";
 import { a as logout, r as isLoggedIn } from "./authGate-Bd0wCx6i.js";
-import { t as Route$8 } from "./settings-E4KsAyWP.js";
+import { t as Route$8 } from "./settings-DsCOK4eM.js";
 import { t as Route$9 } from "./calendar-D4VfzyeD.js";
 import { t as Route$10 } from "./calculator-BebDG-hB.js";
 import * as React from "react";
 import { useEffect, useMemo, useState } from "react";
-import { HeadContent, Link, Outlet, Scripts, createFileRoute, createRootRouteWithContext, createRouter, lazyRouteComponent, redirect, useRouter, useRouterState } from "@tanstack/react-router";
+import { HeadContent, Link, Outlet, Scripts, createFileRoute, createHashHistory, createRootRouteWithContext, createRouter, lazyRouteComponent, redirect, useRouter, useRouterState } from "@tanstack/react-router";
 import { jsx, jsxs } from "react/jsx-runtime";
 import { QueryClient, QueryClientProvider, useIsMutating, useQueryClient } from "@tanstack/react-query";
 import { BarChart3, Calculator, Calendar, Clock, GripVertical, ListChecks, LogOut, PanelLeft, RefreshCw, Settings, UserCog, Users, Wallet, Wifi, WifiOff, X } from "lucide-react";
@@ -1083,11 +1083,13 @@ function attachOfflinePersistence(client) {
 var getRouter = () => {
 	const queryClient = makeQueryClient();
 	attachOfflinePersistence(queryClient);
+	const isFileProtocol = typeof window !== "undefined" && window.location.protocol === "file:";
 	return createRouter({
 		routeTree,
 		context: { queryClient },
 		scrollRestoration: true,
-		defaultPreloadStaleTime: 0
+		defaultPreloadStaleTime: 0,
+		...isFileProtocol ? { history: createHashHistory() } : {}
 	});
 };
 //#endregion
