@@ -52,6 +52,7 @@ import {
   type MechanicAdvance,
 } from "@/lib/api";
 import { effectivePayout, type PayoutMechanic, type PayoutService } from "@/lib/payouts";
+import { ExpensesMonthlyTable } from "@/components/ExpensesMonthlyTable";
 
 
 export const Route = createFileRoute("/expenses")({
@@ -353,10 +354,11 @@ function ExpensesPage() {
 
 
       <Tabs defaultValue="summary">
-        <TabsList>
+        <TabsList className="no-print">
           <TabsTrigger value="summary">Сводка</TabsTrigger>
           <TabsTrigger value="mechanics">По мастерам</TabsTrigger>
           <TabsTrigger value="services">По услугам</TabsTrigger>
+          <TabsTrigger value="table">Сводная таблица</TabsTrigger>
         </TabsList>
 
         <TabsContent value="summary" className="mt-4">
@@ -382,6 +384,17 @@ function ExpensesPage() {
 
         <TabsContent value="services" className="mt-4">
           <ServicesBlock appts={doneAppts} effPayout={effPayout} />
+        </TabsContent>
+
+        <TabsContent value="table" className="mt-4">
+          <ExpensesMonthlyTable
+            month={month}
+            appts={doneAppts}
+            mechanics={mechanics}
+            advances={advances}
+            mechById={mechById}
+            svcById={svcById}
+          />
         </TabsContent>
 
       </Tabs>
