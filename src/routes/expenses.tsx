@@ -52,6 +52,7 @@ import {
   type MechanicAdvance,
 } from "@/lib/api";
 import { effectivePayout, type PayoutMechanic, type PayoutService } from "@/lib/payouts";
+import { ExpensesMonthlyTable } from "@/components/ExpensesMonthlyTable";
 
 
 export const Route = createFileRoute("/expenses")({
