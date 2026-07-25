@@ -168,10 +168,25 @@ function AccountTab() {
 
       <LoginHeroCard />
 
-      <a
-        href={winDownload.url}
-        download="SamsonCRM-windows.zip"
-        className="mt-4 flex items-center gap-3 rounded-lg border bg-card p-4 shadow-sm transition hover:bg-accent"
+      <button
+        type="button"
+        onClick={async () => {
+          try {
+            const res = await fetch(winDownload.url);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const blob = await res.blob();
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = "SamsonCRM-windows.zip";
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+          } catch (e) {
+            alert("Не удалось скачать архив: " + (e as Error).message);
+          }
+        }}
+        className="mt-4 flex w-full items-center gap-3 rounded-lg border bg-card p-4 text-left shadow-sm transition hover:bg-accent"
       >
         <Download className="h-5 w-5 shrink-0" />
         <div className="text-left">
@@ -180,7 +195,8 @@ function AccountTab() {
             ZIP ~138 МБ · распакуйте и запустите SamsonCRM.exe · логин тот же
           </div>
         </div>
-      </a>
+      </button>
+
     </div>
   );
 }
