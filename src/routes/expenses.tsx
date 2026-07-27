@@ -84,17 +84,6 @@ const fmt = (n: number) =>
 
 const isoDate = (d: Date) => format(d, "yyyy-MM-dd");
 
-function ExpensesPage() {
-  const [month, setMonth] = useState(() => startOfMonth(new Date()));
-  const monthStart = useMemo(() => startOfMonth(month), [month]);
-  const monthEnd = useMemo(() => endOfMonth(month), [month]);
-  const fromIso = isoDate(monthStart);
-  const toIso = isoDate(monthEnd);
-
-  const { data: appts = [] } = useQuery({
-    queryKey: ["appointments", "expenses-month", fromIso, toIso],
-    queryFn: () => listAppointments(monthStart, monthEnd),
-  });
 type Period = "day" | "week" | "month";
 
 function ExpensesPage() {
