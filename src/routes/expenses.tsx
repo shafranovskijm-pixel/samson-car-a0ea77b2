@@ -548,11 +548,13 @@ function ExpensesBlock({
   fromIso,
   toIso,
   defaultDate,
+  periodLabel,
 }: {
   expenses: Expense[];
   fromIso: string;
   toIso: string;
   defaultDate: string;
+  periodLabel: string;
 }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
