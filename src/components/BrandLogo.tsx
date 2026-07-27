@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 // filippofilip95/car-logos-dataset — thumb 200px, свободный доступ через jsDelivr CDN.
 const slug = (brand: string) =>
@@ -13,22 +13,30 @@ export const brandLogoUrl = (brand: string) =>
 
 export function BrandLogo({
   brand,
+  logoUrl,
   size = 48,
   className = "",
 }: {
   brand: string;
+  logoUrl?: string | null;
   size?: number;
   className?: string;
 }) {
-  const [failed, setFailed] = useState(false);
-  const initials = brand
-    .split(/\s+/)
-    .map((w) => w[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+  // 0: custom logo_url, 1: jsDelivr CDN, 2: initials fallback
+  const [stage, setStage] = useState<0 | 1 | 2>(logoUrl ? 0 : 1);
 
-  if (failed) {
+  // если logoUrl появился/сменился — начнём сначала
+  useEffect(() => {
+    setStage(logoUrl ? 0 : 1);
+  }, [logoUrl]);
+
+  if (stage === 2) {
+    const initials = brand
+      .split(/\s+/)
+      .map((w) => w[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
     return (
       <div
         className={`inline-flex items-center justify-center rounded-md bg-white/10 font-bold text-white/80 ${className}`}
@@ -39,14 +47,16 @@ export function BrandLogo({
       </div>
     );
   }
+
+  const src = stage === 0 ? (logoUrl as string) : brandLogoUrl(brand);
   return (
     <img
-      src={brandLogoUrl(brand)}
+      src={src}
       alt={brand}
       width={size}
       height={size}
       loading="lazy"
-      onError={() => setFailed(true)}
+      onError={() => setStage((s) => (s === 0 ? 1 : 2))}
       className={`object-contain ${className}`}
       style={{ width: size, height: size }}
     />
