@@ -123,6 +123,31 @@ function RootComponent() {
     setAuthed(isLoggedIn());
   }, [pathname]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const marker = "#redirect=";
+    if (!window.location.hash.startsWith(marker)) return;
+    const target = decodeURIComponent(window.location.hash.slice(marker.length));
+    window.history.replaceState(null, "", target);
+    switch (target.split("?")[0]) {
+      case "/":
+      case "/login":
+      case "/schedule":
+      case "/calendar":
+      case "/clients":
+      case "/mechanics":
+      case "/calculator":
+      case "/stats":
+      case "/settings":
+      case "/expenses":
+        router.invalidate();
+        break;
+      default:
+        window.history.replaceState(null, "", "/");
+        router.invalidate();
+    }
+  }, [router]);
+
   const isLoginRoute = pathname === "/login";
 
   return (
