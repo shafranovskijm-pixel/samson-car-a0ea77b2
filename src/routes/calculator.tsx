@@ -99,6 +99,10 @@ function LandingPage() {
   const confirm = useConfirm();
   const { data: brands = [] } = useQuery({ queryKey: ["brands"], queryFn: listBrands });
   const { data: services = [] } = useQuery({ queryKey: ["services"], queryFn: listServices });
+  const { data: dbCategories = [] } = useQuery({
+    queryKey: ["service_categories"],
+    queryFn: listServiceCategories,
+  });
   const { data: cars = [] } = useQuery({
     queryKey: ["cars"],
     queryFn: listCars,
