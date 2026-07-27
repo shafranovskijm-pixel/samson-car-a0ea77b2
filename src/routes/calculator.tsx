@@ -935,13 +935,21 @@ function LandingPage() {
                     <ChevronLeft className="h-4 w-4" /> Все категории
                   </button>
                   <div className="mb-4 flex items-center gap-3">
-                    <img
-                      src={CATEGORIES.find((c) => c.name === activeCategory)?.img}
-                      alt=""
-                      width={80}
-                      height={60}
-                      className="h-14 w-20 rounded-lg object-cover ring-1 ring-white/10"
-                    />
+                    {(() => {
+                      const cur = catList.find((c) => c.name === activeCategory);
+                      return cur?.image_url ? (
+                        <img
+                          src={cur.image_url}
+                          alt=""
+                          className="h-14 w-20 rounded-lg object-cover ring-1 ring-white/10"
+                        />
+                      ) : (
+                        <div
+                          className="h-14 w-20 rounded-lg ring-1 ring-white/10"
+                          style={{ background: gradientForName(activeCategory) }}
+                        />
+                      );
+                    })()}
                     <div className="flex-1">
                       <h3 className="text-xl font-bold">{activeCategory}</h3>
                       <div className="text-xs text-white/50">
