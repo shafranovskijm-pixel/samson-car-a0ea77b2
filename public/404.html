@@ -1,0 +1,14 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Redirecting…</title>
+<script>
+  // На случай, если хостинг отдаёт 404.html вместо fallback на index.html,
+  // мгновенно уводим пользователя на корень с сохранением пути в hash.
+  var path = location.pathname + location.search;
+  location.replace("/#redirect=" + encodeURIComponent(path));
+</script>
+</head>
+<body></body>
+</html>
