@@ -524,35 +524,6 @@ function RangePicker({
 }
 
 
-function MonthPicker({
-  month,
-  setMonth,
-}: {
-  month: Date;
-  setMonth: (d: Date) => void;
-}) {
-  return (
-    <div className="flex items-center gap-2 rounded-lg border bg-card px-2 py-1">
-      <Button variant="ghost" size="icon" onClick={() => setMonth(addMonths(month, -1))}>
-        <ChevronLeft className="h-4 w-4" />
-      </Button>
-      <div className="min-w-[140px] text-center text-sm font-medium capitalize">
-        {format(month, "LLLL yyyy", { locale: ru })}
-      </div>
-      <Button variant="ghost" size="icon" onClick={() => setMonth(addMonths(month, 1))}>
-        <ChevronRight className="h-4 w-4" />
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        className="ml-1"
-        onClick={() => setMonth(startOfMonth(new Date()))}
-      >
-        Сегодня
-      </Button>
-    </div>
-  );
-}
 
 function StatCard({
   label,
