@@ -1006,7 +1006,7 @@ function CategoriesSection() {
                       await confirm({
                         title: "Удалить категорию?",
                         description: c.name,
-                        confirmLabel: "Удалить",
+                        confirmText: "Удалить",
                         variant: "destructive",
                       })
                     ) {
