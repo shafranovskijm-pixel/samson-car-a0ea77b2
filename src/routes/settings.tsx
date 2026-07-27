@@ -183,6 +183,40 @@ function AccountTab() {
         </div>
       </a>
 
+      <button
+        type="button"
+        onClick={() => {
+          if (!confirm("Очистить кэш и перезагрузить приложение? Локальные данные (логин, картинка входа) сохранятся.")) return;
+          try {
+            const keep: Record<string, string | null> = {
+              "samson-crm-auth": localStorage.getItem("samson-crm-auth"),
+              "samson-crm-login-hero": localStorage.getItem("samson-crm-login-hero"),
+            };
+            localStorage.clear();
+            sessionStorage.clear();
+            for (const [k, v] of Object.entries(keep)) {
+              if (v != null) localStorage.setItem(k, v);
+            }
+            const reload = () => window.location.reload();
+            if (typeof caches !== "undefined") {
+              caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k)))).finally(reload);
+            } else {
+              reload();
+            }
+          } catch {
+            window.location.reload();
+          }
+        }}
+        className="mt-4 flex w-full items-center gap-3 rounded-lg border bg-card p-4 text-left shadow-sm transition hover:bg-accent"
+      >
+        <Trash2 className="h-5 w-5 shrink-0" />
+        <div>
+          <div className="font-medium">Очистить кэш</div>
+          <div className="text-xs text-muted-foreground">
+            Удалит оффлайн-кэш и перезагрузит приложение. Логин и картинка входа сохранятся.
+          </div>
+        </div>
+      </button>
     </div>
   );
 }
