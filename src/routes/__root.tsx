@@ -123,6 +123,15 @@ function RootComponent() {
     setAuthed(isLoggedIn());
   }, [pathname]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const marker = "#redirect=";
+    if (!window.location.hash.startsWith(marker)) return;
+    const target = decodeURIComponent(window.location.hash.slice(marker.length));
+    if (!target.startsWith("/")) return;
+    router.navigate({ to: target });
+  }, [router]);
+
   const isLoginRoute = pathname === "/login";
 
   return (
