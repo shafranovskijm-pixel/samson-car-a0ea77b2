@@ -303,7 +303,7 @@ export function ExpensesMonthlyTable({
                   </tr>
                   <tr className="border-b bg-muted/40 text-[10px] uppercase tracking-wider text-muted-foreground">
                     {visibleMechs.map((m) => (
-                      <>
+                      <Fragment key={m.id}>
                         <th key={`${m.id}-p`} className="border-l px-2 py-1.5 text-right">
                           %
                         </th>
@@ -316,7 +316,7 @@ export function ExpensesMonthlyTable({
                         <th key={`${m.id}-a`} className="px-2 py-1.5 text-right">
                           Аванс
                         </th>
-                      </>
+                      </Fragment>
                     ))}
                   </tr>
                 </thead>
@@ -333,7 +333,7 @@ export function ExpensesMonthlyTable({
                         const c = r.byMech[m.id];
                         if (!c) {
                           return (
-                            <>
+                            <Fragment key={m.id}>
                               <td key={`${m.id}-p`} className="border-l px-2 py-2 text-right text-muted-foreground">
                                 —
                               </td>
@@ -346,11 +346,11 @@ export function ExpensesMonthlyTable({
                               <td key={`${m.id}-a`} className="px-2 py-2 text-right text-muted-foreground">
                                 —
                               </td>
-                            </>
+                            </Fragment>
                           );
                         }
                         return (
-                          <>
+                          <Fragment key={m.id}>
                             <td
                               key={`${m.id}-p`}
                               className="whitespace-nowrap border-l px-2 py-2 text-right tabular-nums"
@@ -375,7 +375,7 @@ export function ExpensesMonthlyTable({
                             >
                               {c.advance ? fmt(c.advance) : ""}
                             </td>
-                          </>
+                          </Fragment>
                         );
                       })}
                     </tr>
@@ -389,7 +389,7 @@ export function ExpensesMonthlyTable({
                     {visibleMechs.map((m) => {
                       const t = totalsByMech.get(m.id)!;
                       return (
-                        <>
+                        <Fragment key={m.id}>
                           <td key={`${m.id}-tp`} className="border-l px-2 py-2 text-right" />
                           <td
                             key={`${m.id}-ts`}
@@ -409,7 +409,7 @@ export function ExpensesMonthlyTable({
                           >
                             {fmt(t.advance)}
                           </td>
-                        </>
+                        </Fragment>
                       );
                     })}
                   </tr>
