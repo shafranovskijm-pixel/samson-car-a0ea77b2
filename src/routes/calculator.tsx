@@ -93,6 +93,19 @@ import { Plus } from "lucide-react";
 
 const OTHER_CATEGORY = "Прочие услуги";
 
+const normalizeCategoryKey = (value?: string | null) =>
+  (value ?? "").trim().replace(/\s+/g, " ").toLocaleLowerCase("ru-RU");
+
+const cleanCategoryName = (value?: string | null) => {
+  const clean = (value ?? "").trim().replace(/\s+/g, " ");
+  return normalizeCategoryKey(clean) === normalizeCategoryKey(OTHER_CATEGORY)
+    ? OTHER_CATEGORY
+    : clean;
+};
+
+const sameCategoryName = (a?: string | null, b?: string | null) =>
+  normalizeCategoryKey(a) === normalizeCategoryKey(b);
+
 // Цветной градиент как аккуратный плейсхолдер, если у категории нет своей картинки.
 const gradientForName = (name: string): string => {
   let h = 0;
@@ -326,34 +339,57 @@ function LandingPage() {
 
   // Список категорий из БД + гарантируем наличие "Прочие услуги"
   const catList = useMemo(() => {
-    const list = [...dbCategories];
-    if (!list.some((c) => c.name.toLowerCase() === OTHER_CATEGORY.toLowerCase())) {
-      list.push({ id: "__other", name: OTHER_CATEGORY, image_url: null, sort_order: 1000 });
+    const byKey = new Map<string, (typeof dbCategories)[number]>();
+    dbCategories.forEach((category) => {
+      const name = cleanCategoryName(category.name);
+      const key = normalizeCategoryKey(name);
+      if (!key) return;
+      const normalized = { ...category, name };
+      const prev = byKey.get(key);
+      if (!prev || normalized.sort_order < prev.sort_order || (!prev.image_url && normalized.image_url)) {
+        byKey.set(key, normalized);
+      }
+    });
+    if (!byKey.has(normalizeCategoryKey(OTHER_CATEGORY))) {
+      byKey.set(normalizeCategoryKey(OTHER_CATEGORY), {
+        id: "__other",
+        name: OTHER_CATEGORY,
+        image_url: null,
+        sort_order: 1000,
+      });
     }
-    return list.sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name));
+    return Array.from(byKey.values()).sort(
+      (a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name),
+    );
   }, [dbCategories]);
 
-  const knownCatSet = useMemo(
-    () => new Set(dbCategories.map((c) => c.name.toLowerCase())),
-    [dbCategories],
-  );
+  const catNameByKey = useMemo(() => {
+    const map = new Map<string, string>();
+    catList.forEach((category) => map.set(normalizeCategoryKey(category.name), category.name));
+    return map;
+  }, [catList]);
 
   // Услуги по категориям (неизвестные категории → "Прочие услуги")
   const byCategory = useMemo(() => {
     const map: Record<string, typeof services> = {};
     services.forEach((s) => {
-      const cat = knownCatSet.has((s.category ?? "").toLowerCase()) ? s.category : OTHER_CATEGORY;
+      const categoryKey = normalizeCategoryKey(cleanCategoryName(s.category));
+      const cat = catNameByKey.get(categoryKey) ?? OTHER_CATEGORY;
       (map[cat] ??= []).push(s);
     });
     return map;
-  }, [services, knownCatSet]);
+  }, [services, catNameByKey]);
 
   // Управление категориями прямо из калькулятора
   const invalidateCats = () => qc.invalidateQueries({ queryKey: ["service_categories"] });
 
   const addCategoryPrompt = async () => {
-    const name = window.prompt("Название новой категории")?.trim();
+    const name = cleanCategoryName(window.prompt("Название новой категории"));
     if (!name) return;
+    if (catList.some((category) => sameCategoryName(category.name, name))) {
+      toast.error("Такая категория уже есть");
+      return;
+    }
     try {
       await createServiceCategory({ name, sort_order: 100, image_url: null });
       toast.success("Категория добавлена");
@@ -364,12 +400,17 @@ function LandingPage() {
   };
 
   const renameCategoryPrompt = async (c: { id: string; name: string }) => {
-    const next = window.prompt("Новое название категории", c.name)?.trim();
-    if (!next || next === c.name) return;
+    const currentName = cleanCategoryName(c.name);
+    const next = cleanCategoryName(window.prompt("Новое название категории", currentName));
+    if (!next || sameCategoryName(next, currentName)) return;
+    if (catList.some((category) => category.id !== c.id && sameCategoryName(category.name, next))) {
+      toast.error("Такая категория уже есть");
+      return;
+    }
     try {
       await updateServiceCategory(c.id, { name: next });
       toast.success("Категория переименована");
-      if (activeCategory === c.name) setActiveCategory(next);
+      if (sameCategoryName(activeCategory, currentName)) setActiveCategory(next);
       invalidateCats();
       qc.invalidateQueries({ queryKey: ["services"] });
     } catch (e) {
@@ -378,17 +419,20 @@ function LandingPage() {
   };
 
   const deleteCategoryPrompt = async (c: { id: string; name: string }) => {
+    const categoryName = cleanCategoryName(c.name);
     const ok = await confirm({
       title: "Удалить категорию?",
-      description: `«${c.name}». Услуги в ней не будут удалены — они попадут в «Прочие услуги».`,
+      description: `«${categoryName}». Услуги в ней не будут удалены — они попадут в «Прочие услуги».`,
       confirmText: "Удалить",
+      destructive: true,
     });
     if (!ok) return;
     try {
-      await deleteServiceCategory(c.id);
+      await deleteServiceCategory(c.id, OTHER_CATEGORY);
       toast.success("Категория удалена");
-      if (activeCategory === c.name) setActiveCategory(null);
+      if (sameCategoryName(activeCategory, categoryName)) setActiveCategory(null);
       invalidateCats();
+      qc.invalidateQueries({ queryKey: ["services"] });
     } catch (e) {
       toast.error(humanizeSupabaseError(e));
     }
@@ -978,7 +1022,7 @@ function LandingPage() {
                       const selectedInCat =
                         byCategory[c.name]?.filter((s) => selected.has(s.id)).length ?? 0;
                       const img = c.image_url ?? fallbackImg(c.name);
-                      const isSynthetic = c.id === "__other";
+                      const isSynthetic = c.id === "__other" || sameCategoryName(c.name, OTHER_CATEGORY);
                       return (
                         <div key={c.name} className="relative">
                           <button
@@ -1056,7 +1100,7 @@ function LandingPage() {
                   </button>
                   <div className="mb-4 flex items-center gap-3">
                     {(() => {
-                      const cur = catList.find((c) => c.name === activeCategory);
+                      const cur = catList.find((c) => sameCategoryName(c.name, activeCategory));
                       const img = cur?.image_url ?? fallbackImg(activeCategory);
                       return img ? (
                         <img
@@ -1075,7 +1119,7 @@ function LandingPage() {
                       <h3 className="text-xl font-bold">{activeCategory}</h3>
                       <div className="text-xs text-white/50">
                         {(byCategory[activeCategory]?.length ?? 0) +
-                          customServices.items.filter((c) => c.category === activeCategory).length}{" "}
+                          customServices.items.filter((c) => sameCategoryName(c.category, activeCategory)).length}{" "}
                         услуг
                       </div>
                     </div>
@@ -1110,7 +1154,7 @@ function LandingPage() {
                             if (!n || !activeCategory) return null;
                             const dup = customServices.items.find(
                               (x) =>
-                                x.category === activeCategory &&
+                                sameCategoryName(x.category, activeCategory) &&
                                 x.name.trim().toLowerCase() === n,
                             );
                             if (!dup) return null;
@@ -1143,10 +1187,12 @@ function LandingPage() {
                           type="button"
                           disabled={savingCustom || !customDraft.name.trim() || !customDraft.price}
                           onClick={async () => {
+                            const category = activeCategory;
+                            if (!category) return;
                             setSavingCustom(true);
                             try {
                               const res = await customServices.add({
-                                category: activeCategory!,
+                                category,
                                 name: customDraft.name.trim(),
                                 price: Number(customDraft.price) || 0,
                                 duration_minutes: Number(customDraft.minutes) || 30,
@@ -1179,7 +1225,7 @@ function LandingPage() {
 
                   <div className="grid gap-3 sm:grid-cols-2">
                     {customServices.items
-                      .filter((c) => c.category === activeCategory)
+                      .filter((c) => sameCategoryName(c.category, activeCategory))
                       .map((c) => {
                         const sid = customId(c.id);
                         const active = selected.has(sid);
