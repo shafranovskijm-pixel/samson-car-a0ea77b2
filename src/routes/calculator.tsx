@@ -66,6 +66,31 @@ const gradientForName = (name: string): string => {
   return `linear-gradient(135deg, hsl(${hue} 60% 35%), hsl(${(hue + 40) % 360} 55% 22%))`;
 };
 
+const calculatorSearchSchema = z.object({
+  carId: fallback(z.string().optional(), undefined),
+});
+
+export const Route = createFileRoute("/calculator")({
+  ssr: false,
+  validateSearch: zodValidator(calculatorSearchSchema),
+  head: () => ({
+    meta: [
+      { title: "Samson Auto — автосервис · калькулятор стоимости" },
+      {
+        name: "description",
+        content:
+          "Samson Auto — современный автосервис. Онлайн-калькулятор стоимости услуг для любой марки авто, запись в удобное время.",
+      },
+      { property: "og:title", content: "Samson Auto — автосервис" },
+      {
+        property: "og:description",
+        content: "Калькулятор стоимости, полный прайс услуг и онлайн-запись.",
+      },
+    ],
+  }),
+  component: LandingPage,
+});
+
 type Step = 1 | 2 | 3;
 
 function LandingPage() {
