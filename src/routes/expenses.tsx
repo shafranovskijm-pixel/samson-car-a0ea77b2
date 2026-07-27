@@ -737,6 +737,7 @@ function MechanicsBlock({
   fromIso,
   toIso,
   apptPayout,
+  periodLabel,
 }: {
   mechanics: { id: string; full_name: string }[];
   appts: ApptRow[];
@@ -745,6 +746,7 @@ function MechanicsBlock({
   toIso: string;
   apptPayout: (a: ApptRow) => number;
   effPayout: (mechanicId: string | null, price: number, stored: number) => number;
+  periodLabel: string;
 }) {
 
   const byMech = useMemo(() => {
