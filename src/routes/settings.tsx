@@ -914,3 +914,330 @@ function BrandPricesDialog({
     </Dialog>
   );
 }
+
+// =========================================================================
+// CATALOG TAB — управление категориями услуг и логотипами марок
+// =========================================================================
+
+function CatalogTab() {
+  return (
+    <div className="space-y-8">
+      <CategoriesSection />
+      <BrandLogosSection />
+    </div>
+  );
+}
+
+function CategoriesSection() {
+  const qc = useQueryClient();
+  const { data: cats = [] } = useQuery({
+    queryKey: ["service_categories"],
+    queryFn: listServiceCategories,
+  });
+  const [openNew, setOpenNew] = useState(false);
+  const [editing, setEditing] = useState<ServiceCategory | null>(null);
+  const confirm = useConfirm();
+
+  const invalidate = () =>
+    qc.invalidateQueries({ queryKey: ["service_categories"] });
+
+  const delM = useMutation({
+    mutationFn: (id: string) => deleteServiceCategory(id),
+    onSuccess: () => {
+      toast.success("Категория удалена");
+      invalidate();
+    },
+    onError: (e) => toast.error(humanizeSupabaseError(e)),
+  });
+
+  return (
+    <section>
+      <div className="mb-3 flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">Категории услуг</h2>
+          <p className="text-xs text-muted-foreground">
+            Отображаются в калькуляторе. Картинку можно загрузить свою.
+          </p>
+        </div>
+        <Button size="sm" onClick={() => setOpenNew(true)}>
+          <Plus className="h-4 w-4 mr-1" /> Добавить
+        </Button>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {cats.map((c) => (
+          <div
+            key={c.id}
+            className="overflow-hidden rounded-xl border bg-card"
+          >
+            <div className="relative aspect-[16/9] bg-muted">
+              {c.image_url ? (
+                <img
+                  src={c.image_url}
+                  alt={c.name}
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground">
+                  Нет картинки
+                </div>
+              )}
+            </div>
+            <div className="flex items-center justify-between gap-2 p-3">
+              <div className="min-w-0">
+                <div className="truncate font-medium">{c.name}</div>
+                <div className="text-xs text-muted-foreground">
+                  Порядок: {c.sort_order}
+                </div>
+              </div>
+              <div className="flex gap-1">
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => setEditing(c)}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={async () => {
+                    if (
+                      await confirm({
+                        title: "Удалить категорию?",
+                        description: c.name,
+                        confirmLabel: "Удалить",
+                        variant: "destructive",
+                      })
+                    ) {
+                      delM.mutate(c.id);
+                    }
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <CategoryDialog
+        open={openNew}
+        onClose={() => setOpenNew(false)}
+        onSaved={invalidate}
+      />
+      <CategoryDialog
+        open={!!editing}
+        category={editing}
+        onClose={() => setEditing(null)}
+        onSaved={invalidate}
+      />
+    </section>
+  );
+}
+
+function CategoryDialog({
+  open,
+  onClose,
+  onSaved,
+  category,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSaved: () => void;
+  category?: ServiceCategory | null;
+}) {
+  const [name, setName] = useState(category?.name ?? "");
+  const [sortOrder, setSortOrder] = useState<number>(category?.sort_order ?? 100);
+  const [imageUrl, setImageUrl] = useState<string | null>(category?.image_url ?? null);
+  const [uploading, setUploading] = useState(false);
+
+  // Sync when opening for edit
+  useMemo(() => {
+    if (open) {
+      setName(category?.name ?? "");
+      setSortOrder(category?.sort_order ?? 100);
+      setImageUrl(category?.image_url ?? null);
+    }
+  }, [open, category]);
+
+  const saveM = useMutation({
+    mutationFn: async () => {
+      if (category) {
+        return updateServiceCategory(category.id, {
+          name: name.trim(),
+          sort_order: sortOrder,
+          image_url: imageUrl,
+        });
+      }
+      return createServiceCategory({
+        name: name.trim(),
+        sort_order: sortOrder,
+        image_url: imageUrl,
+      });
+    },
+    onSuccess: () => {
+      toast.success("Сохранено");
+      onSaved();
+      onClose();
+    },
+    onError: (e) => toast.error(humanizeSupabaseError(e)),
+  });
+
+  const onFile = async (f: File | null) => {
+    if (!f) return;
+    try {
+      setUploading(true);
+      const url = await uploadCatalogImage(f, "categories");
+      setImageUrl(url);
+    } catch (e) {
+      toast.error(humanizeSupabaseError(e));
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{category ? "Изменить категорию" : "Новая категория"}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div>
+            <Label>Название</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+          <div>
+            <Label>Порядок отображения</Label>
+            <Input
+              type="number"
+              value={sortOrder}
+              onChange={(e) => setSortOrder(Number(e.target.value) || 0)}
+            />
+          </div>
+          <div>
+            <Label>Картинка</Label>
+            {imageUrl && (
+              <div className="mb-2 overflow-hidden rounded-lg border">
+                <img src={imageUrl} alt="" className="aspect-[16/9] w-full object-cover" />
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={(e) => onFile(e.target.files?.[0] ?? null)}
+                disabled={uploading}
+              />
+              {imageUrl && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setImageUrl(null)}
+                >
+                  Убрать
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Отмена</Button>
+          <Button
+            disabled={!name.trim() || saveM.isPending || uploading}
+            onClick={() => saveM.mutate()}
+          >
+            <Save className="h-4 w-4 mr-1" /> Сохранить
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function BrandLogosSection() {
+  const qc = useQueryClient();
+  const { data: brands = [] } = useQuery<BrandRow[]>({
+    queryKey: ["brands"],
+    queryFn: listBrands,
+  });
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["brands"] });
+
+  const onUpload = async (b: BrandRow, f: File | null) => {
+    if (!f) return;
+    try {
+      setUploadingId(b.id);
+      const url = await uploadCatalogImage(f, `brands/${b.id}`);
+      await updateBrandLogo(b.id, url);
+      toast.success(`Логотип обновлён: ${b.name}`);
+      invalidate();
+    } catch (e) {
+      toast.error(humanizeSupabaseError(e));
+    } finally {
+      setUploadingId(null);
+    }
+  };
+
+  const onReset = async (b: BrandRow) => {
+    try {
+      await updateBrandLogo(b.id, null);
+      toast.success(`Логотип сброшен: ${b.name}`);
+      invalidate();
+    } catch (e) {
+      toast.error(humanizeSupabaseError(e));
+    }
+  };
+
+  return (
+    <section>
+      <div className="mb-3">
+        <h2 className="text-lg font-semibold">Логотипы марок</h2>
+        <p className="text-xs text-muted-foreground">
+          По умолчанию логотипы берутся из внешнего каталога. Здесь можно загрузить свой.
+        </p>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        {brands.map((b) => (
+          <div key={b.id} className="flex items-center gap-3 rounded-lg border bg-card p-3">
+            <div className="flex h-14 w-14 flex-none items-center justify-center rounded-md bg-white p-1">
+              {b.logo_url ? (
+                <img src={b.logo_url} alt={b.name} className="h-full w-full object-contain" />
+              ) : (
+                <span className="text-xs text-muted-foreground">Стандарт</span>
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="truncate font-medium">{b.name}</div>
+              <div className="mt-1 flex items-center gap-1">
+                <label className="inline-flex cursor-pointer items-center gap-1 rounded-md border px-2 py-1 text-xs hover:bg-accent">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={uploadingId === b.id}
+                    onChange={(e) => onUpload(b, e.target.files?.[0] ?? null)}
+                  />
+                  {uploadingId === b.id ? "..." : "Загрузить"}
+                </label>
+                {b.logo_url && (
+                  <button
+                    type="button"
+                    onClick={() => onReset(b)}
+                    className="rounded-md border px-2 py-1 text-xs text-destructive hover:bg-accent"
+                  >
+                    Сброс
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
