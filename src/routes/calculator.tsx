@@ -1419,7 +1419,7 @@ function LandingPage() {
                       );
                     })}
                     {(byCategory[activeCategory]?.length ?? 0) === 0 &&
-                      customServices.items.filter((c) => c.category === activeCategory).length === 0 && (
+                      customServices.items.filter((c) => sameCategoryName(c.category, activeCategory)).length === 0 && (
                         <div className="col-span-full rounded-lg border border-white/10 bg-white/5 p-6 text-center text-sm text-white/60">
                           В этой категории пока нет услуг
                         </div>
