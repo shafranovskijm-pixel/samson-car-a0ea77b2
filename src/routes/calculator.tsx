@@ -484,7 +484,7 @@ function LandingPage() {
                         className="flex aspect-square items-center justify-center rounded-xl border border-white/10 bg-white p-2 transition hover:border-red-500/60 hover:shadow-[0_0_20px_-5px_rgba(239,68,68,0.5)]"
                         title={n}
                       >
-                        <BrandLogo brand={n} size={44} />
+                        <BrandLogo brand={n} logoUrl={brands.find((b) => b.name === n)?.logo_url ?? null} size={44} />
                       </button>
                     ))}
                   </div>
@@ -532,7 +532,7 @@ function LandingPage() {
                   </button>
 
                   <div className="flex items-center gap-3">
-                    <BrandLogo brand={brandName} size={56} className="rounded-lg bg-white p-1.5" />
+                    <BrandLogo brand={brandName} logoUrl={dbBrand?.logo_url ?? null} size={56} className="rounded-lg bg-white p-1.5" />
                     <div>
                       <h2 className="text-2xl font-bold">{brandName}</h2>
                       {dbBrand ? (
