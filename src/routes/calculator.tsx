@@ -289,14 +289,29 @@ function LandingPage() {
     setStep(2);
   }, [carId, cars, brands, prefillDone]);
 
-  // Услуги по категориям
+  // Список категорий из БД + гарантируем наличие "Прочие услуги"
+  const catList = useMemo(() => {
+    const list = [...dbCategories];
+    if (!list.some((c) => c.name.toLowerCase() === OTHER_CATEGORY.toLowerCase())) {
+      list.push({ id: "__other", name: OTHER_CATEGORY, image_url: null, sort_order: 1000 });
+    }
+    return list.sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name));
+  }, [dbCategories]);
+
+  const knownCatSet = useMemo(
+    () => new Set(dbCategories.map((c) => c.name.toLowerCase())),
+    [dbCategories],
+  );
+
+  // Услуги по категориям (неизвестные категории → "Прочие услуги")
   const byCategory = useMemo(() => {
     const map: Record<string, typeof services> = {};
     services.forEach((s) => {
-      (map[s.category] ??= []).push(s);
+      const cat = knownCatSet.has((s.category ?? "").toLowerCase()) ? s.category : OTHER_CATEGORY;
+      (map[cat] ??= []).push(s);
     });
     return map;
-  }, [services]);
+  }, [services, knownCatSet]);
 
   const popularServices = useMemo(() => {
     const ids = topServiceIds(6);
