@@ -7,7 +7,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { persistQueryClient } from "@tanstack/react-query-persist-client";
 import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 
-const CACHE_KEY = "samson-crm-query-cache-v1";
+const CACHE_KEY = "samson-crm-query-cache-v2";
 
 export function makeQueryClient() {
   return new QueryClient({
