@@ -460,6 +460,8 @@ function CalendarPage() {
           onEventResize={onEventResize}
           getNow={() => new Date()}
           scrollToTime={now}
+          min={new Date(1970, 0, 1, 9, 0, 0)}
+          max={new Date(1970, 0, 1, 22, 0, 0)}
           onSelectSlot={(slot) => {
             const s = slot.start as Date;
             const e = slot.end as Date;
