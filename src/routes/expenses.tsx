@@ -614,7 +614,7 @@ function ExpensesBlock({
 
         {expenses.length === 0 ? (
           <div className="rounded-lg border border-dashed py-10 text-center text-sm text-muted-foreground">
-            За этот месяц ещё нет записей о расходах.
+            За этот {periodLabel === "день" ? "день" : periodLabel === "неделю" ? "неделю" : "месяц"} ещё нет записей о расходах.
           </div>
         ) : (
           <div className="space-y-2">
