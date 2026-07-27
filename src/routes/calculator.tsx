@@ -1057,9 +1057,10 @@ function LandingPage() {
                   <div className="mb-4 flex items-center gap-3">
                     {(() => {
                       const cur = catList.find((c) => c.name === activeCategory);
-                      return cur?.image_url ? (
+                      const img = cur?.image_url ?? fallbackImg(activeCategory);
+                      return img ? (
                         <img
-                          src={cur.image_url}
+                          src={img}
                           alt=""
                           className="h-14 w-20 rounded-lg object-cover ring-1 ring-white/10"
                         />
