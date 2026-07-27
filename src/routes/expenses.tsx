@@ -1,7 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { format, parseISO, startOfMonth, endOfMonth, addMonths } from "date-fns";
+import {
+  format,
+  parseISO,
+  startOfMonth,
+  endOfMonth,
+  addMonths,
+  startOfDay,
+  endOfDay,
+  addDays,
+  startOfWeek,
+  endOfWeek,
+  addWeeks,
+  isSameDay,
+} from "date-fns";
 import { ru } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 
@@ -71,16 +84,34 @@ const fmt = (n: number) =>
 
 const isoDate = (d: Date) => format(d, "yyyy-MM-dd");
 
+type Period = "day" | "week" | "month";
+
 function ExpensesPage() {
-  const [month, setMonth] = useState(() => startOfMonth(new Date()));
-  const monthStart = useMemo(() => startOfMonth(month), [month]);
-  const monthEnd = useMemo(() => endOfMonth(month), [month]);
-  const fromIso = isoDate(monthStart);
-  const toIso = isoDate(monthEnd);
+  const [period, setPeriod] = useState<Period>("month");
+  const [anchor, setAnchor] = useState<Date>(() => new Date());
+
+  const { rangeStart, rangeEnd } = useMemo(() => {
+    if (period === "day") {
+      return { rangeStart: startOfDay(anchor), rangeEnd: endOfDay(anchor) };
+    }
+    if (period === "week") {
+      return {
+        rangeStart: startOfWeek(anchor, { weekStartsOn: 1 }),
+        rangeEnd: endOfWeek(anchor, { weekStartsOn: 1 }),
+      };
+    }
+    return { rangeStart: startOfMonth(anchor), rangeEnd: endOfMonth(anchor) };
+  }, [anchor, period]);
+
+  const fromIso = isoDate(rangeStart);
+  const toIso = isoDate(rangeEnd);
+
+  const periodLabel =
+    period === "day" ? "день" : period === "week" ? "неделю" : "месяц";
 
   const { data: appts = [] } = useQuery({
-    queryKey: ["appointments", "expenses-month", fromIso, toIso],
-    queryFn: () => listAppointments(monthStart, monthEnd),
+    queryKey: ["appointments", "expenses-range", fromIso, toIso],
+    queryFn: () => listAppointments(rangeStart, rangeEnd),
   });
   const { data: expenses = [] } = useQuery({
     queryKey: ["expenses", fromIso, toIso],
@@ -158,51 +189,50 @@ function ExpensesPage() {
       0,
     );
 
-  // Оборот кассы за месяц = все фактические платежи клиентов с paid_at в этом месяце
-  // (независимо от того, в каком месяце сама запись).
+  // Оборот кассы за период = все фактические платежи клиентов с paid_at в этом диапазоне
+  // (независимо от того, в каком периоде сама запись).
   const revenue = payments.reduce((s, p) => s + Number(p.amount ?? 0), 0);
-  // Дебиторка по выполненным работам этого месяца: сколько ещё не оплачено.
+  // Дебиторка по выполненным работам этого периода: сколько ещё не оплачено.
   const unpaidBalance = doneAppts.reduce(
     (s, a) => s + Math.max(0, (a.total_price ?? 0) - Number(a.paid_amount ?? 0)),
     0,
   );
-  // Ожидается поступлений: неоплаченная часть по запланированным/в работе записям месяца.
+  // Ожидается поступлений: неоплаченная часть по запланированным/в работе записям.
   const expectedIncome = upcomingAppts.reduce(
     (s, a) => s + Math.max(0, (a.total_price ?? 0) - Number(a.paid_amount ?? 0)),
     0,
   );
   const expectedCount = upcomingAppts.length;
 
-  // Начислено мастерам (по всем выполненным работам месяца) — с учётом % мастера/услуги.
+  // Начислено мастерам (по всем выполненным работам периода) — с учётом % мастера/услуги.
   const mechanicsAccrued = doneAppts.reduce((s, a) => s + apptPayout(a), 0);
-  // Фактически выплачено мастерам за месяц (авансы)
+  // Фактически выплачено мастерам за период (авансы)
   const mechanicsPaid = advances.reduce((s, a) => s + Number(a.amount ?? 0), 0);
   // Оборот по выполненным работам (начисление, независимо от даты оплаты)
   const accruedRevenue = doneAppts.reduce((s, a) => s + Number(a.total_price ?? 0), 0);
 
 
   const otherExpenses = expenses.reduce((s, e) => s + Number(e.amount ?? 0), 0);
-  // Чистая прибыль — доходы месяца минус все расходы (начисленная ЗП + прочие),
-  // независимо от того, выплачены ли уже авансы мастерам.
   const cashProfit = revenue - mechanicsAccrued - otherExpenses;
-  // Прибыль (начисленная) — по факту выполненных работ, независимо от даты оплат:
-  //   выполнено − начислено ЗП − прочие расходы.
   const accruedProfit = accruedRevenue - mechanicsAccrued - otherExpenses;
-  // Долг перед мастерами = начислено − уже выплачено авансами.
-  // Отрицательное значение = мастеру переплатили авансами (аванс > начисления за месяц).
   const mechanicsDebt = mechanicsAccrued - mechanicsPaid;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
-      <header className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:mb-8">
+      <header className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h1 className="truncate text-xl font-bold sm:text-2xl">Расходы</h1>
           <p className="mt-0.5 truncate text-xs text-muted-foreground sm:text-sm">
-            Оборот, прибыль, ЗП мастеров и авансы за месяц
+            Оборот, прибыль, ЗП мастеров и авансы за {periodLabel}
           </p>
         </div>
         <div className="shrink-0">
-          <MonthPicker month={month} setMonth={setMonth} />
+          <RangePicker
+            period={period}
+            setPeriod={setPeriod}
+            anchor={anchor}
+            setAnchor={setAnchor}
+          />
         </div>
       </header>
 
@@ -234,8 +264,9 @@ function ExpensesPage() {
             </div>
             <div className="mt-1.5 truncate text-2xl font-bold">{fmt(revenue)}</div>
             <div className="mt-1 text-[11px] text-muted-foreground">
-              Оборот кассы (платежи за месяц)
+              Оборот кассы (платежи за {periodLabel})
             </div>
+
             <div className="mt-auto grid grid-cols-2 gap-3 border-t pt-3">
               <div className="min-w-0">
                 <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
@@ -263,7 +294,7 @@ function ExpensesPage() {
                   {fmt(unpaidBalance)}
                 </div>
                 <div className="truncate text-[10px] text-muted-foreground">
-                  по работам месяца
+                  по работам за {periodLabel}
                 </div>
               </div>
             </div>
@@ -358,7 +389,9 @@ function ExpensesPage() {
           <TabsTrigger value="summary">Сводка</TabsTrigger>
           <TabsTrigger value="mechanics">По мастерам</TabsTrigger>
           <TabsTrigger value="services">По услугам</TabsTrigger>
-          <TabsTrigger value="table">Сводная таблица</TabsTrigger>
+          {period === "month" && (
+            <TabsTrigger value="table">Сводная таблица</TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="summary" className="mt-4">
@@ -367,6 +400,7 @@ function ExpensesPage() {
             fromIso={fromIso}
             toIso={toIso}
             defaultDate={fromIso}
+            periodLabel={periodLabel}
           />
         </TabsContent>
 
@@ -379,6 +413,7 @@ function ExpensesPage() {
             toIso={toIso}
             apptPayout={apptPayout}
             effPayout={effPayout}
+            periodLabel={periodLabel}
           />
         </TabsContent>
 
@@ -386,51 +421,98 @@ function ExpensesPage() {
           <ServicesBlock appts={doneAppts} effPayout={effPayout} />
         </TabsContent>
 
-        <TabsContent value="table" className="mt-4">
-          <ExpensesMonthlyTable
-            month={month}
-            appts={doneAppts}
-            mechanics={mechanics}
-            advances={advances}
-            mechById={mechById}
-            svcById={svcById}
-          />
-        </TabsContent>
+        {period === "month" && (
+          <TabsContent value="table" className="mt-4">
+            <ExpensesMonthlyTable
+              month={startOfMonth(anchor)}
+              appts={doneAppts}
+              mechanics={mechanics}
+              advances={advances}
+              mechById={mechById}
+              svcById={svcById}
+            />
+          </TabsContent>
+        )}
 
       </Tabs>
     </div>
   );
 }
 
-function MonthPicker({
-  month,
-  setMonth,
+function RangePicker({
+  period,
+  setPeriod,
+  anchor,
+  setAnchor,
 }: {
-  month: Date;
-  setMonth: (d: Date) => void;
+  period: Period;
+  setPeriod: (p: Period) => void;
+  anchor: Date;
+  setAnchor: (d: Date) => void;
 }) {
+  const step = (dir: 1 | -1) => {
+    if (period === "day") setAnchor(addDays(anchor, dir));
+    else if (period === "week") setAnchor(addWeeks(anchor, dir));
+    else setAnchor(addMonths(anchor, dir));
+  };
+  const label = (() => {
+    if (period === "day") return format(anchor, "d MMM yyyy", { locale: ru });
+    if (period === "week") {
+      const s = startOfWeek(anchor, { weekStartsOn: 1 });
+      const e = endOfWeek(anchor, { weekStartsOn: 1 });
+      const sameMonth = s.getMonth() === e.getMonth();
+      return `${format(s, "d")}${sameMonth ? "" : " " + format(s, "MMM", { locale: ru })} – ${format(e, "d MMM yyyy", { locale: ru })}`;
+    }
+    return format(anchor, "LLLL yyyy", { locale: ru });
+  })();
+  const todayLabel = period === "day" ? "Сегодня" : period === "week" ? "Эта неделя" : "Этот месяц";
+  const isNow = (() => {
+    const now = new Date();
+    if (period === "day") return isSameDay(anchor, now);
+    if (period === "week")
+      return isSameDay(
+        startOfWeek(anchor, { weekStartsOn: 1 }),
+        startOfWeek(now, { weekStartsOn: 1 }),
+      );
+    return (
+      anchor.getFullYear() === now.getFullYear() && anchor.getMonth() === now.getMonth()
+    );
+  })();
+
   return (
-    <div className="flex items-center gap-2 rounded-lg border bg-card px-2 py-1">
-      <Button variant="ghost" size="icon" onClick={() => setMonth(addMonths(month, -1))}>
-        <ChevronLeft className="h-4 w-4" />
-      </Button>
-      <div className="min-w-[140px] text-center text-sm font-medium capitalize">
-        {format(month, "LLLL yyyy", { locale: ru })}
+    <div className="flex flex-wrap items-center gap-2">
+      <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)}>
+        <TabsList>
+          <TabsTrigger value="day">День</TabsTrigger>
+          <TabsTrigger value="week">Неделя</TabsTrigger>
+          <TabsTrigger value="month">Месяц</TabsTrigger>
+        </TabsList>
+      </Tabs>
+      <div className="flex items-center gap-1 rounded-lg border bg-card px-2 py-1">
+        <Button variant="ghost" size="icon" onClick={() => step(-1)}>
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <div className="min-w-[150px] text-center text-sm font-medium capitalize">
+          {label}
+        </div>
+        <Button variant="ghost" size="icon" onClick={() => step(1)}>
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="ml-1"
+          disabled={isNow}
+          onClick={() => setAnchor(new Date())}
+        >
+          {todayLabel}
+        </Button>
       </div>
-      <Button variant="ghost" size="icon" onClick={() => setMonth(addMonths(month, 1))}>
-        <ChevronRight className="h-4 w-4" />
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        className="ml-1"
-        onClick={() => setMonth(startOfMonth(new Date()))}
-      >
-        Сегодня
-      </Button>
     </div>
   );
 }
+
+
 
 function StatCard({
   label,
@@ -466,11 +548,13 @@ function ExpensesBlock({
   fromIso,
   toIso,
   defaultDate,
+  periodLabel,
 }: {
   expenses: Expense[];
   fromIso: string;
   toIso: string;
   defaultDate: string;
+  periodLabel: string;
 }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -530,7 +614,7 @@ function ExpensesBlock({
 
         {expenses.length === 0 ? (
           <div className="rounded-lg border border-dashed py-10 text-center text-sm text-muted-foreground">
-            За этот месяц ещё нет записей о расходах.
+            За этот {periodLabel === "день" ? "день" : periodLabel === "неделю" ? "неделю" : "месяц"} ещё нет записей о расходах.
           </div>
         ) : (
           <div className="space-y-2">
@@ -653,6 +737,7 @@ function MechanicsBlock({
   fromIso,
   toIso,
   apptPayout,
+  periodLabel,
 }: {
   mechanics: { id: string; full_name: string }[];
   appts: ApptRow[];
@@ -661,6 +746,7 @@ function MechanicsBlock({
   toIso: string;
   apptPayout: (a: ApptRow) => number;
   effPayout: (mechanicId: string | null, price: number, stored: number) => number;
+  periodLabel: string;
 }) {
 
   const byMech = useMemo(() => {
