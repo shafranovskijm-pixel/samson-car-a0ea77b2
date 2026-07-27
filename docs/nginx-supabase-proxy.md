@@ -21,18 +21,24 @@ location /supabase/ {
     # ВАЖНО: слеш в конце proxy_pass — он срезает /supabase/ из пути.
     proxy_pass https://ammqnssqnhtejoqrgvdh.supabase.co/;
 
+    # Только Host. НЕ добавлять X-Real-IP / X-Forwarded-For —
+    # Cloudflare перед Supabase считает их подменой IP и возвращает 404.
     proxy_set_header Host ammqnssqnhtejoqrgvdh.supabase.co;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
 
+    # SNI для правильного TLS-хендшейка с Cloudflare
     proxy_ssl_server_name on;
     proxy_ssl_name ammqnssqnhtejoqrgvdh.supabase.co;
 
-    # WebSocket (Realtime)
+    # WebSocket (Realtime) — пробрасываем Upgrade только если он есть
     proxy_http_version 1.1;
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection $connection_upgrade;
+
+    # Убираем свои X-Forwarded-* если где-то выше уже добавлены
+    proxy_set_header X-Real-IP "";
+    proxy_set_header X-Forwarded-For "";
+    proxy_set_header X-Forwarded-Proto "";
+    proxy_set_header X-Forwarded-Host "";
 
     proxy_read_timeout 300s;
     proxy_send_timeout 300s;
