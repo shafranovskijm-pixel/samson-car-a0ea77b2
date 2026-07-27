@@ -23,7 +23,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 
-import { listBrands, listCars, listServices, upsertServiceByCategoryName, humanizeSupabaseError } from "@/lib/api";
+import { listBrands, listCars, listServices, listServiceCategories, upsertServiceByCategoryName, humanizeSupabaseError } from "@/lib/api";
 import {
   TIER_COEFFICIENT,
   TIER_LABEL,
@@ -56,52 +56,15 @@ import { usePriceOverrides } from "@/hooks/usePriceOverrides";
 import { useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 
-import imgFluids from "@/assets/cat-fluids.jpg";
-import imgEngine from "@/assets/cat-engine.jpg";
-import imgFuel from "@/assets/cat-fuel.jpg";
-import imgSuspension from "@/assets/cat-suspension.jpg";
-import imgAlignment from "@/assets/cat-alignment.jpg";
-import imgBrakes from "@/assets/cat-brakes.jpg";
-import imgAc from "@/assets/cat-ac.jpg";
-import imgTires from "@/assets/cat-tires.jpg";
-import imgElectric from "@/assets/cat-electric.jpg";
+const OTHER_CATEGORY = "Прочие услуги";
 
-const calculatorSearchSchema = z.object({
-  carId: fallback(z.string().optional(), undefined),
-});
-
-export const Route = createFileRoute("/calculator")({
-  ssr: false,
-  validateSearch: zodValidator(calculatorSearchSchema),
-  head: () => ({
-    meta: [
-      { title: "Samson Auto — автосервис · калькулятор стоимости" },
-      {
-        name: "description",
-        content:
-          "Samson Auto — современный автосервис. Онлайн-калькулятор стоимости услуг для любой марки авто, запись в удобное время.",
-      },
-      { property: "og:title", content: "Samson Auto — автосервис" },
-      {
-        property: "og:description",
-        content: "Калькулятор стоимости, полный прайс услуг и онлайн-запись.",
-      },
-    ],
-  }),
-  component: LandingPage,
-});
-
-const CATEGORIES: { name: string; img: string }[] = [
-  { name: "Жидкости и фильтры", img: imgFluids },
-  { name: "Двигатель и навесное оборудование", img: imgEngine },
-  { name: "Топливная система", img: imgFuel },
-  { name: "Ходовая часть и рулевое управление", img: imgSuspension },
-  { name: "Регулировочные работы", img: imgAlignment },
-  { name: "Тормозная система", img: imgBrakes },
-  { name: "Кондиционер и отопление", img: imgAc },
-  { name: "Шиномонтажные работы", img: imgTires },
-  { name: "Электрика и электроника", img: imgElectric },
-];
+// Цветной градиент как аккуратный плейсхолдер, если у категории нет своей картинки.
+const gradientForName = (name: string): string => {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  const hue = h % 360;
+  return `linear-gradient(135deg, hsl(${hue} 60% 35%), hsl(${(hue + 40) % 360} 55% 22%))`;
+};
 
 type Step = 1 | 2 | 3;
 
