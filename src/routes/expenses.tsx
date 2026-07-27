@@ -95,6 +95,35 @@ function ExpensesPage() {
     queryKey: ["appointments", "expenses-month", fromIso, toIso],
     queryFn: () => listAppointments(monthStart, monthEnd),
   });
+type Period = "day" | "week" | "month";
+
+function ExpensesPage() {
+  const [period, setPeriod] = useState<Period>("month");
+  const [anchor, setAnchor] = useState<Date>(() => new Date());
+
+  const { rangeStart, rangeEnd } = useMemo(() => {
+    if (period === "day") {
+      return { rangeStart: startOfDay(anchor), rangeEnd: endOfDay(anchor) };
+    }
+    if (period === "week") {
+      return {
+        rangeStart: startOfWeek(anchor, { weekStartsOn: 1 }),
+        rangeEnd: endOfWeek(anchor, { weekStartsOn: 1 }),
+      };
+    }
+    return { rangeStart: startOfMonth(anchor), rangeEnd: endOfMonth(anchor) };
+  }, [anchor, period]);
+
+  const fromIso = isoDate(rangeStart);
+  const toIso = isoDate(rangeEnd);
+
+  const periodLabel =
+    period === "day" ? "день" : period === "week" ? "неделю" : "месяц";
+
+  const { data: appts = [] } = useQuery({
+    queryKey: ["appointments", "expenses-range", fromIso, toIso],
+    queryFn: () => listAppointments(rangeStart, rangeEnd),
+  });
   const { data: expenses = [] } = useQuery({
     queryKey: ["expenses", fromIso, toIso],
     queryFn: () => listExpenses(fromIso, toIso),
@@ -171,51 +200,50 @@ function ExpensesPage() {
       0,
     );
 
-  // Оборот кассы за месяц = все фактические платежи клиентов с paid_at в этом месяце
-  // (независимо от того, в каком месяце сама запись).
+  // Оборот кассы за период = все фактические платежи клиентов с paid_at в этом диапазоне
+  // (независимо от того, в каком периоде сама запись).
   const revenue = payments.reduce((s, p) => s + Number(p.amount ?? 0), 0);
-  // Дебиторка по выполненным работам этого месяца: сколько ещё не оплачено.
+  // Дебиторка по выполненным работам этого периода: сколько ещё не оплачено.
   const unpaidBalance = doneAppts.reduce(
     (s, a) => s + Math.max(0, (a.total_price ?? 0) - Number(a.paid_amount ?? 0)),
     0,
   );
-  // Ожидается поступлений: неоплаченная часть по запланированным/в работе записям месяца.
+  // Ожидается поступлений: неоплаченная часть по запланированным/в работе записям.
   const expectedIncome = upcomingAppts.reduce(
     (s, a) => s + Math.max(0, (a.total_price ?? 0) - Number(a.paid_amount ?? 0)),
     0,
   );
   const expectedCount = upcomingAppts.length;
 
-  // Начислено мастерам (по всем выполненным работам месяца) — с учётом % мастера/услуги.
+  // Начислено мастерам (по всем выполненным работам периода) — с учётом % мастера/услуги.
   const mechanicsAccrued = doneAppts.reduce((s, a) => s + apptPayout(a), 0);
-  // Фактически выплачено мастерам за месяц (авансы)
+  // Фактически выплачено мастерам за период (авансы)
   const mechanicsPaid = advances.reduce((s, a) => s + Number(a.amount ?? 0), 0);
   // Оборот по выполненным работам (начисление, независимо от даты оплаты)
   const accruedRevenue = doneAppts.reduce((s, a) => s + Number(a.total_price ?? 0), 0);
 
 
   const otherExpenses = expenses.reduce((s, e) => s + Number(e.amount ?? 0), 0);
-  // Чистая прибыль — доходы месяца минус все расходы (начисленная ЗП + прочие),
-  // независимо от того, выплачены ли уже авансы мастерам.
   const cashProfit = revenue - mechanicsAccrued - otherExpenses;
-  // Прибыль (начисленная) — по факту выполненных работ, независимо от даты оплат:
-  //   выполнено − начислено ЗП − прочие расходы.
   const accruedProfit = accruedRevenue - mechanicsAccrued - otherExpenses;
-  // Долг перед мастерами = начислено − уже выплачено авансами.
-  // Отрицательное значение = мастеру переплатили авансами (аванс > начисления за месяц).
   const mechanicsDebt = mechanicsAccrued - mechanicsPaid;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
-      <header className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:mb-8">
+      <header className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h1 className="truncate text-xl font-bold sm:text-2xl">Расходы</h1>
           <p className="mt-0.5 truncate text-xs text-muted-foreground sm:text-sm">
-            Оборот, прибыль, ЗП мастеров и авансы за месяц
+            Оборот, прибыль, ЗП мастеров и авансы за {periodLabel}
           </p>
         </div>
         <div className="shrink-0">
-          <MonthPicker month={month} setMonth={setMonth} />
+          <RangePicker
+            period={period}
+            setPeriod={setPeriod}
+            anchor={anchor}
+            setAnchor={setAnchor}
+          />
         </div>
       </header>
 
@@ -247,8 +275,9 @@ function ExpensesPage() {
             </div>
             <div className="mt-1.5 truncate text-2xl font-bold">{fmt(revenue)}</div>
             <div className="mt-1 text-[11px] text-muted-foreground">
-              Оборот кассы (платежи за месяц)
+              Оборот кассы (платежи за {periodLabel})
             </div>
+
             <div className="mt-auto grid grid-cols-2 gap-3 border-t pt-3">
               <div className="min-w-0">
                 <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
