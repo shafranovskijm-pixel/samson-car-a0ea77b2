@@ -814,17 +814,23 @@ export const clearAppointmentPayments = async (appointment_id: string) => {
 };
 
 // Сумма платежей за диапазон дат (по фактической дате оплаты).
+// Отсекаем платежи по удалённым записям — они не должны попадать в кассу.
 export const listPaymentsRange = async (
   from: string,
   to: string,
 ): Promise<AppointmentPayment[]> => {
   const { data, error } = await anySb
     .from("appointment_payments")
-    .select("*")
+    .select("*, appointment:appointments!inner(deleted_at)")
     .gte("paid_at", from)
     .lte("paid_at", to)
+    .is("appointment.deleted_at", null)
     .order("paid_at", { ascending: false });
   if (error) throw error;
-  return (data ?? []) as AppointmentPayment[];
+  return ((data ?? []) as (AppointmentPayment & { appointment?: unknown })[]).map((p) => {
+    const { appointment: _drop, ...rest } = p;
+    return rest as AppointmentPayment;
+  });
 };
+
 
