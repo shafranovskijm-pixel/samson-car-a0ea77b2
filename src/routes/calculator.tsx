@@ -23,7 +23,42 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 
-import { listBrands, listCars, listServices, listServiceCategories, upsertServiceByCategoryName, humanizeSupabaseError } from "@/lib/api";
+import {
+  listBrands,
+  listCars,
+  listServices,
+  listServiceCategories,
+  createServiceCategory,
+  updateServiceCategory,
+  deleteServiceCategory,
+  upsertServiceByCategoryName,
+  humanizeSupabaseError,
+} from "@/lib/api";
+
+import imgFluids from "@/assets/cat-fluids.jpg";
+import imgEngine from "@/assets/cat-engine.jpg";
+import imgFuel from "@/assets/cat-fuel.jpg";
+import imgSuspension from "@/assets/cat-suspension.jpg";
+import imgAlignment from "@/assets/cat-alignment.jpg";
+import imgBrakes from "@/assets/cat-brakes.jpg";
+import imgAc from "@/assets/cat-ac.jpg";
+import imgTires from "@/assets/cat-tires.jpg";
+import imgElectric from "@/assets/cat-electric.jpg";
+
+// Fallback-картинки для стандартных категорий (если админ не загрузил свою).
+const FALLBACK_CATEGORY_IMAGES: Record<string, string> = {
+  "жидкости и фильтры": imgFluids,
+  "двигатель и навесное оборудование": imgEngine,
+  "топливная система": imgFuel,
+  "ходовая часть и рулевое управление": imgSuspension,
+  "регулировочные работы": imgAlignment,
+  "тормозная система": imgBrakes,
+  "кондиционер и отопление": imgAc,
+  "шиномонтажные работы": imgTires,
+  "электрика и электроника": imgElectric,
+};
+const fallbackImg = (name: string) =>
+  FALLBACK_CATEGORY_IMAGES[name.trim().toLowerCase()] ?? null;
 import {
   TIER_COEFFICIENT,
   TIER_LABEL,
