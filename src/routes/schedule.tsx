@@ -206,13 +206,22 @@ function SchedulePage() {
 
   const submitPayDialog = () => {
     if (!payDlg.id) return;
-    const amt = Math.max(0, Math.round(Number(payDlg.amount) || 0));
+    let amt = Math.max(0, Math.round(Number(payDlg.amount) || 0));
     if (amt <= 0) {
       toast.error("Введите сумму больше 0");
       return;
     }
     if (!payDlg.paid_at) {
       toast.error("Укажите дату платежа");
+      return;
+    }
+    const due = Math.max(0, payDlg.total - payDlg.paid);
+    if (amt > due) {
+      toast.info(`Сумма уменьшена до остатка ${due} ₽`);
+      amt = due;
+    }
+    if (amt <= 0) {
+      toast.info("Уже оплачено полностью");
       return;
     }
     addPayMut.mutate(
@@ -228,6 +237,7 @@ function SchedulePage() {
           toast.success("Платёж добавлен");
         },
       },
+
     );
   };
 
