@@ -35,6 +35,9 @@ import {
   createBrand, createCarModel, createService, deleteBrand, deleteCarModel,
   deleteService, deleteServicePrice, listBrands, listCarModels, listServicePrices,
   listServices, updateBrand, updateCarModel, updateService, upsertServicePrice,
+  listServiceCategories, createServiceCategory, updateServiceCategory, deleteServiceCategory,
+  updateBrandLogo, uploadCatalogImage, humanizeSupabaseError,
+  type ServiceCategory, type BrandRow,
 } from "@/lib/api";
 import {
   TIER_LABEL, TIER_OPTIONS, type Brand, type BrandTier,
@@ -52,7 +55,9 @@ function SettingsPage() {
   const { tab } = Route.useSearch();
   const navigate = Route.useNavigate();
   const activeTab =
-    tab === "services" ? "services" : tab === "account" ? "account" : "brands";
+    tab === "services" ? "services" :
+    tab === "account" ? "account" :
+    tab === "catalog" ? "catalog" : "brands";
 
   return (
     <div className="p-4">
@@ -71,6 +76,7 @@ function SettingsPage() {
         <TabsList>
           <TabsTrigger value="brands">Марки авто</TabsTrigger>
           <TabsTrigger value="services">Услуги и цены</TabsTrigger>
+          <TabsTrigger value="catalog">Каталог</TabsTrigger>
           <TabsTrigger value="account">Аккаунт</TabsTrigger>
         </TabsList>
 
@@ -79,6 +85,9 @@ function SettingsPage() {
         </TabsContent>
         <TabsContent value="services" className="mt-4">
           <ServicesTab />
+        </TabsContent>
+        <TabsContent value="catalog" className="mt-4">
+          <CatalogTab />
         </TabsContent>
         <TabsContent value="account" className="mt-4">
           <AccountTab />
