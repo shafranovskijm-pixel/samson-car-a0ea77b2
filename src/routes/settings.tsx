@@ -1007,7 +1007,6 @@ function CategoriesSection() {
                         title: "Удалить категорию?",
                         description: c.name,
                         confirmText: "Удалить",
-                        variant: "destructive",
                       })
                     ) {
                       delM.mutate(c.id);
