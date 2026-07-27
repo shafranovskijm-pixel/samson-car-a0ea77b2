@@ -417,7 +417,7 @@ function LandingPage() {
   // Компактная карточка выбранного авто (в шаге 2/3)
   const CarSummary = () => (
     <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-3">
-      <BrandLogo brand={brandName} size={40} className="rounded-md bg-white p-1" />
+      <BrandLogo brand={brandName} logoUrl={dbBrand?.logo_url ?? null} size={40} className="rounded-md bg-white p-1" />
       <div className="min-w-0 flex-1">
         <div className="truncate font-semibold text-white">
           {brandName} {modelName}{" "}
