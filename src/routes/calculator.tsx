@@ -882,7 +882,7 @@ function LandingPage() {
                     Выберите категорию услуг
                   </div>
                   <div className="grid gap-5 sm:grid-cols-2">
-                    {CATEGORIES.map((c) => {
+                    {catList.map((c) => {
                       const count = byCategory[c.name]?.length ?? 0;
                       const selectedInCat =
                         byCategory[c.name]?.filter((s) => selected.has(s.id)).length ?? 0;
@@ -893,14 +893,19 @@ function LandingPage() {
                           onClick={() => setActiveCategory(c.name)}
                           className="group relative aspect-[16/10] overflow-hidden rounded-2xl border border-white/10 bg-white/5 text-left transition-all hover:border-red-500/50 hover:shadow-[0_10px_40px_-10px_rgba(239,68,68,0.4)]"
                         >
-                          <img
-                            src={c.img}
-                            alt={c.name}
-                            loading="lazy"
-                            width={800}
-                            height={512}
-                            className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                          />
+                          {c.image_url ? (
+                            <img
+                              src={c.image_url}
+                              alt={c.name}
+                              loading="lazy"
+                              className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                            />
+                          ) : (
+                            <div
+                              className="absolute inset-0 transition-transform duration-500 group-hover:scale-110"
+                              style={{ background: gradientForName(c.name) }}
+                            />
+                          )}
                           <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/50 to-transparent" />
                           {selectedInCat > 0 && (
                             <div className="absolute right-4 top-4 flex h-9 min-w-9 items-center justify-center rounded-full bg-red-600 px-2.5 text-sm font-bold text-white shadow-lg">
