@@ -128,8 +128,24 @@ function RootComponent() {
     const marker = "#redirect=";
     if (!window.location.hash.startsWith(marker)) return;
     const target = decodeURIComponent(window.location.hash.slice(marker.length));
-    if (!target.startsWith("/")) return;
-    router.navigate({ to: target });
+    window.history.replaceState(null, "", target);
+    switch (target.split("?")[0]) {
+      case "/":
+      case "/login":
+      case "/schedule":
+      case "/calendar":
+      case "/clients":
+      case "/mechanics":
+      case "/calculator":
+      case "/stats":
+      case "/settings":
+      case "/expenses":
+        router.invalidate();
+        break;
+      default:
+        window.history.replaceState(null, "", "/");
+        router.invalidate();
+    }
   }, [router]);
 
   const isLoginRoute = pathname === "/login";
