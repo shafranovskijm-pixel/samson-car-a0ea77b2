@@ -1133,13 +1133,16 @@ function PaymentsSection({
   };
 
   const addMut = useMutation({
-    mutationFn: () =>
-      createAppointmentPayment({
+    mutationFn: () => {
+      let amt = Math.max(0, Math.round(Number(amount) || 0));
+      if (amt > due) amt = due;
+      return createAppointmentPayment({
         appointment_id: appointmentId,
         paid_at: paidAt,
-        amount: Math.max(0, Math.round(Number(amount) || 0)),
+        amount: amt,
         note: note.trim() || null,
-      }),
+      });
+    },
     onSuccess: () => {
       invalidate();
       setAmount("");
@@ -1148,6 +1151,7 @@ function PaymentsSection({
     },
     onError: (e: Error) => toast.error(mapError(e)),
   });
+
 
   const delMut = useMutation({
     mutationFn: (id: string) => deleteAppointmentPayment(id),
