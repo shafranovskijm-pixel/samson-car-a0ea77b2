@@ -400,7 +400,9 @@ function ExpensesPage() {
           <TabsTrigger value="summary">Сводка</TabsTrigger>
           <TabsTrigger value="mechanics">По мастерам</TabsTrigger>
           <TabsTrigger value="services">По услугам</TabsTrigger>
-          <TabsTrigger value="table">Сводная таблица</TabsTrigger>
+          {period === "month" && (
+            <TabsTrigger value="table">Сводная таблица</TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="summary" className="mt-4">
@@ -409,6 +411,7 @@ function ExpensesPage() {
             fromIso={fromIso}
             toIso={toIso}
             defaultDate={fromIso}
+            periodLabel={periodLabel}
           />
         </TabsContent>
 
@@ -421,6 +424,7 @@ function ExpensesPage() {
             toIso={toIso}
             apptPayout={apptPayout}
             effPayout={effPayout}
+            periodLabel={periodLabel}
           />
         </TabsContent>
 
@@ -428,21 +432,97 @@ function ExpensesPage() {
           <ServicesBlock appts={doneAppts} effPayout={effPayout} />
         </TabsContent>
 
-        <TabsContent value="table" className="mt-4">
-          <ExpensesMonthlyTable
-            month={month}
-            appts={doneAppts}
-            mechanics={mechanics}
-            advances={advances}
-            mechById={mechById}
-            svcById={svcById}
-          />
-        </TabsContent>
+        {period === "month" && (
+          <TabsContent value="table" className="mt-4">
+            <ExpensesMonthlyTable
+              month={startOfMonth(anchor)}
+              appts={doneAppts}
+              mechanics={mechanics}
+              advances={advances}
+              mechById={mechById}
+              svcById={svcById}
+            />
+          </TabsContent>
+        )}
 
       </Tabs>
     </div>
   );
 }
+
+function RangePicker({
+  period,
+  setPeriod,
+  anchor,
+  setAnchor,
+}: {
+  period: Period;
+  setPeriod: (p: Period) => void;
+  anchor: Date;
+  setAnchor: (d: Date) => void;
+}) {
+  const step = (dir: 1 | -1) => {
+    if (period === "day") setAnchor(addDays(anchor, dir));
+    else if (period === "week") setAnchor(addWeeks(anchor, dir));
+    else setAnchor(addMonths(anchor, dir));
+  };
+  const label = (() => {
+    if (period === "day") return format(anchor, "d MMM yyyy", { locale: ru });
+    if (period === "week") {
+      const s = startOfWeek(anchor, { weekStartsOn: 1 });
+      const e = endOfWeek(anchor, { weekStartsOn: 1 });
+      const sameMonth = s.getMonth() === e.getMonth();
+      return `${format(s, "d")}${sameMonth ? "" : " " + format(s, "MMM", { locale: ru })} – ${format(e, "d MMM yyyy", { locale: ru })}`;
+    }
+    return format(anchor, "LLLL yyyy", { locale: ru });
+  })();
+  const todayLabel = period === "day" ? "Сегодня" : period === "week" ? "Эта неделя" : "Этот месяц";
+  const isNow = (() => {
+    const now = new Date();
+    if (period === "day") return isSameDay(anchor, now);
+    if (period === "week")
+      return isSameDay(
+        startOfWeek(anchor, { weekStartsOn: 1 }),
+        startOfWeek(now, { weekStartsOn: 1 }),
+      );
+    return (
+      anchor.getFullYear() === now.getFullYear() && anchor.getMonth() === now.getMonth()
+    );
+  })();
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)}>
+        <TabsList>
+          <TabsTrigger value="day">День</TabsTrigger>
+          <TabsTrigger value="week">Неделя</TabsTrigger>
+          <TabsTrigger value="month">Месяц</TabsTrigger>
+        </TabsList>
+      </Tabs>
+      <div className="flex items-center gap-1 rounded-lg border bg-card px-2 py-1">
+        <Button variant="ghost" size="icon" onClick={() => step(-1)}>
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <div className="min-w-[150px] text-center text-sm font-medium capitalize">
+          {label}
+        </div>
+        <Button variant="ghost" size="icon" onClick={() => step(1)}>
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="ml-1"
+          disabled={isNow}
+          onClick={() => setAnchor(new Date())}
+        >
+          {todayLabel}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 
 function MonthPicker({
   month,
