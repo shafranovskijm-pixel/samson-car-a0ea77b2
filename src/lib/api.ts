@@ -43,6 +43,18 @@ const throwIf = <T,>(x: { data: T | null; error: unknown }): T => {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const anySb = supabase as any;
 
+const normalizeCategoryKey = (value?: string | null) =>
+  (value ?? "").trim().replace(/\s+/g, " ").toLocaleLowerCase("ru-RU");
+
+const cleanCategoryName = (value?: string | null) => {
+  const clean = (value ?? "").trim().replace(/\s+/g, " ");
+  return normalizeCategoryKey(clean) === normalizeCategoryKey("Прочие услуги")
+    ? "Прочие услуги"
+    : clean;
+};
+
+const cleanServiceName = (value: string) => value.trim().replace(/\s+/g, " ");
+
 
 // BRANDS
 export type BrandRow = Brand & { logo_url?: string | null };
@@ -83,7 +95,7 @@ export const createServiceCategory = async (input: {
     await supabase
       .from("service_categories")
       .insert({
-        name: input.name,
+        name: cleanCategoryName(input.name),
         image_url: input.image_url ?? null,
         sort_order: input.sort_order ?? 100,
       })
@@ -95,9 +107,47 @@ export const updateServiceCategory = async (
   input: Partial<{ name: string; image_url: string | null; sort_order: number }>,
 ) =>
   throwIf(
-    await supabase.from("service_categories").update(input).eq("id", id).select().single(),
+    await supabase
+      .from("service_categories")
+      .update({ ...input, ...(input.name != null ? { name: cleanCategoryName(input.name) } : {}) })
+      .eq("id", id)
+      .select()
+      .single(),
   );
-export const deleteServiceCategory = async (id: string) => {
+export const deleteServiceCategory = async (id: string, fallbackName = "Прочие услуги") => {
+  const { data: category, error: categoryError } = await supabase
+    .from("service_categories")
+    .select("name")
+    .eq("id", id)
+    .maybeSingle();
+  if (categoryError) throw categoryError;
+
+  const fallbackCategory = cleanCategoryName(fallbackName);
+  const targetKey = normalizeCategoryKey((category as { name?: string } | null)?.name);
+  const fallbackKey = normalizeCategoryKey(fallbackCategory);
+
+  if (targetKey && targetKey !== fallbackKey) {
+    const { data: rowsData, error: rowsError } = await supabase
+      .from("services")
+      .select("id, category")
+      .is("deleted_at", null);
+    if (rowsError) throw rowsError;
+
+    const rows = (rowsData ?? []) as Array<{ id: string; category: string | null }>;
+    const ids = rows
+      .filter((row) => normalizeCategoryKey(row.category) === targetKey)
+      .map((row) => row.id);
+
+    for (let i = 0; i < ids.length; i += 100) {
+      const chunk = ids.slice(i, i + 100);
+      const { error: updateError } = await supabase
+        .from("services")
+        .update({ category: fallbackCategory })
+        .in("id", chunk);
+      if (updateError) throw updateError;
+    }
+  }
+
   const { error } = await supabase.from("service_categories").delete().eq("id", id);
   if (error) throw error;
 };
@@ -150,20 +200,26 @@ export const upsertServiceByCategoryName = async (input: {
   price: number;
   duration_minutes?: number;
 }): Promise<Service> => {
-  const { data: existing, error: findErr } = await supabase
+  const category = cleanCategoryName(input.category);
+  const name = cleanServiceName(input.name);
+  const { data: matches, error: findErr } = await supabase
     .from("services")
     .select("*")
-    .ilike("category", input.category)
-    .ilike("name", input.name)
-    .is("deleted_at", null)
-    .maybeSingle();
-  if (findErr && findErr.code !== "PGRST116") throw findErr;
+    .ilike("name", name)
+    .is("deleted_at", null);
+  if (findErr) throw findErr;
+  const existing = ((matches ?? []) as Service[]).find(
+    (service) =>
+      normalizeCategoryKey(service.category) === normalizeCategoryKey(category) &&
+      cleanServiceName(service.name).toLocaleLowerCase("ru-RU") ===
+        name.toLocaleLowerCase("ru-RU"),
+  );
   if (existing) return existing as Service;
   const { data, error } = await supabase
     .from("services")
     .insert({
-      category: input.category,
-      name: input.name,
+      category,
+      name,
       base_price: input.price,
       duration_minutes: input.duration_minutes ?? 30,
     })
