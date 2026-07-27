@@ -305,7 +305,7 @@ function ExpensesPage() {
                   {fmt(unpaidBalance)}
                 </div>
                 <div className="truncate text-[10px] text-muted-foreground">
-                  по работам месяца
+                  по работам за {periodLabel}
                 </div>
               </div>
             </div>
