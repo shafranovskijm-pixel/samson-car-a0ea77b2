@@ -197,12 +197,11 @@ function AccountTab() {
             for (const [k, v] of Object.entries(keep)) {
               if (v != null) localStorage.setItem(k, v);
             }
-            if ("caches" in window) {
-              caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k)))).finally(() => {
-                window.location.reload();
-              });
+            const reload = () => window.location.reload();
+            if (typeof caches !== "undefined") {
+              caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k)))).finally(reload);
             } else {
-              window.location.reload();
+              reload();
             }
           } catch {
             window.location.reload();
