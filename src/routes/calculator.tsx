@@ -23,7 +23,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 
-import { listBrands, listCars, listServices, upsertServiceByCategoryName, humanizeSupabaseError } from "@/lib/api";
+import { listBrands, listCars, listServices, listServiceCategories, upsertServiceByCategoryName, humanizeSupabaseError } from "@/lib/api";
 import {
   TIER_COEFFICIENT,
   TIER_LABEL,
@@ -56,15 +56,15 @@ import { usePriceOverrides } from "@/hooks/usePriceOverrides";
 import { useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 
-import imgFluids from "@/assets/cat-fluids.jpg";
-import imgEngine from "@/assets/cat-engine.jpg";
-import imgFuel from "@/assets/cat-fuel.jpg";
-import imgSuspension from "@/assets/cat-suspension.jpg";
-import imgAlignment from "@/assets/cat-alignment.jpg";
-import imgBrakes from "@/assets/cat-brakes.jpg";
-import imgAc from "@/assets/cat-ac.jpg";
-import imgTires from "@/assets/cat-tires.jpg";
-import imgElectric from "@/assets/cat-electric.jpg";
+const OTHER_CATEGORY = "Прочие услуги";
+
+// Цветной градиент как аккуратный плейсхолдер, если у категории нет своей картинки.
+const gradientForName = (name: string): string => {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  const hue = h % 360;
+  return `linear-gradient(135deg, hsl(${hue} 60% 35%), hsl(${(hue + 40) % 360} 55% 22%))`;
+};
 
 const calculatorSearchSchema = z.object({
   carId: fallback(z.string().optional(), undefined),
@@ -91,18 +91,6 @@ export const Route = createFileRoute("/calculator")({
   component: LandingPage,
 });
 
-const CATEGORIES: { name: string; img: string }[] = [
-  { name: "Жидкости и фильтры", img: imgFluids },
-  { name: "Двигатель и навесное оборудование", img: imgEngine },
-  { name: "Топливная система", img: imgFuel },
-  { name: "Ходовая часть и рулевое управление", img: imgSuspension },
-  { name: "Регулировочные работы", img: imgAlignment },
-  { name: "Тормозная система", img: imgBrakes },
-  { name: "Кондиционер и отопление", img: imgAc },
-  { name: "Шиномонтажные работы", img: imgTires },
-  { name: "Электрика и электроника", img: imgElectric },
-];
-
 type Step = 1 | 2 | 3;
 
 function LandingPage() {
@@ -111,6 +99,10 @@ function LandingPage() {
   const confirm = useConfirm();
   const { data: brands = [] } = useQuery({ queryKey: ["brands"], queryFn: listBrands });
   const { data: services = [] } = useQuery({ queryKey: ["services"], queryFn: listServices });
+  const { data: dbCategories = [] } = useQuery({
+    queryKey: ["service_categories"],
+    queryFn: listServiceCategories,
+  });
   const { data: cars = [] } = useQuery({
     queryKey: ["cars"],
     queryFn: listCars,
@@ -297,14 +289,29 @@ function LandingPage() {
     setStep(2);
   }, [carId, cars, brands, prefillDone]);
 
-  // Услуги по категориям
+  // Список категорий из БД + гарантируем наличие "Прочие услуги"
+  const catList = useMemo(() => {
+    const list = [...dbCategories];
+    if (!list.some((c) => c.name.toLowerCase() === OTHER_CATEGORY.toLowerCase())) {
+      list.push({ id: "__other", name: OTHER_CATEGORY, image_url: null, sort_order: 1000 });
+    }
+    return list.sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name));
+  }, [dbCategories]);
+
+  const knownCatSet = useMemo(
+    () => new Set(dbCategories.map((c) => c.name.toLowerCase())),
+    [dbCategories],
+  );
+
+  // Услуги по категориям (неизвестные категории → "Прочие услуги")
   const byCategory = useMemo(() => {
     const map: Record<string, typeof services> = {};
     services.forEach((s) => {
-      (map[s.category] ??= []).push(s);
+      const cat = knownCatSet.has((s.category ?? "").toLowerCase()) ? s.category : OTHER_CATEGORY;
+      (map[cat] ??= []).push(s);
     });
     return map;
-  }, [services]);
+  }, [services, knownCatSet]);
 
   const popularServices = useMemo(() => {
     const ids = topServiceIds(6);
@@ -410,7 +417,7 @@ function LandingPage() {
   // Компактная карточка выбранного авто (в шаге 2/3)
   const CarSummary = () => (
     <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-3">
-      <BrandLogo brand={brandName} size={40} className="rounded-md bg-white p-1" />
+      <BrandLogo brand={brandName} logoUrl={dbBrand?.logo_url ?? null} size={40} className="rounded-md bg-white p-1" />
       <div className="min-w-0 flex-1">
         <div className="truncate font-semibold text-white">
           {brandName} {modelName}{" "}
@@ -477,7 +484,7 @@ function LandingPage() {
                         className="flex aspect-square items-center justify-center rounded-xl border border-white/10 bg-white p-2 transition hover:border-red-500/60 hover:shadow-[0_0_20px_-5px_rgba(239,68,68,0.5)]"
                         title={n}
                       >
-                        <BrandLogo brand={n} size={44} />
+                        <BrandLogo brand={n} logoUrl={brands.find((b) => b.name === n)?.logo_url ?? null} size={44} />
                       </button>
                     ))}
                   </div>
@@ -525,7 +532,7 @@ function LandingPage() {
                   </button>
 
                   <div className="flex items-center gap-3">
-                    <BrandLogo brand={brandName} size={56} className="rounded-lg bg-white p-1.5" />
+                    <BrandLogo brand={brandName} logoUrl={dbBrand?.logo_url ?? null} size={56} className="rounded-lg bg-white p-1.5" />
                     <div>
                       <h2 className="text-2xl font-bold">{brandName}</h2>
                       {dbBrand ? (
@@ -875,7 +882,7 @@ function LandingPage() {
                     Выберите категорию услуг
                   </div>
                   <div className="grid gap-5 sm:grid-cols-2">
-                    {CATEGORIES.map((c) => {
+                    {catList.map((c) => {
                       const count = byCategory[c.name]?.length ?? 0;
                       const selectedInCat =
                         byCategory[c.name]?.filter((s) => selected.has(s.id)).length ?? 0;
@@ -886,14 +893,19 @@ function LandingPage() {
                           onClick={() => setActiveCategory(c.name)}
                           className="group relative aspect-[16/10] overflow-hidden rounded-2xl border border-white/10 bg-white/5 text-left transition-all hover:border-red-500/50 hover:shadow-[0_10px_40px_-10px_rgba(239,68,68,0.4)]"
                         >
-                          <img
-                            src={c.img}
-                            alt={c.name}
-                            loading="lazy"
-                            width={800}
-                            height={512}
-                            className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                          />
+                          {c.image_url ? (
+                            <img
+                              src={c.image_url}
+                              alt={c.name}
+                              loading="lazy"
+                              className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                            />
+                          ) : (
+                            <div
+                              className="absolute inset-0 transition-transform duration-500 group-hover:scale-110"
+                              style={{ background: gradientForName(c.name) }}
+                            />
+                          )}
                           <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/50 to-transparent" />
                           {selectedInCat > 0 && (
                             <div className="absolute right-4 top-4 flex h-9 min-w-9 items-center justify-center rounded-full bg-red-600 px-2.5 text-sm font-bold text-white shadow-lg">
@@ -923,13 +935,21 @@ function LandingPage() {
                     <ChevronLeft className="h-4 w-4" /> Все категории
                   </button>
                   <div className="mb-4 flex items-center gap-3">
-                    <img
-                      src={CATEGORIES.find((c) => c.name === activeCategory)?.img}
-                      alt=""
-                      width={80}
-                      height={60}
-                      className="h-14 w-20 rounded-lg object-cover ring-1 ring-white/10"
-                    />
+                    {(() => {
+                      const cur = catList.find((c) => c.name === activeCategory);
+                      return cur?.image_url ? (
+                        <img
+                          src={cur.image_url}
+                          alt=""
+                          className="h-14 w-20 rounded-lg object-cover ring-1 ring-white/10"
+                        />
+                      ) : (
+                        <div
+                          className="h-14 w-20 rounded-lg ring-1 ring-white/10"
+                          style={{ background: gradientForName(activeCategory) }}
+                        />
+                      );
+                    })()}
                     <div className="flex-1">
                       <h3 className="text-xl font-bold">{activeCategory}</h3>
                       <div className="text-xs text-white/50">

@@ -45,15 +45,73 @@ const anySb = supabase as any;
 
 
 // BRANDS
-export const listBrands = async (): Promise<Brand[]> =>
+export type BrandRow = Brand & { logo_url?: string | null };
+export const listBrands = async (): Promise<BrandRow[]> =>
   throwIf(await supabase.from("brands").select("*").order("name"));
 export const createBrand = async (name: string) =>
   throwIf(await supabase.from("brands").insert({ name }).select().single());
 export const updateBrand = async (id: string, name: string) =>
   throwIf(await supabase.from("brands").update({ name }).eq("id", id).select().single());
+export const updateBrandLogo = async (id: string, logo_url: string | null) =>
+  throwIf(await supabase.from("brands").update({ logo_url }).eq("id", id).select().single());
 export const deleteBrand = async (id: string) => {
   const { error } = await supabase.from("brands").delete().eq("id", id);
   if (error) throw error;
+};
+
+// SERVICE CATEGORIES
+export type ServiceCategory = {
+  id: string;
+  name: string;
+  image_url: string | null;
+  sort_order: number;
+};
+export const listServiceCategories = async (): Promise<ServiceCategory[]> =>
+  throwIf(
+    await supabase
+      .from("service_categories")
+      .select("id, name, image_url, sort_order")
+      .order("sort_order")
+      .order("name"),
+  ) as ServiceCategory[];
+export const createServiceCategory = async (input: {
+  name: string;
+  image_url?: string | null;
+  sort_order?: number;
+}) =>
+  throwIf(
+    await supabase
+      .from("service_categories")
+      .insert({
+        name: input.name,
+        image_url: input.image_url ?? null,
+        sort_order: input.sort_order ?? 100,
+      })
+      .select()
+      .single(),
+  );
+export const updateServiceCategory = async (
+  id: string,
+  input: Partial<{ name: string; image_url: string | null; sort_order: number }>,
+) =>
+  throwIf(
+    await supabase.from("service_categories").update(input).eq("id", id).select().single(),
+  );
+export const deleteServiceCategory = async (id: string) => {
+  const { error } = await supabase.from("service_categories").delete().eq("id", id);
+  if (error) throw error;
+};
+
+// CATALOG-IMAGES STORAGE
+export const uploadCatalogImage = async (file: File, prefix: string): Promise<string> => {
+  const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+  const path = `${prefix}/${crypto.randomUUID()}.${ext}`;
+  const { error } = await supabase.storage
+    .from("catalog-images")
+    .upload(path, file, { cacheControl: "3600", upsert: false, contentType: file.type });
+  if (error) throw error;
+  const { data } = supabase.storage.from("catalog-images").getPublicUrl(path);
+  return data.publicUrl;
 };
 
 // CAR MODELS

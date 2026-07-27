@@ -168,6 +168,7 @@ export type Database = {
           created_at: string
           deleted_at: string | null
           id: string
+          logo_url: string | null
           name: string
           tier: string
           updated_at: string
@@ -176,6 +177,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           id?: string
+          logo_url?: string | null
           name: string
           tier?: string
           updated_at?: string
@@ -184,6 +186,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           id?: string
+          logo_url?: string | null
           name?: string
           tier?: string
           updated_at?: string
@@ -748,6 +751,33 @@ export type Database = {
           id?: string
           phone?: string | null
           specialization?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      service_categories: {
+        Row: {
+          created_at: string
+          id: string
+          image_url: string | null
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          name?: string
+          sort_order?: number
           updated_at?: string
         }
         Relationships: []
