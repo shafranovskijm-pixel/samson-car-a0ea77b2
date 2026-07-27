@@ -913,49 +913,88 @@ function LandingPage() {
 
               {!activeCategory ? (
                 <>
-                  <div className="text-lg font-semibold text-white">
-                    Выберите категорию услуг
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-lg font-semibold text-white">
+                      Выберите категорию услуг
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-white/20 bg-white/5 text-white hover:bg-white/10"
+                      onClick={() => addCategoryPrompt()}
+                    >
+                      <Plus className="mr-1 h-4 w-4" /> Категория
+                    </Button>
                   </div>
                   <div className="grid gap-5 sm:grid-cols-2">
                     {catList.map((c) => {
                       const count = byCategory[c.name]?.length ?? 0;
                       const selectedInCat =
                         byCategory[c.name]?.filter((s) => selected.has(s.id)).length ?? 0;
+                      const img = c.image_url ?? fallbackImg(c.name);
+                      const isSynthetic = c.id === "__other";
                       return (
-                        <button
-                          key={c.name}
-                          type="button"
-                          onClick={() => setActiveCategory(c.name)}
-                          className="group relative aspect-[16/10] overflow-hidden rounded-2xl border border-white/10 bg-white/5 text-left transition-all hover:border-red-500/50 hover:shadow-[0_10px_40px_-10px_rgba(239,68,68,0.4)]"
-                        >
-                          {c.image_url ? (
-                            <img
-                              src={c.image_url}
-                              alt={c.name}
-                              loading="lazy"
-                              className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                            />
-                          ) : (
-                            <div
-                              className="absolute inset-0 transition-transform duration-500 group-hover:scale-110"
-                              style={{ background: gradientForName(c.name) }}
-                            />
-                          )}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/50 to-transparent" />
-                          {selectedInCat > 0 && (
-                            <div className="absolute right-4 top-4 flex h-9 min-w-9 items-center justify-center rounded-full bg-red-600 px-2.5 text-sm font-bold text-white shadow-lg">
-                              {selectedInCat}
+                        <div key={c.name} className="relative">
+                          <button
+                            type="button"
+                            onClick={() => setActiveCategory(c.name)}
+                            className="group relative block aspect-[16/10] w-full overflow-hidden rounded-2xl border border-white/10 bg-white/5 text-left transition-all hover:border-red-500/50 hover:shadow-[0_10px_40px_-10px_rgba(239,68,68,0.4)]"
+                          >
+                            {img ? (
+                              <img
+                                src={img}
+                                alt={c.name}
+                                loading="lazy"
+                                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                              />
+                            ) : (
+                              <div
+                                className="absolute inset-0 transition-transform duration-500 group-hover:scale-110"
+                                style={{ background: gradientForName(c.name) }}
+                              />
+                            )}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/50 to-transparent" />
+                            {selectedInCat > 0 && (
+                              <div className="absolute right-4 top-4 flex h-9 min-w-9 items-center justify-center rounded-full bg-red-600 px-2.5 text-sm font-bold text-white shadow-lg">
+                                {selectedInCat}
+                              </div>
+                            )}
+                            <div className="absolute inset-x-0 bottom-0 p-6">
+                              <div className="text-2xl font-bold leading-tight text-white">
+                                {c.name}
+                              </div>
+                              <div className="mt-2 text-sm text-white/70">
+                                {count} услуг · нажмите чтобы открыть
+                              </div>
+                            </div>
+                          </button>
+                          {!isSynthetic && (
+                            <div className="absolute left-3 top-3 flex gap-1">
+                              <button
+                                type="button"
+                                title="Переименовать"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  renameCategoryPrompt(c);
+                                }}
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white/80 backdrop-blur transition hover:bg-black/80 hover:text-white"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </button>
+                              <button
+                                type="button"
+                                title="Удалить"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  deleteCategoryPrompt(c);
+                                }}
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-red-300 backdrop-blur transition hover:bg-black/80 hover:text-red-200"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
                             </div>
                           )}
-                          <div className="absolute inset-x-0 bottom-0 p-6">
-                            <div className="text-2xl font-bold leading-tight text-white">
-                              {c.name}
-                            </div>
-                            <div className="mt-2 text-sm text-white/70">
-                              {count} услуг · нажмите чтобы открыть
-                            </div>
-                          </div>
-                        </button>
+                        </div>
                       );
                     })}
                   </div>
