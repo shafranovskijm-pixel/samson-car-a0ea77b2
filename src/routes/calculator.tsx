@@ -348,6 +348,52 @@ function LandingPage() {
     return map;
   }, [services, knownCatSet]);
 
+  // Управление категориями прямо из калькулятора
+  const invalidateCats = () => qc.invalidateQueries({ queryKey: ["service_categories"] });
+
+  const addCategoryPrompt = async () => {
+    const name = window.prompt("Название новой категории")?.trim();
+    if (!name) return;
+    try {
+      await createServiceCategory({ name, sort_order: 100, image_url: null });
+      toast.success("Категория добавлена");
+      invalidateCats();
+    } catch (e) {
+      toast.error(humanizeSupabaseError(e));
+    }
+  };
+
+  const renameCategoryPrompt = async (c: { id: string; name: string }) => {
+    const next = window.prompt("Новое название категории", c.name)?.trim();
+    if (!next || next === c.name) return;
+    try {
+      await updateServiceCategory(c.id, { name: next });
+      toast.success("Категория переименована");
+      if (activeCategory === c.name) setActiveCategory(next);
+      invalidateCats();
+      qc.invalidateQueries({ queryKey: ["services"] });
+    } catch (e) {
+      toast.error(humanizeSupabaseError(e));
+    }
+  };
+
+  const deleteCategoryPrompt = async (c: { id: string; name: string }) => {
+    const ok = await confirm({
+      title: "Удалить категорию?",
+      description: `«${c.name}». Услуги в ней не будут удалены — они попадут в «Прочие услуги».`,
+      confirmText: "Удалить",
+    });
+    if (!ok) return;
+    try {
+      await deleteServiceCategory(c.id);
+      toast.success("Категория удалена");
+      if (activeCategory === c.name) setActiveCategory(null);
+      invalidateCats();
+    } catch (e) {
+      toast.error(humanizeSupabaseError(e));
+    }
+  };
+
   const popularServices = useMemo(() => {
     const ids = topServiceIds(6);
     return ids
