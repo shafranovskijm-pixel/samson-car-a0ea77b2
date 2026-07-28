@@ -267,7 +267,7 @@ function ExpensesPage() {
 
 
         {/* Доходы */}
-        <Card>
+        <Card role="button" onClick={() => setDrill("income")} className="cursor-pointer transition-shadow hover:shadow-md">
           <CardContent className="flex h-full flex-col p-4 sm:p-5">
             <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
               Доходы
