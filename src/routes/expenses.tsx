@@ -90,6 +90,7 @@ type Period = "day" | "week" | "month";
 function ExpensesPage() {
   const [period, setPeriod] = useState<Period>("month");
   const [anchor, setAnchor] = useState<Date>(() => new Date());
+  const [drill, setDrill] = useState<DrillMetric | null>(null);
 
   const { rangeStart, rangeEnd } = useMemo(() => {
     if (period === "day") {
