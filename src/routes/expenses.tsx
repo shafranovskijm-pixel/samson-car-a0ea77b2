@@ -444,6 +444,27 @@ function ExpensesPage() {
         )}
 
       </Tabs>
+
+      <ExpensesDrillDown
+        metric={drill}
+        onClose={() => setDrill(null)}
+        onOpenMetric={(m) => setDrill(m)}
+        periodLabel={periodLabel}
+        rangeLabel={rangeLabel}
+        appts={appts}
+        doneAppts={doneAppts}
+        upcomingAppts={upcomingAppts}
+        payments={payments}
+        expenses={expenses}
+        advances={advances}
+        mechanics={mechanics}
+        mechById={mechById}
+        svcById={svcById}
+        revenue={revenue}
+        mechanicsAccrued={mechanicsAccrued}
+        otherExpenses={otherExpenses}
+        cashProfit={cashProfit}
+      />
     </div>
   );
 }
