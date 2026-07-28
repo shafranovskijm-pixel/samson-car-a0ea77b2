@@ -226,6 +226,9 @@ function IncomeView(p: Props) {
                 ? `${a.car?.brand?.name ?? ""} ${a.car?.model ?? ""}`.trim()
                 : "";
               const plate = a?.car?.license_plate ?? "";
+              const services = (a?.services ?? [])
+                .map((s) => s.service?.name)
+                .filter(Boolean) as string[];
               return (
                 <div
                   key={pay.id}
@@ -237,6 +240,11 @@ function IncomeView(p: Props) {
                       {car ? ` · ${car}` : ""}
                       {plate ? ` · ${plate}` : ""}
                     </div>
+                    {services.length > 0 && (
+                      <div className="truncate text-foreground/80">
+                        {services.join(", ")}
+                      </div>
+                    )}
                     <div className="truncate text-muted-foreground">
                       {fmtDate(pay.paid_at)}
                       {pay.method ? ` · ${pay.method}` : ""}
