@@ -110,6 +110,12 @@ function ExpensesPage() {
 
   const periodLabel =
     period === "day" ? "день" : period === "week" ? "неделю" : "месяц";
+  const rangeLabel = (() => {
+    if (period === "day") return format(rangeStart, "d MMMM yyyy", { locale: ru });
+    if (period === "week")
+      return `${format(rangeStart, "d MMM", { locale: ru })} – ${format(rangeEnd, "d MMM yyyy", { locale: ru })}`;
+    return format(rangeStart, "LLLL yyyy", { locale: ru });
+  })();
 
   const { data: appts = [] } = useQuery({
     queryKey: ["appointments", "expenses-range", fromIso, toIso],
