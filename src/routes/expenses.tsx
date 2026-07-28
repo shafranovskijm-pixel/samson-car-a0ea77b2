@@ -312,7 +312,7 @@ function ExpensesPage() {
         </Card>
 
         {/* ЗП мастерам */}
-        <Card>
+        <Card role="button" onClick={() => setDrill("payout")} className="cursor-pointer transition-shadow hover:shadow-md">
           <CardContent className="flex h-full flex-col p-4 sm:p-5">
             <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
               Зарплаты (мастера)
