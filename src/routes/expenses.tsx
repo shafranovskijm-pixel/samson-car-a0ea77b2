@@ -66,6 +66,7 @@ import {
 } from "@/lib/api";
 import { effectivePayout, type PayoutMechanic, type PayoutService } from "@/lib/payouts";
 import { ExpensesMonthlyTable } from "@/components/ExpensesMonthlyTable";
+import { ExpensesDrillDown, type DrillMetric } from "@/components/ExpensesDrillDown";
 
 
 export const Route = createFileRoute("/expenses")({
@@ -89,6 +90,7 @@ type Period = "day" | "week" | "month";
 function ExpensesPage() {
   const [period, setPeriod] = useState<Period>("month");
   const [anchor, setAnchor] = useState<Date>(() => new Date());
+  const [drill, setDrill] = useState<DrillMetric | null>(null);
 
   const { rangeStart, rangeEnd } = useMemo(() => {
     if (period === "day") {
@@ -108,6 +110,12 @@ function ExpensesPage() {
 
   const periodLabel =
     period === "day" ? "день" : period === "week" ? "неделю" : "месяц";
+  const rangeLabel = (() => {
+    if (period === "day") return format(rangeStart, "d MMMM yyyy", { locale: ru });
+    if (period === "week")
+      return `${format(rangeStart, "d MMM", { locale: ru })} – ${format(rangeEnd, "d MMM yyyy", { locale: ru })}`;
+    return format(rangeStart, "LLLL yyyy", { locale: ru });
+  })();
 
   const { data: appts = [] } = useQuery({
     queryKey: ["appointments", "expenses-range", fromIso, toIso],
@@ -239,7 +247,9 @@ function ExpensesPage() {
       <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
         {/* Прибыль (кассовая) — герой */}
         <Card
-          className={`border-2 ${cashProfit >= 0 ? "border-green-500/30" : "border-red-500/30"} sm:col-span-2 lg:col-span-1`}
+          role="button"
+          onClick={() => setDrill("profit")}
+          className={`cursor-pointer border-2 transition-shadow hover:shadow-md ${cashProfit >= 0 ? "border-green-500/30" : "border-red-500/30"} sm:col-span-2 lg:col-span-1`}
         >
           <CardContent className="flex h-full flex-col p-4 sm:p-5">
             <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
@@ -257,7 +267,7 @@ function ExpensesPage() {
 
 
         {/* Доходы */}
-        <Card>
+        <Card role="button" onClick={() => setDrill("income")} className="cursor-pointer transition-shadow hover:shadow-md">
           <CardContent className="flex h-full flex-col p-4 sm:p-5">
             <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
               Доходы
@@ -302,7 +312,7 @@ function ExpensesPage() {
         </Card>
 
         {/* ЗП мастерам */}
-        <Card>
+        <Card role="button" onClick={() => setDrill("payout")} className="cursor-pointer transition-shadow hover:shadow-md">
           <CardContent className="flex h-full flex-col p-4 sm:p-5">
             <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
               Зарплаты (мастера)
@@ -350,7 +360,7 @@ function ExpensesPage() {
         </Card>
 
         {/* Прочие расходы */}
-        <Card>
+        <Card role="button" onClick={() => setDrill("expense")} className="cursor-pointer transition-shadow hover:shadow-md">
           <CardContent className="flex h-full flex-col p-4 sm:p-5">
             <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
               Прочие расходы
@@ -364,11 +374,10 @@ function ExpensesPage() {
             <div className="mt-auto pt-3">
               <button
                 type="button"
-                onClick={() =>
-                  document
-                    .getElementById("expenses-block")
-                    ?.scrollIntoView({ behavior: "smooth", block: "start" })
-                }
+                onClick={(ev) => {
+                  ev.stopPropagation();
+                  setDrill("expense");
+                }}
                 className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground transition-colors hover:text-amber-600"
               >
                 Подробнее
@@ -435,6 +444,27 @@ function ExpensesPage() {
         )}
 
       </Tabs>
+
+      <ExpensesDrillDown
+        metric={drill}
+        onClose={() => setDrill(null)}
+        onOpenMetric={(m) => setDrill(m)}
+        periodLabel={periodLabel}
+        rangeLabel={rangeLabel}
+        appts={appts}
+        doneAppts={doneAppts}
+        upcomingAppts={upcomingAppts}
+        payments={payments}
+        expenses={expenses}
+        advances={advances}
+        mechanics={mechanics}
+        mechById={mechById}
+        svcById={svcById}
+        revenue={revenue}
+        mechanicsAccrued={mechanicsAccrued}
+        otherExpenses={otherExpenses}
+        cashProfit={cashProfit}
+      />
     </div>
   );
 }
