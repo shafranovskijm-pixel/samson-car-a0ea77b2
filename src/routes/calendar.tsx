@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Calendar as BigCalendar, dateFnsLocalizer, Views, type View } from "react-big-calendar";
 import withDragAndDropDefault, {
@@ -193,8 +193,16 @@ function CalendarPage() {
 
   const openNew = (start: Date) => {
     setDialog({ open: true, id: null, start, prefill: currentPrefill });
-    if (hasPrefill) navigate({ search: {}, replace: true });
   };
+
+  // Clear prefill from URL after the dialog is open, so navigation
+  // doesn't race with the dialog opening in the same tick.
+  useEffect(() => {
+    if (dialog.open && hasPrefill) {
+      navigate({ search: {}, replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dialog.open]);
 
   const openNewShift = (start: Date, end: Date) => {
     setShiftDlg({

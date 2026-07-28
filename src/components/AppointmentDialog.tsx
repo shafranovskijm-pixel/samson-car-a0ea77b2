@@ -172,30 +172,15 @@ export function AppointmentDialog({
       setSelected(existing.services.map((s) => ({ service_id: s.service_id, price: s.price, mechanic_payout: s.mechanic_payout ?? 0 })));
     } else {
       const d = defaultStart ?? new Date();
-      // try to auto-select a car matching prefilled brand/model
-      let autoCarId = defaultCarId ?? "";
-      let autoClientId = "";
-      if (!autoCarId && (defaultBrandId || defaultModelId)) {
-        const modelName = allModels.find((m) => m.id === defaultModelId)?.name;
-        const match = cars.find(
-          (c) =>
-            (!defaultBrandId || c.brand_id === defaultBrandId) &&
-            (!modelName || c.model?.toLowerCase() === modelName.toLowerCase()),
-        );
-        if (match) {
-          autoCarId = match.id;
-          autoClientId = match.client_id;
-        }
-      }
-      setClientId(autoClientId);
-      setCarId(autoCarId);
+      setClientId("");
+      setCarId(defaultCarId ?? "");
       setMechanicId("");
       setStartDate(ussDateISO(d));
       setStartTime(ussTimeHM(d));
       setDuration(60);
       setStatus("scheduled");
       setMileage("");
-      setComment(prefillLabel ? `Из калькулятора: ${prefillLabel}` : "");
+      setComment("");
       setSelected(
         defaultServices && defaultServices.length > 0
           ? defaultServices.map((s) => ({ ...s, mechanic_payout: 0 }))
@@ -207,18 +192,46 @@ export function AppointmentDialog({
     setReminderOn(false);
     setReminderInterval("half_year");
     setReminderTitle("");
+    // Intentionally not including cars/allModels/prefillLabel: those async
+    // sources must not reset the user's in-progress edits when queries refetch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     open,
+    appointmentId,
     existing,
     defaultStart,
     defaultCarId,
     defaultServices,
     defaultBrandId,
     defaultModelId,
-    prefillLabel,
-    allModels,
-    cars,
   ]);
+
+  // Auto-pick a car matching prefilled brand/model once cars/models load.
+  // Runs only when carId is still empty, so it never wipes user edits.
+  useEffect(() => {
+    if (!open || existing) return;
+    if (carId) return;
+    if (defaultCarId) return;
+    if (!defaultBrandId && !defaultModelId) return;
+    if (cars.length === 0) return;
+    const modelName = allModels.find((m) => m.id === defaultModelId)?.name;
+    const match = cars.find(
+      (c) =>
+        (!defaultBrandId || c.brand_id === defaultBrandId) &&
+        (!modelName || c.model?.toLowerCase() === modelName.toLowerCase()),
+    );
+    if (match) {
+      setCarId(match.id);
+      setClientId(match.client_id);
+    }
+  }, [open, existing, carId, defaultCarId, defaultBrandId, defaultModelId, cars, allModels]);
+
+  // Set the "from calculator" comment once the label resolves (brands/models loaded).
+  useEffect(() => {
+    if (!open || existing) return;
+    if (!prefillLabel) return;
+    setComment((prev) => (prev ? prev : `Из калькулятора: ${prefillLabel}`));
+  }, [open, existing, prefillLabel]);
 
 
   // filter cars by chosen client

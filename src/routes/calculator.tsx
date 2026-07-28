@@ -1555,8 +1555,9 @@ function LandingPage() {
                         to: "/calendar",
                         search: {
                           services: parts.join(","),
-                          brand: brandId || undefined,
-                          carId: carId || undefined,
+                          brand: brandId ?? "",
+                          model: "",
+                          carId: carId ?? "",
                         },
                       });
                     }}
