@@ -374,11 +374,10 @@ function ExpensesPage() {
             <div className="mt-auto pt-3">
               <button
                 type="button"
-                onClick={() =>
-                  document
-                    .getElementById("expenses-block")
-                    ?.scrollIntoView({ behavior: "smooth", block: "start" })
-                }
+                onClick={(ev) => {
+                  ev.stopPropagation();
+                  setDrill("expense");
+                }}
                 className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground transition-colors hover:text-amber-600"
               >
                 Подробнее
