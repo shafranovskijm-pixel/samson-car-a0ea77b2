@@ -66,6 +66,7 @@ import {
 } from "@/lib/api";
 import { effectivePayout, type PayoutMechanic, type PayoutService } from "@/lib/payouts";
 import { ExpensesMonthlyTable } from "@/components/ExpensesMonthlyTable";
+import { ExpensesDrillDown, type DrillMetric } from "@/components/ExpensesDrillDown";
 
 
 export const Route = createFileRoute("/expenses")({
