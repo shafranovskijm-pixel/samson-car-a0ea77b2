@@ -936,7 +936,11 @@ function CarDialog({
         license_plate: form.license_plate.trim() || null,
         vin: form.vin.trim() || null,
         color: form.color.trim() || null,
-        engine_volume: form.engine_volume ? Number(form.engine_volume) : null,
+        engine_volume: form.engine_volume
+          ? (Number(form.engine_volume) > 20
+              ? +(Number(form.engine_volume) / 1000).toFixed(1)
+              : +Number(form.engine_volume).toFixed(1))
+          : null,
         engine_power: form.engine_power ? Number(form.engine_power) : null,
         transmission: form.transmission || null,
         drive_type: form.drive_type || null,
