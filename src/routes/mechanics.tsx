@@ -646,7 +646,8 @@ function MechanicSalary({ mechanicId, defaultPercent }: { mechanicId: string; de
 function MechanicAdvances({ mechanicId }: { mechanicId: string }) {
   const qc = useQueryClient();
   const confirmActionCtx = useConfirm();
-  const [period, setPeriod] = useState<Period>("month");
+  const periodState = usePeriodState();
+  const { period, start, end } = periodState;
   const [open, setOpen] = useState(false);
   const today = new Date().toISOString().slice(0, 10);
   const [form, setForm] = useState({ paid_at: today, amount: "", note: "" });
@@ -656,10 +657,11 @@ function MechanicAdvances({ mechanicId }: { mechanicId: string }) {
     queryFn: () => listMechanicAdvances({ mechanic_id: mechanicId }),
   });
 
-  const filtered = useMemo(() => {
-    const start = periodStart(period);
-    return advances.filter((a) => new Date(a.paid_at).getTime() >= start);
-  }, [advances, period]);
+  const filtered = useMemo(
+    () => advances.filter((a) => inDayRange(a.paid_at, start, end)),
+    [advances, start, end],
+  );
+
 
   const total = filtered.reduce((s, a) => s + Number(a.amount ?? 0), 0);
 
