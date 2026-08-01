@@ -83,39 +83,23 @@ export const Route = createFileRoute("/expenses")({
 const fmt = (n: number) =>
   new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(Math.round(n)) + " ₽";
 
-const isoDate = (d: Date) => format(d, "yyyy-MM-dd");
-
-type Period = "day" | "week" | "month";
-
 function ExpensesPage() {
-  const [period, setPeriod] = useState<Period>("month");
+  const [period, setPeriod] = useState<PeriodKey>("month");
   const [anchor, setAnchor] = useState<Date>(() => new Date());
+  const [custom, setCustom] = useState<CustomRange>(() => defaultCustomRange());
   const [drill, setDrill] = useState<DrillMetric | null>(null);
 
   const { rangeStart, rangeEnd } = useMemo(() => {
-    if (period === "day") {
-      return { rangeStart: startOfDay(anchor), rangeEnd: endOfDay(anchor) };
-    }
-    if (period === "week") {
-      return {
-        rangeStart: startOfWeek(anchor, { weekStartsOn: 1 }),
-        rangeEnd: endOfWeek(anchor, { weekStartsOn: 1 }),
-      };
-    }
-    return { rangeStart: startOfMonth(anchor), rangeEnd: endOfMonth(anchor) };
-  }, [anchor, period]);
+    const { start, end } = periodRange(period, anchor, custom);
+    return { rangeStart: start, rangeEnd: end };
+  }, [anchor, period, custom]);
 
   const fromIso = isoDate(rangeStart);
   const toIso = isoDate(rangeEnd);
 
-  const periodLabel =
-    period === "day" ? "день" : period === "week" ? "неделю" : "месяц";
-  const rangeLabel = (() => {
-    if (period === "day") return format(rangeStart, "d MMMM yyyy", { locale: ru });
-    if (period === "week")
-      return `${format(rangeStart, "d MMM", { locale: ru })} – ${format(rangeEnd, "d MMM yyyy", { locale: ru })}`;
-    return format(rangeStart, "LLLL yyyy", { locale: ru });
-  })();
+  const periodLabel = periodNoun(period);
+  const rangeLabel = periodRangeLabel(period, anchor, custom);
+
 
   const { data: appts = [] } = useQuery({
     queryKey: ["appointments", "expenses-range", fromIso, toIso],
