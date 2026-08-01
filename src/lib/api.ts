@@ -674,22 +674,26 @@ export const updateMechanicDefaultPayoutPercent = async (id: string, percent: nu
 };
 
 /**
- * Пересчитывает сохранённые суммы mechanic_payout во всех услугах мастера
+ * Пересчитывает сохранённые суммы mechanic_payout в услугах мастера
  * по актуальному проценту (индивидуальная ставка за услугу имеет приоритет).
- * Нужно после смены процента: старые записи хранят сумму, посчитанную по прежнему %.
+ *
+ * Безопасность бухгалтерии:
+ *  - opts.onlyFrom — ограничение по дате начала записи (закрытые месяцы не трогаем);
+ *  - opts.skipPaid — не трогать полностью оплаченные записи (закрытая касса).
  */
 export const recalcMechanicPayouts = async (
   mechanicId: string,
   percent: number,
-  opts?: { onlyFrom?: string },
+  opts?: { onlyFrom?: string; skipPaid?: boolean },
 ): Promise<number> => {
   let aq = anySb
     .from("appointments")
-    .select("id")
+    .select("id, payment_status")
     .eq("mechanic_id", mechanicId)
     .is("deleted_at", null);
   if (opts?.onlyFrom) aq = aq.gte("starts_at", opts.onlyFrom);
-  const appts = (throwIf(await aq) as { id: string }[]) ?? [];
+  let appts = (throwIf(await aq) as { id: string; payment_status?: string }[]) ?? [];
+  if (opts?.skipPaid) appts = appts.filter((a) => a.payment_status !== "paid");
   if (!appts.length) return 0;
   const ids = appts.map((a) => a.id);
 
@@ -704,6 +708,7 @@ export const recalcMechanicPayouts = async (
         .in("appointment_id", ids),
     ) as { appointment_id: string; service_id: string; price: number; mechanic_payout: number }[]) ??
     [];
+
 
   let changed = 0;
   for (const r of rows) {
