@@ -465,7 +465,8 @@ function MechanicSalary({ mechanicId, defaultPercent }: { mechanicId: string; de
     queryKey: ["mechanic-advances", mechanicId],
     queryFn: () => listMechanicAdvances({ mechanic_id: mechanicId }),
   });
-  const [period, setPeriod] = useState<Period>("month");
+  const periodState = usePeriodState();
+  const { period, start, end } = periodState;
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const mechForPayout: PayoutMechanic = {
@@ -487,16 +488,16 @@ function MechanicSalary({ mechanicId, defaultPercent }: { mechanicId: string; de
     });
 
   const filtered = useMemo(() => {
-    const start = periodStart(period);
     return rows
-      .filter((r) => r.status === "done" && new Date(r.starts_at).getTime() >= start)
+      .filter((r) => r.status === "done" && inRange(new Date(r.starts_at), start, end))
       .sort((a, b) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime());
-  }, [rows, period]);
+  }, [rows, start, end]);
 
-  const advancesInPeriod = useMemo(() => {
-    const start = periodStart(period);
-    return advances.filter((a) => new Date(a.paid_at).getTime() >= start);
-  }, [advances, period]);
+  const advancesInPeriod = useMemo(
+    () => advances.filter((a) => inDayRange(a.paid_at, start, end)),
+    [advances, start, end],
+  );
+
 
   const pending = useMemo(
     () => rows.filter((r) => r.status !== "done" && r.status !== "cancelled"),
