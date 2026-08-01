@@ -16,7 +16,8 @@ import {
 import {
   createMechanic, createMechanicAdvance, createMechanicShift, deleteMechanic,
   deleteMechanicAdvance, deleteMechanicShift, listMechanicAdvances, listMechanicPayouts,
-  listMechanicServiceRates, listMechanicShifts, listMechanics, listServices, updateMechanic,
+  listMechanicServiceRates, listMechanicShifts, listMechanics, listServices,
+  recalcMechanicPayouts, updateMechanic,
   updateMechanicDefaultPayoutPercent, upsertMechanicServiceRate,
 } from "@/lib/api";
 import type { Mechanic, MechanicShift } from "@/lib/types";
@@ -271,16 +272,44 @@ function periodStart(p: Period): number {
 
 function MechanicDefaultPercent({ mechanic }: { mechanic: Mechanic }) {
   const qc = useQueryClient();
+  const confirm = useConfirm();
   const [value, setValue] = useState<string>(String(mechanic.default_payout_percent ?? 50));
 
-  const saveM = useMutation({
-    mutationFn: async (n: number) => updateMechanicDefaultPayoutPercent(mechanic.id, n),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["mechanics"] });
-      toast.success("Процент сохранён");
+  const invalidateMoney = () => {
+    qc.invalidateQueries({ queryKey: ["mechanics"] });
+    qc.invalidateQueries({ queryKey: ["mechanic-payouts"] });
+    qc.invalidateQueries({ queryKey: ["appointments"] });
+    qc.invalidateQueries({ queryKey: ["expenses"] });
+  };
+
+  const recalcM = useMutation({
+    mutationFn: async (n: number) => recalcMechanicPayouts(mechanic.id, n),
+    onSuccess: (changed) => {
+      invalidateMoney();
+      toast.success(
+        changed > 0 ? `Пересчитано услуг: ${changed}` : "Все выплаты уже соответствуют проценту",
+      );
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const saveM = useMutation({
+    mutationFn: async (n: number) => updateMechanicDefaultPayoutPercent(mechanic.id, n),
+    onSuccess: async (_d, n) => {
+      invalidateMoney();
+      toast.success("Процент сохранён");
+      const ok = await confirm({
+        title: "Пересчитать выплаты?",
+        description: `Пересчитать сохранённые суммы выплат по всем записям мастера под ${n}%? Индивидуальные ставки за услугу останутся без изменений.`,
+        confirmText: "Пересчитать",
+        cancelText: "Не сейчас",
+      });
+      if (ok) recalcM.mutate(n);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const currentPercent = Number(mechanic.default_payout_percent ?? 50);
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card p-4">
@@ -293,7 +322,7 @@ function MechanicDefaultPercent({ mechanic }: { mechanic: Mechanic }) {
           </div>
         </div>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Input
           type="number"
           className="h-9 w-24"
@@ -302,17 +331,33 @@ function MechanicDefaultPercent({ mechanic }: { mechanic: Mechanic }) {
           onBlur={() => {
             const n = Number(value);
             if (!Number.isFinite(n) || n < 0 || n > 100) {
-              setValue(String(mechanic.default_payout_percent ?? 50));
+              setValue(String(currentPercent));
               return;
             }
-            if (n !== Number(mechanic.default_payout_percent ?? 50)) saveM.mutate(n);
+            if (n !== currentPercent) saveM.mutate(n);
           }}
         />
         <span className="text-sm text-muted-foreground">%</span>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={recalcM.isPending}
+          onClick={async () => {
+            const ok = await confirm({
+              title: "Пересчитать выплаты?",
+              description: `Все сохранённые суммы выплат мастера будут пересчитаны под ${currentPercent}%. Ручные правки сумм будут перезаписаны.`,
+              confirmText: "Пересчитать",
+            });
+            if (ok) recalcM.mutate(currentPercent);
+          }}
+        >
+          {recalcM.isPending ? "Пересчёт…" : "Пересчитать выплаты"}
+        </Button>
       </div>
     </div>
   );
 }
+
 
 function MechanicSalary({ mechanicId, defaultPercent }: { mechanicId: string; defaultPercent: number }) {
   const { data: rows = [] } = useQuery({
