@@ -702,19 +702,21 @@ function MechanicAdvances({ mechanicId }: { mechanicId: string }) {
 
   return (
     <div>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <BadgeDollarSign className="h-5 w-5" />
-          <h2 className="text-lg font-semibold">Авансы</h2>
-        </div>
-        <div className="flex items-center gap-2">
-          <PeriodPicker state={periodState} />
-
-          <Button size="sm" onClick={() => setOpen(true)}>
+      <div className="mb-3 flex flex-col gap-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <BadgeDollarSign className="h-5 w-5" />
+            <h2 className="text-lg font-semibold">Авансы</h2>
+          </div>
+          <Button size="sm" className="h-10" onClick={() => setOpen(true)}>
             <Plus className="mr-1 h-4 w-4" />Аванс
           </Button>
         </div>
+        <div className="toolbar-scroll -mx-1 px-1">
+          <PeriodPicker state={periodState} />
+        </div>
       </div>
+
 
       <div className="rounded-lg border bg-card p-4">
         <div className="text-xs text-muted-foreground">
