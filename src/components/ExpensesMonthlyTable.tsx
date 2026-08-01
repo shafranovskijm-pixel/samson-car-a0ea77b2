@@ -96,8 +96,11 @@ export function ExpensesMonthlyTable({
         const stored = Number(s.mechanic_payout ?? 0);
         const mech = a.mechanic_id ? mechById.get(a.mechanic_id) ?? null : null;
         const svc = s.service_id ? svcById.get(s.service_id) ?? null : null;
-        const percent = effectivePercent(mech, svc);
         const payout = effectivePayout({ storedPayout: stored, price, mechanic: mech, service: svc });
+        // Показываем ФАКТИЧЕСКИЙ процент этой работы (из сохранённой суммы),
+        // а не текущую ставку мастера — иначе старые работы выглядят пересчитанными.
+        const percent = price > 0 ? Math.round((payout / price) * 100) : effectivePercent(mech, svc);
+
 
         let advance = 0;
         if (idx === 0) {
