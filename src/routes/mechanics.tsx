@@ -31,7 +31,6 @@ import {
   PERIOD_LABELS,
   periodRange,
   periodRangeLabel,
-  periodNoun,
   defaultCustomRange,
   canNavigate,
   stepAnchor,
