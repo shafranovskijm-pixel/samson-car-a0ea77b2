@@ -238,7 +238,10 @@ function ExpensesPage() {
             setPeriod={setPeriod}
             anchor={anchor}
             setAnchor={setAnchor}
+            custom={custom}
+            setCustom={setCustom}
           />
+
         </div>
       </header>
 
