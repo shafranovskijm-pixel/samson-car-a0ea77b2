@@ -963,10 +963,10 @@ function LandingPage() {
               {/* Липкий футер шага 1 */}
               {brandName && (
                 <div className="sticky bottom-4 z-20 mt-8">
-                  <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 rounded-2xl border border-white/10 bg-black/80 p-4 shadow-2xl backdrop-blur">
+                  <div className="mx-auto flex max-w-3xl flex-col gap-3 rounded-2xl border border-white/10 bg-black/80 p-4 shadow-2xl backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                     <div className="min-w-0 text-sm">
                       <div className="text-white/60">Ваше авто</div>
-                      <div className="truncate text-base font-bold text-white">
+                      <div className="text-base font-bold break-words text-white">
                         {brandName} {modelName} {year ? `· ${year}` : ""}
                       </div>
                     </div>
@@ -974,11 +974,12 @@ function LandingPage() {
                       size="lg"
                       disabled={!carReady}
                       onClick={goToServices}
-                      className="bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                      className="w-full shrink-0 bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 sm:w-auto"
                     >
                       Далее — услуги <ChevronRight className="ml-1 h-4 w-4" />
                     </Button>
                   </div>
+
                 </div>
               )}
             </div>
