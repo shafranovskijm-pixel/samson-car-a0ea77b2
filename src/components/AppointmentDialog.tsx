@@ -463,16 +463,28 @@ export function AppointmentDialog({
       if (!startDate || !startTime) throw new Error("Укажите дату и время");
       const starts_at = ussLocalToInstant(startDate, startTime).toISOString();
 
-      // Принудительный пересчёт по текущим правилам:
-      // всегда пересчитываем выплату мастеру по актуальным ставкам,
-      // КРОМЕ строк, где пользователь вручную поправил сумму в этом окне.
-      // Так «Механики»/«Расходы» видят корректный оборот/ЗП после любых
-      // правок старых записей (цена, услуги, мастер, ставки).
-      const servicesPayload = selected.map((s) =>
-        manualPayouts.has(s.service_id)
-          ? s
-          : { ...s, mechanic_payout: rateFor(s.service_id, s.price) },
+      // Пересчёт выплат при сохранении — консервативный:
+      //  • ручные правки суммы в этом окне не трогаем;
+      //  • у СУЩЕСТВУЮЩЕЙ записи строку не трогаем, если не изменились
+      //    ни цена услуги, ни мастер (старые работы остаются как были);
+      //  • новые строки и всё, что изменилось, считаем по актуальным ставкам.
+      const prevMech = existing?.mechanic_id ?? null;
+      const mechChangedOnSave = (mechanicId || null) !== prevMech;
+      const prevRows = new Map(
+        (existing?.services ?? []).map((s) => [
+          s.service_id,
+          { price: Number(s.price ?? 0), payout: Number(s.mechanic_payout ?? 0) },
+        ]),
       );
+      const servicesPayload = selected.map((s) => {
+        if (manualPayouts.has(s.service_id)) return s;
+        const prev = prevRows.get(s.service_id);
+        if (prev && !mechChangedOnSave && prev.price === Number(s.price ?? 0) && prev.payout > 0) {
+          return { ...s, mechanic_payout: prev.payout };
+        }
+        return { ...s, mechanic_payout: rateFor(s.service_id, s.price) };
+      });
+
 
       const payload = {
         car_id: carId,
