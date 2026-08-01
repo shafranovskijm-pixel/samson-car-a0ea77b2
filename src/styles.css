@@ -207,3 +207,32 @@
   .expense-table th { background: #eee; }
   .expense-table tfoot td { border-top: 2px solid #000; font-weight: bold; }
 }
+
+/* --- Мобильные утилиты интерфейса --- */
+/* Горизонтально прокручиваемая панель инструментов (переключатели периодов и т.п.) */
+.toolbar-scroll {
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.toolbar-scroll::-webkit-scrollbar { display: none; }
+.toolbar-scroll > * { flex-wrap: nowrap; width: max-content; min-width: 100%; }
+@media (min-width: 640px) {
+  .toolbar-scroll > * { flex-wrap: wrap; width: auto; min-width: 0; }
+}
+/* Кликабельная иконка-кнопка с явной рамкой (понятно, что можно нажать) */
+.icon-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.25rem;
+  width: 2.25rem;
+  border-radius: 0.5rem;
+  border: 1px solid color-mix(in oklab, currentColor 25%, transparent);
+  background: color-mix(in oklab, currentColor 8%, transparent);
+  cursor: pointer;
+  transition: background-color .15s ease, border-color .15s ease, transform .1s ease;
+}
+.icon-action:hover { background: color-mix(in oklab, currentColor 16%, transparent); }
+.icon-action:active { transform: scale(.95); }
+.icon-action:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
