@@ -119,6 +119,7 @@ export type Mechanic = {
   phone: string | null;
   color: string;
   default_payout_percent?: number;
+  payout_percent_since?: string | null;
 };
 export type MechanicServiceRate = {
   id: string;
