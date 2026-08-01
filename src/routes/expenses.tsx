@@ -638,7 +638,7 @@ function ExpensesBlock({
 
         {expenses.length === 0 ? (
           <div className="rounded-lg border border-dashed py-10 text-center text-sm text-muted-foreground">
-            За этот {periodLabel === "день" ? "день" : periodLabel === "неделю" ? "неделю" : "месяц"} ещё нет записей о расходах.
+            {period === "all" ? "Записей о расходах пока нет." : `За ${periodLabel === "период" ? "выбранный период" : periodLabel === "всё время" ? "всё время" : "этот " + periodLabel} ещё нет записей о расходах.`}
           </div>
         ) : (
           <div className="space-y-2">
