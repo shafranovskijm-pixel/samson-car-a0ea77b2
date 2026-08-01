@@ -24,6 +24,8 @@ import type { Mechanic, MechanicShift } from "@/lib/types";
 import { STATUS_LABELS } from "@/lib/types";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { effectivePayout, type PayoutMechanic, type PayoutService } from "@/lib/payouts";
+import { ussLocalToInstant } from "@/lib/tz";
+
 
 const COLORS = [
   "#ef4444", "#f97316", "#f59e0b", "#eab308", "#84cc16",
