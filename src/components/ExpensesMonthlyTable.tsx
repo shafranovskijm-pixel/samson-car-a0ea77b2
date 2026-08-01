@@ -231,8 +231,9 @@ export function ExpensesMonthlyTable({
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Свод");
-    const safeMonth = format(month, "yyyy-MM");
+    const safeMonth = (rangeLabel ?? format(month, "yyyy-MM")).replace(/[^\wа-яА-Я\d-]+/g, "_");
     XLSX.writeFile(wb, `Свод_${safeMonth}.xlsx`);
+
   };
 
   return (
