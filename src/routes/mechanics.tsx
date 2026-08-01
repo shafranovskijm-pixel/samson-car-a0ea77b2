@@ -249,7 +249,7 @@ function MechanicsPage() {
                     key={c}
                     type="button"
                     onClick={() => setForm({ ...form, color: c })}
-                    className={`h-8 w-8 rounded-md border-2 ${form.color === c ? "border-foreground" : "border-transparent"}`}
+                    className={`h-10 w-10 cursor-pointer rounded-md border-2 transition hover:ring-2 hover:ring-ring/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95 ${form.color === c ? "border-foreground" : "border-border/60"}`}
                     style={{ background: c }}
                   />
                 ))}
@@ -287,7 +287,7 @@ function PeriodPicker({ state }: { state: PeriodState }) {
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       <Select value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
-        <SelectTrigger className="h-8 w-32 sm:w-36"><SelectValue /></SelectTrigger>
+        <SelectTrigger className="h-10 w-32 sm:w-36"><SelectValue /></SelectTrigger>
         <SelectContent>
           {(["day", "week", "month", "all", "custom"] as PeriodKey[]).map((p) => (
             <SelectItem key={p} value={p}>{PERIOD_LABELS[p]}</SelectItem>
@@ -296,19 +296,19 @@ function PeriodPicker({ state }: { state: PeriodState }) {
       </Select>
       {canNavigate(period) && (
         <div className="flex items-center gap-0.5 rounded-md border bg-card px-1">
-          <Button variant="ghost" size="icon" className="h-7 w-7"
+          <Button variant="ghost" size="icon" className="h-9 w-9"
             onClick={() => setAnchor(stepAnchor(period, anchor, -1))}>
             <ChevronLeft className="h-3.5 w-3.5" />
           </Button>
           <span className="min-w-[110px] text-center text-xs font-medium capitalize">
             {periodRangeLabel(period, anchor, custom)}
           </span>
-          <Button variant="ghost" size="icon" className="h-7 w-7"
+          <Button variant="ghost" size="icon" className="h-9 w-9"
             onClick={() => setAnchor(stepAnchor(period, anchor, 1))}>
             <ChevronRight className="h-3.5 w-3.5" />
           </Button>
           {!isCurrentPeriod(period, anchor) && (
-            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs"
+            <Button variant="ghost" size="sm" className="h-9 px-2 text-xs"
               onClick={() => setAnchor(new Date())}>
               Сейчас
             </Button>
@@ -317,10 +317,10 @@ function PeriodPicker({ state }: { state: PeriodState }) {
       )}
       {period === "custom" && (
         <div className="flex items-center gap-1">
-          <Input type="date" className="h-8 w-[135px]" value={custom.from}
+          <Input type="date" className="h-10 w-[135px]" value={custom.from}
             onChange={(e) => setCustom({ ...custom, from: e.target.value })} />
           <span className="text-muted-foreground">–</span>
-          <Input type="date" className="h-8 w-[135px]" value={custom.to}
+          <Input type="date" className="h-10 w-[135px]" value={custom.to}
             onChange={(e) => setCustom({ ...custom, to: e.target.value })} />
         </div>
       )}
@@ -526,14 +526,16 @@ function MechanicSalary({ mechanicId, defaultPercent }: { mechanicId: string; de
 
   return (
     <div>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+      <div className="mb-3 flex flex-col gap-2">
         <div className="flex items-center gap-2">
           <Wallet className="h-5 w-5" />
           <h2 className="text-lg font-semibold">Зарплата</h2>
         </div>
-        <PeriodPicker state={periodState} />
-
+        <div className="toolbar-scroll -mx-1 px-1">
+          <PeriodPicker state={periodState} />
+        </div>
       </div>
+
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-lg border bg-card p-4">
@@ -700,19 +702,21 @@ function MechanicAdvances({ mechanicId }: { mechanicId: string }) {
 
   return (
     <div>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <BadgeDollarSign className="h-5 w-5" />
-          <h2 className="text-lg font-semibold">Авансы</h2>
-        </div>
-        <div className="flex items-center gap-2">
-          <PeriodPicker state={periodState} />
-
-          <Button size="sm" onClick={() => setOpen(true)}>
+      <div className="mb-3 flex flex-col gap-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <BadgeDollarSign className="h-5 w-5" />
+            <h2 className="text-lg font-semibold">Авансы</h2>
+          </div>
+          <Button size="sm" className="h-10" onClick={() => setOpen(true)}>
             <Plus className="mr-1 h-4 w-4" />Аванс
           </Button>
         </div>
+        <div className="toolbar-scroll -mx-1 px-1">
+          <PeriodPicker state={periodState} />
+        </div>
       </div>
+
 
       <div className="rounded-lg border bg-card p-4">
         <div className="text-xs text-muted-foreground">
@@ -744,7 +748,7 @@ function MechanicAdvances({ mechanicId }: { mechanicId: string }) {
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="h-7 w-7"
+                  className="h-9 w-9"
                   onClick={() => {
                     (async () => {
                       const ok = await confirmActionCtx({

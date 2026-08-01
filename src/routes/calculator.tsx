@@ -31,6 +31,7 @@ import {
   createServiceCategory,
   updateServiceCategory,
   deleteServiceCategory,
+  deleteService,
   upsertServiceByCategoryName,
   humanizeSupabaseError,
 } from "@/lib/api";
@@ -438,6 +439,29 @@ function LandingPage() {
     }
   };
 
+  const deleteServicePrompt = async (s: { id: string; name: string }) => {
+    const ok = await confirm({
+      title: "Удалить услугу?",
+      description: `«${s.name}» будет удалена из прайса. Уже созданные записи не изменятся.`,
+      confirmText: "Удалить",
+      destructive: true,
+    });
+    if (!ok) return;
+    try {
+      await deleteService(s.id);
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.delete(s.id);
+        return next;
+      });
+      toast.success("Услуга удалена");
+      qc.invalidateQueries({ queryKey: ["services"] });
+    } catch (e) {
+      toast.error(humanizeSupabaseError(e));
+    }
+  };
+
+
   const popularServices = useMemo(() => {
     const ids = topServiceIds(6);
     return ids
@@ -630,7 +654,7 @@ function LandingPage() {
                         key={n}
                         type="button"
                         onClick={() => setBrandName(n)}
-                        className="rounded-lg px-3 py-2 text-left font-semibold text-white transition hover:bg-white/10"
+                        className="rounded-lg border border-white/15 bg-white/5 px-3 py-2.5 text-left font-semibold text-white transition hover:border-white/35 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 active:scale-[0.98]"
                         title={n}
                       >
                         {n}
@@ -1067,7 +1091,7 @@ function LandingPage() {
                                   e.stopPropagation();
                                   renameCategoryPrompt(c);
                                 }}
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white/80 backdrop-blur transition hover:bg-black/80 hover:text-white"
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white/80 backdrop-blur transition hover:bg-black/80 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 active:scale-95"
                               >
                                 <Pencil className="h-4 w-4" />
                               </button>
@@ -1078,7 +1102,7 @@ function LandingPage() {
                                   e.stopPropagation();
                                   deleteCategoryPrompt(c);
                                 }}
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-red-300 backdrop-blur transition hover:bg-black/80 hover:text-red-200"
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-red-400/30 bg-black/60 text-red-300 backdrop-blur transition hover:bg-black/80 hover:text-red-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/70 active:scale-95"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </button>
@@ -1367,7 +1391,7 @@ function LandingPage() {
                                         if (!Number.isNaN(v) && v >= 0) setPrice(s.id, v);
                                         setEditingPrice(null);
                                       }}
-                                      className="rounded p-1 text-emerald-400 hover:bg-white/10"
+                                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-emerald-400/30 bg-emerald-400/10 text-emerald-300 transition hover:bg-emerald-400/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60 active:scale-95"
                                       aria-label="Сохранить"
                                     >
                                       <Check className="h-4 w-4" />
@@ -1375,7 +1399,7 @@ function LandingPage() {
                                     <button
                                       type="button"
                                       onClick={() => setEditingPrice(null)}
-                                      className="rounded p-1 text-white/60 hover:bg-white/10"
+                                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-white/5 text-white/70 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 active:scale-95"
                                       aria-label="Отмена"
                                     >
                                       <X className="h-4 w-4" />
@@ -1392,19 +1416,28 @@ function LandingPage() {
                                         setEditingPrice(s.id);
                                         setPriceDraft(String(price));
                                       }}
-                                      className="rounded p-1 text-white/50 hover:bg-white/10 hover:text-white"
+                                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-white/5 text-white/70 transition hover:border-white/30 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 active:scale-95"
                                       aria-label="Изменить цену"
                                       title="Изменить цену"
                                     >
-                                      <Pencil className="h-3.5 w-3.5" />
+                                      <Pencil className="h-4 w-4" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => deleteServicePrompt(s)}
+                                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-500/30 bg-red-500/10 text-red-300 transition hover:border-red-500/60 hover:bg-red-500/20 hover:text-red-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60 active:scale-95"
+                                      aria-label="Удалить услугу"
+                                      title="Удалить услугу"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
                                     </button>
                                     {hasOverride && (
                                       <button
                                         type="button"
                                         onClick={() => resetPrice(s.id)}
-                                        className="text-xs text-white/40 underline underline-offset-2 hover:text-white/70"
+                                        className="rounded-lg border border-white/15 bg-white/5 px-2.5 py-1.5 text-xs text-white/70 transition hover:bg-white/10 hover:text-white"
                                       >
-                                        сброс
+                                        сброс цены
                                       </button>
                                     )}
                                   </>

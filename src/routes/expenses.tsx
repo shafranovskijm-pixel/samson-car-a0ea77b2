@@ -213,14 +213,14 @@ function ExpensesPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
-      <header className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-start sm:justify-between">
+      <header className="mb-6 flex flex-col gap-3 sm:mb-8">
         <div className="min-w-0">
-          <h1 className="truncate text-xl font-bold sm:text-2xl">Расходы</h1>
-          <p className="mt-0.5 truncate text-xs text-muted-foreground sm:text-sm">
+          <h1 className="text-xl font-bold sm:text-2xl">Расходы</h1>
+          <p className="mt-0.5 text-xs text-muted-foreground sm:text-sm">
             Оборот, прибыль, ЗП мастеров и авансы за {periodLabel}
           </p>
         </div>
-        <div className="shrink-0">
+        <div className="-mx-4 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <RangePicker
             period={period}
             setPeriod={setPeriod}
@@ -229,16 +229,18 @@ function ExpensesPage() {
             custom={custom}
             setCustom={setCustom}
           />
-
         </div>
       </header>
+
 
       <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
         {/* Прибыль (кассовая) — герой */}
         <Card
           role="button"
           onClick={() => setDrill("profit")}
-          className={`cursor-pointer border-2 transition-shadow hover:shadow-md ${cashProfit >= 0 ? "border-green-500/30" : "border-red-500/30"} sm:col-span-2 lg:col-span-1`}
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setDrill("profit"); } }}
+          className={`cursor-pointer border-2 transition-all hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.99] ${cashProfit >= 0 ? "border-green-500/30" : "border-red-500/30"} sm:col-span-2 lg:col-span-1`}
         >
           <CardContent className="flex h-full flex-col p-4 sm:p-5">
             <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
@@ -256,12 +258,14 @@ function ExpensesPage() {
 
 
         {/* Доходы */}
-        <Card role="button" onClick={() => setDrill("income")} className="cursor-pointer transition-shadow hover:shadow-md">
+        <Card role="button" onClick={() => setDrill("income")}
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setDrill("income"); } }} className="cursor-pointer transition-all hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.99]">
           <CardContent className="flex h-full flex-col p-4 sm:p-5">
             <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
               Доходы
             </div>
-            <div className="mt-1.5 truncate text-2xl font-bold">{fmt(revenue)}</div>
+            <div className="mt-1.5 break-words text-xl font-bold sm:text-2xl">{fmt(revenue)}</div>
             <div className="mt-1 text-[11px] text-muted-foreground">
               Оборот кассы (платежи за {periodLabel})
             </div>
@@ -301,12 +305,14 @@ function ExpensesPage() {
         </Card>
 
         {/* ЗП мастерам */}
-        <Card role="button" onClick={() => setDrill("payout")} className="cursor-pointer transition-shadow hover:shadow-md">
+        <Card role="button" onClick={() => setDrill("payout")}
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setDrill("payout"); } }} className="cursor-pointer transition-all hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.99]">
           <CardContent className="flex h-full flex-col p-4 sm:p-5">
             <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
               Зарплаты (мастера)
             </div>
-            <div className="mt-1.5 truncate text-2xl font-bold text-amber-600">
+            <div className="mt-1.5 break-words text-xl font-bold sm:text-2xl text-amber-600">
               {fmt(mechanicsAccrued)}
             </div>
             <div className="mt-1 text-[11px] text-muted-foreground">
@@ -314,7 +320,7 @@ function ExpensesPage() {
             </div>
             <div className="mt-auto border-t pt-3">
               <div className="flex items-center justify-between gap-2">
-                <span className="min-w-0 truncate text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                <span className="min-w-0 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                   {mechanicsDebt >= 0 ? "К выплате" : "Переплата"}
                 </span>
                 <span
@@ -341,7 +347,7 @@ function ExpensesPage() {
                   }}
                 />
               </div>
-              <div className="mt-1 truncate text-[10px] text-muted-foreground">
+              <div className="mt-1 text-[10px] leading-snug text-muted-foreground">
                 начислено {fmt(mechanicsAccrued)} − авансы {fmt(mechanicsPaid)}
               </div>
             </div>
@@ -349,12 +355,14 @@ function ExpensesPage() {
         </Card>
 
         {/* Прочие расходы */}
-        <Card role="button" onClick={() => setDrill("expense")} className="cursor-pointer transition-shadow hover:shadow-md">
+        <Card role="button" onClick={() => setDrill("expense")}
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setDrill("expense"); } }} className="cursor-pointer transition-all hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.99]">
           <CardContent className="flex h-full flex-col p-4 sm:p-5">
             <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
               Прочие расходы
             </div>
-            <div className="mt-1.5 truncate text-2xl font-bold text-amber-600">
+            <div className="mt-1.5 break-words text-xl font-bold sm:text-2xl text-amber-600">
               {fmt(otherExpenses)}
             </div>
             <div className="mt-1 text-[11px] text-muted-foreground">
@@ -367,11 +375,12 @@ function ExpensesPage() {
                   ev.stopPropagation();
                   setDrill("expense");
                 }}
-                className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground transition-colors hover:text-amber-600"
+                className="inline-flex min-h-9 items-center gap-1 rounded-md border border-border bg-muted/40 px-2.5 py-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground transition-colors hover:border-amber-500/50 hover:bg-amber-500/10 hover:text-amber-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.97]"
               >
                 Подробнее
                 <ChevronRight className="h-3 w-3" />
               </button>
+
             </div>
           </CardContent>
         </Card>
@@ -383,13 +392,15 @@ function ExpensesPage() {
 
 
       <Tabs defaultValue="summary">
-        <TabsList className="no-print">
-          <TabsTrigger value="summary">Сводка</TabsTrigger>
-          <TabsTrigger value="mechanics">По мастерам</TabsTrigger>
-          <TabsTrigger value="services">По услугам</TabsTrigger>
-          <TabsTrigger value="table">Сводная таблица</TabsTrigger>
+        <div className="toolbar-scroll no-print -mx-1 px-1">
+          <TabsList>
+            <TabsTrigger value="summary">Сводка</TabsTrigger>
+            <TabsTrigger value="mechanics">По мастерам</TabsTrigger>
+            <TabsTrigger value="services">По услугам</TabsTrigger>
+            <TabsTrigger value="table">Сводная таблица</TabsTrigger>
+          </TabsList>
+        </div>
 
-        </TabsList>
 
         <TabsContent value="summary" className="mt-4">
           <ExpensesBlock
@@ -478,7 +489,8 @@ function RangePicker({
   const navigable = canNavigate(period);
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex w-max min-w-full flex-nowrap items-center gap-2 sm:w-auto sm:flex-wrap">
+
       <Tabs value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
         <TabsList>
           {(["day", "week", "month", "all", "custom"] as PeriodKey[]).map((p) => (
@@ -518,14 +530,14 @@ function RangePicker({
           <Input
             type="date"
             value={custom.from}
-            className="h-8 w-[140px]"
+            className="h-10 w-[140px]"
             onChange={(e) => setCustom({ ...custom, from: e.target.value })}
           />
           <span className="text-muted-foreground">–</span>
           <Input
             type="date"
             value={custom.to}
-            className="h-8 w-[140px]"
+            className="h-10 w-[140px]"
             onChange={(e) => setCustom({ ...custom, to: e.target.value })}
           />
         </div>
