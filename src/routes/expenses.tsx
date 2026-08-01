@@ -1,20 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  format,
-  parseISO,
-  startOfMonth,
-  endOfMonth,
-  addMonths,
-  startOfDay,
-  endOfDay,
-  addDays,
-  startOfWeek,
-  endOfWeek,
-  addWeeks,
-  isSameDay,
-} from "date-fns";
+import { format, parseISO, startOfMonth } from "date-fns";
+
 import { ru } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 
