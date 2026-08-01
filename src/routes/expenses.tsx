@@ -238,6 +238,8 @@ function ExpensesPage() {
         <Card
           role="button"
           onClick={() => setDrill("profit")}
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setDrill("profit"); } }}
           className={`cursor-pointer border-2 transition-all hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.99] ${cashProfit >= 0 ? "border-green-500/30" : "border-red-500/30"} sm:col-span-2 lg:col-span-1`}
         >
           <CardContent className="flex h-full flex-col p-4 sm:p-5">
@@ -256,7 +258,9 @@ function ExpensesPage() {
 
 
         {/* Доходы */}
-        <Card role="button" onClick={() => setDrill("income")} className="cursor-pointer transition-all hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.99]">
+        <Card role="button" onClick={() => setDrill("income")}
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setDrill("income"); } }} className="cursor-pointer transition-all hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.99]">
           <CardContent className="flex h-full flex-col p-4 sm:p-5">
             <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
               Доходы
@@ -301,7 +305,9 @@ function ExpensesPage() {
         </Card>
 
         {/* ЗП мастерам */}
-        <Card role="button" onClick={() => setDrill("payout")} className="cursor-pointer transition-all hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.99]">
+        <Card role="button" onClick={() => setDrill("payout")}
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setDrill("payout"); } }} className="cursor-pointer transition-all hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.99]">
           <CardContent className="flex h-full flex-col p-4 sm:p-5">
             <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
               Зарплаты (мастера)
@@ -349,7 +355,9 @@ function ExpensesPage() {
         </Card>
 
         {/* Прочие расходы */}
-        <Card role="button" onClick={() => setDrill("expense")} className="cursor-pointer transition-all hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.99]">
+        <Card role="button" onClick={() => setDrill("expense")}
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setDrill("expense"); } }} className="cursor-pointer transition-all hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.99]">
           <CardContent className="flex h-full flex-col p-4 sm:p-5">
             <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
               Прочие расходы
