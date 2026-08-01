@@ -1416,19 +1416,28 @@ function LandingPage() {
                                         setEditingPrice(s.id);
                                         setPriceDraft(String(price));
                                       }}
-                                      className="rounded p-1 text-white/50 hover:bg-white/10 hover:text-white"
+                                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-white/5 text-white/70 transition hover:border-white/30 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 active:scale-95"
                                       aria-label="Изменить цену"
                                       title="Изменить цену"
                                     >
-                                      <Pencil className="h-3.5 w-3.5" />
+                                      <Pencil className="h-4 w-4" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => deleteServicePrompt(s)}
+                                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-500/30 bg-red-500/10 text-red-300 transition hover:border-red-500/60 hover:bg-red-500/20 hover:text-red-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60 active:scale-95"
+                                      aria-label="Удалить услугу"
+                                      title="Удалить услугу"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
                                     </button>
                                     {hasOverride && (
                                       <button
                                         type="button"
                                         onClick={() => resetPrice(s.id)}
-                                        className="text-xs text-white/40 underline underline-offset-2 hover:text-white/70"
+                                        className="rounded-lg border border-white/15 bg-white/5 px-2.5 py-1.5 text-xs text-white/70 transition hover:bg-white/10 hover:text-white"
                                       >
-                                        сброс
+                                        сброс цены
                                       </button>
                                     )}
                                   </>
