@@ -353,7 +353,7 @@ function ExpensesPage() {
                 />
               </div>
               <div className="mt-1 truncate text-[10px] text-muted-foreground">
-                выплачено {fmt(mechanicsPaid)}
+                начислено {fmt(mechanicsAccrued)} − авансы {fmt(mechanicsPaid)}
               </div>
             </div>
           </CardContent>
