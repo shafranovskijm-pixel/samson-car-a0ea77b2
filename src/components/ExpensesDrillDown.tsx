@@ -382,6 +382,10 @@ function PayoutView(p: Props) {
     return Array.from(map.values()).sort((a, b) => b.total - a.total);
   }, [p.doneAppts, p.advances, p.mechById, p.svcById, mechName]);
 
+  const totalAccrued = groups.reduce((s, g) => s + g.total, 0);
+  const totalAdvances = p.advances.reduce((s, a) => s + Number(a.amount ?? 0), 0);
+  const totalToPay = totalAccrued - totalAdvances;
+
   return (
     <div className="space-y-5">
       <div>
@@ -400,6 +404,60 @@ function PayoutView(p: Props) {
           </span>
         </div>
       </div>
+
+      {/* Расшифровка «К выплате» */}
+      <div className="rounded-lg border p-3">
+        <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+          Остаток к выплате мастерам
+        </div>
+        <div className="mt-2 space-y-1 text-sm tabular-nums">
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">Начислено за период</span>
+            <span className="font-medium">{fmt(totalAccrued)}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">
+              − уже выплачено (авансы за период)
+            </span>
+            <span className="font-medium">{fmt(totalAdvances)}</span>
+          </div>
+          <div className="flex items-center justify-between border-t pt-1">
+            <span className="font-semibold">
+              = {totalToPay >= 0 ? "К выплате" : "Переплата"}
+            </span>
+            <span
+              className={`font-bold ${totalToPay >= 0 ? "text-amber-600" : "text-red-600"}`}
+            >
+              {fmt(Math.abs(totalToPay))}
+            </span>
+          </div>
+        </div>
+        <div className="mt-2 text-[11px] leading-5 text-muted-foreground">
+          Это сколько ещё нужно отдать мастерам на руки: заработанное за период
+          минус уже выданные авансы. На чистую прибыль влияет начисленная ЗП, а
+          не эта сумма.
+        </div>
+        {p.advances.length > 0 && (
+          <div className="mt-3 divide-y border-t pt-2 text-xs">
+            {p.advances.map((a) => (
+              <div key={a.id} className="flex items-center justify-between gap-2 py-1.5">
+                <span className="min-w-0 truncate">
+                  {mechName.get(a.mechanic_id) ?? "Мастер"}
+                  <span className="text-muted-foreground">
+                    {" · "}
+                    {a.paid_at}
+                    {a.note ? ` · ${a.note}` : ""}
+                  </span>
+                </span>
+                <span className="shrink-0 tabular-nums font-medium">
+                  {fmt(Number(a.amount ?? 0))}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
 
       {groups.length === 0 ? (
         <div className="rounded border border-dashed py-8 text-center text-sm text-muted-foreground">
