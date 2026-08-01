@@ -436,18 +436,20 @@ function MechanicDefaultPercent({ mechanic }: { mechanic: Mechanic }) {
         <Button
           variant="ghost"
           size="sm"
+          className="text-destructive hover:text-destructive"
           disabled={recalcM.isPending}
           onClick={async () => {
             const ok = await confirm({
               title: "Пересчитать все записи?",
-              description: `Будут пересчитаны все НЕоплаченные и частично оплаченные записи мастера под ${currentPercent}%, включая прошлые месяцы. Полностью оплаченные записи не трогаем. Ручные правки сумм будут перезаписаны.`,
-              confirmText: "Пересчитать всё",
+              description: `Опасно: будут пересчитаны ВСЕ неоплаченные и частично оплаченные записи мастера под ${currentPercent}%, включая прошлые месяцы, когда действовал другой процент. Обычно нужна кнопка «Пересчитать с даты». Ручные правки сумм будут перезаписаны.`,
+              confirmText: "Всё равно пересчитать всё",
             });
             if (ok) recalcM.mutate({ percent: currentPercent, from: null });
           }}
         >
           Пересчитать всё
         </Button>
+
 
       </div>
     </div>
