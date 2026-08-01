@@ -549,7 +549,7 @@ function LandingPage() {
         >
           {n}
         </span>
-        <span className="hidden sm:inline">{label}</span>
+        <span className={active ? "inline" : "hidden sm:inline"}>{label}</span>
       </button>
     );
   };
