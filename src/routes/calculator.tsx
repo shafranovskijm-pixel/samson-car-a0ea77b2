@@ -654,7 +654,7 @@ function LandingPage() {
                         key={n}
                         type="button"
                         onClick={() => setBrandName(n)}
-                        className="rounded-lg px-3 py-2 text-left font-semibold text-white transition hover:bg-white/10"
+                        className="rounded-lg border border-white/15 bg-white/5 px-3 py-2.5 text-left font-semibold text-white transition hover:border-white/35 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 active:scale-[0.98]"
                         title={n}
                       >
                         {n}
@@ -1391,7 +1391,7 @@ function LandingPage() {
                                         if (!Number.isNaN(v) && v >= 0) setPrice(s.id, v);
                                         setEditingPrice(null);
                                       }}
-                                      className="rounded p-1 text-emerald-400 hover:bg-white/10"
+                                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-emerald-400/30 bg-emerald-400/10 text-emerald-300 transition hover:bg-emerald-400/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60 active:scale-95"
                                       aria-label="Сохранить"
                                     >
                                       <Check className="h-4 w-4" />
@@ -1399,7 +1399,7 @@ function LandingPage() {
                                     <button
                                       type="button"
                                       onClick={() => setEditingPrice(null)}
-                                      className="rounded p-1 text-white/60 hover:bg-white/10"
+                                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-white/5 text-white/70 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 active:scale-95"
                                       aria-label="Отмена"
                                     >
                                       <X className="h-4 w-4" />
