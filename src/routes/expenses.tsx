@@ -238,7 +238,7 @@ function ExpensesPage() {
         <Card
           role="button"
           onClick={() => setDrill("profit")}
-          className={`cursor-pointer border-2 transition-shadow hover:shadow-md ${cashProfit >= 0 ? "border-green-500/30" : "border-red-500/30"} sm:col-span-2 lg:col-span-1`}
+          className={`cursor-pointer border-2 transition-all hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.99] ${cashProfit >= 0 ? "border-green-500/30" : "border-red-500/30"} sm:col-span-2 lg:col-span-1`}
         >
           <CardContent className="flex h-full flex-col p-4 sm:p-5">
             <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
@@ -256,12 +256,12 @@ function ExpensesPage() {
 
 
         {/* Доходы */}
-        <Card role="button" onClick={() => setDrill("income")} className="cursor-pointer transition-shadow hover:shadow-md">
+        <Card role="button" onClick={() => setDrill("income")} className="cursor-pointer transition-all hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.99]">
           <CardContent className="flex h-full flex-col p-4 sm:p-5">
             <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
               Доходы
             </div>
-            <div className="mt-1.5 truncate text-2xl font-bold">{fmt(revenue)}</div>
+            <div className="mt-1.5 break-words text-xl font-bold sm:text-2xl">{fmt(revenue)}</div>
             <div className="mt-1 text-[11px] text-muted-foreground">
               Оборот кассы (платежи за {periodLabel})
             </div>
@@ -301,12 +301,12 @@ function ExpensesPage() {
         </Card>
 
         {/* ЗП мастерам */}
-        <Card role="button" onClick={() => setDrill("payout")} className="cursor-pointer transition-shadow hover:shadow-md">
+        <Card role="button" onClick={() => setDrill("payout")} className="cursor-pointer transition-all hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.99]">
           <CardContent className="flex h-full flex-col p-4 sm:p-5">
             <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
               Зарплаты (мастера)
             </div>
-            <div className="mt-1.5 truncate text-2xl font-bold text-amber-600">
+            <div className="mt-1.5 break-words text-xl font-bold sm:text-2xl text-amber-600">
               {fmt(mechanicsAccrued)}
             </div>
             <div className="mt-1 text-[11px] text-muted-foreground">
@@ -314,7 +314,7 @@ function ExpensesPage() {
             </div>
             <div className="mt-auto border-t pt-3">
               <div className="flex items-center justify-between gap-2">
-                <span className="min-w-0 truncate text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                <span className="min-w-0 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                   {mechanicsDebt >= 0 ? "К выплате" : "Переплата"}
                 </span>
                 <span
@@ -341,7 +341,7 @@ function ExpensesPage() {
                   }}
                 />
               </div>
-              <div className="mt-1 truncate text-[10px] text-muted-foreground">
+              <div className="mt-1 text-[10px] leading-snug text-muted-foreground">
                 начислено {fmt(mechanicsAccrued)} − авансы {fmt(mechanicsPaid)}
               </div>
             </div>
@@ -349,12 +349,12 @@ function ExpensesPage() {
         </Card>
 
         {/* Прочие расходы */}
-        <Card role="button" onClick={() => setDrill("expense")} className="cursor-pointer transition-shadow hover:shadow-md">
+        <Card role="button" onClick={() => setDrill("expense")} className="cursor-pointer transition-all hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.99]">
           <CardContent className="flex h-full flex-col p-4 sm:p-5">
             <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
               Прочие расходы
             </div>
-            <div className="mt-1.5 truncate text-2xl font-bold text-amber-600">
+            <div className="mt-1.5 break-words text-xl font-bold sm:text-2xl text-amber-600">
               {fmt(otherExpenses)}
             </div>
             <div className="mt-1 text-[11px] text-muted-foreground">
@@ -522,14 +522,14 @@ function RangePicker({
           <Input
             type="date"
             value={custom.from}
-            className="h-8 w-[140px]"
+            className="h-10 w-[140px]"
             onChange={(e) => setCustom({ ...custom, from: e.target.value })}
           />
           <span className="text-muted-foreground">–</span>
           <Input
             type="date"
             value={custom.to}
-            className="h-8 w-[140px]"
+            className="h-10 w-[140px]"
             onChange={(e) => setCustom({ ...custom, to: e.target.value })}
           />
         </div>
