@@ -387,56 +387,64 @@ function MechanicDefaultPercent({ mechanic }: { mechanic: Mechanic }) {
   const currentPercent = Number(mechanic.default_payout_percent ?? 50);
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card p-4">
-      <div className="flex items-center gap-2">
-        <Percent className="h-5 w-5 text-muted-foreground" />
-        <div>
+    <div className="space-y-4 rounded-lg border bg-card p-4">
+      <div className="flex items-start gap-2">
+        <Percent className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
+        <div className="min-w-0">
           <div className="text-sm font-medium">Процент по умолчанию</div>
           <div className="text-xs text-muted-foreground">
             Пересчёт применяется только к записям с даты «действует с». Более ранние работы не трогаем.
           </div>
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <Input
-          type="number"
-          className="h-9 w-24"
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onBlur={() => {
-            const n = Number(value);
-            if (!Number.isFinite(n) || n < 0 || n > 100) {
-              setValue(String(currentPercent));
-              return;
-            }
-            if (n !== currentPercent) saveM.mutate({ percent: n, since });
-          }}
-        />
-        <span className="text-sm text-muted-foreground">%</span>
-        <Label className="text-xs text-muted-foreground">действует с</Label>
-        <Input
-          type="date"
-          className="h-9 w-40"
-          value={since}
-          onChange={(e) => setSince(e.target.value)}
-          onBlur={() => {
-            if (since && since !== (mechanic.payout_percent_since ?? "")) {
-              saveM.mutate({ percent: currentPercent, since });
-            }
-          }}
-        />
+
+      <div className="grid gap-3 sm:grid-cols-[8rem_1fr] sm:items-end">
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">Процент, %</Label>
+          <Input
+            type="number"
+            inputMode="numeric"
+            className="h-10 w-full"
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            onBlur={() => {
+              const n = Number(value);
+              if (!Number.isFinite(n) || n < 0 || n > 100) {
+                setValue(String(currentPercent));
+                return;
+              }
+              if (n !== currentPercent) saveM.mutate({ percent: n, since });
+            }}
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">Действует с</Label>
+          <Input
+            type="date"
+            className="h-10 w-full sm:max-w-[12rem]"
+            value={since}
+            onChange={(e) => setSince(e.target.value)}
+            onBlur={() => {
+              if (since && since !== (mechanic.payout_percent_since ?? "")) {
+                saveM.mutate({ percent: currentPercent, since });
+              }
+            }}
+          />
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <Button
           variant="outline"
-          size="sm"
+          className="h-10 w-full sm:w-auto"
           disabled={recalcM.isPending}
           onClick={() => recalcM.mutate({ percent: currentPercent, from: since })}
         >
           {recalcM.isPending ? "Пересчёт…" : "Пересчитать с даты"}
         </Button>
         <Button
-          variant="ghost"
-          size="sm"
-          className="text-destructive hover:text-destructive"
+          variant="outline"
+          className="h-10 w-full border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive sm:w-auto"
           disabled={recalcM.isPending}
           onClick={async () => {
             const ok = await confirm({
@@ -449,12 +457,11 @@ function MechanicDefaultPercent({ mechanic }: { mechanic: Mechanic }) {
         >
           Пересчитать всё
         </Button>
-
-
       </div>
     </div>
   );
 }
+
 
 
 
