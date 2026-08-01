@@ -287,7 +287,7 @@ function PeriodPicker({ state }: { state: PeriodState }) {
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       <Select value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
-        <SelectTrigger className="h-8 w-32 sm:w-36"><SelectValue /></SelectTrigger>
+        <SelectTrigger className="h-10 w-32 sm:w-36"><SelectValue /></SelectTrigger>
         <SelectContent>
           {(["day", "week", "month", "all", "custom"] as PeriodKey[]).map((p) => (
             <SelectItem key={p} value={p}>{PERIOD_LABELS[p]}</SelectItem>
@@ -296,19 +296,19 @@ function PeriodPicker({ state }: { state: PeriodState }) {
       </Select>
       {canNavigate(period) && (
         <div className="flex items-center gap-0.5 rounded-md border bg-card px-1">
-          <Button variant="ghost" size="icon" className="h-7 w-7"
+          <Button variant="ghost" size="icon" className="h-9 w-9"
             onClick={() => setAnchor(stepAnchor(period, anchor, -1))}>
             <ChevronLeft className="h-3.5 w-3.5" />
           </Button>
           <span className="min-w-[110px] text-center text-xs font-medium capitalize">
             {periodRangeLabel(period, anchor, custom)}
           </span>
-          <Button variant="ghost" size="icon" className="h-7 w-7"
+          <Button variant="ghost" size="icon" className="h-9 w-9"
             onClick={() => setAnchor(stepAnchor(period, anchor, 1))}>
             <ChevronRight className="h-3.5 w-3.5" />
           </Button>
           {!isCurrentPeriod(period, anchor) && (
-            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs"
+            <Button variant="ghost" size="sm" className="h-9 px-2 text-xs"
               onClick={() => setAnchor(new Date())}>
               Сейчас
             </Button>
@@ -317,10 +317,10 @@ function PeriodPicker({ state }: { state: PeriodState }) {
       )}
       {period === "custom" && (
         <div className="flex items-center gap-1">
-          <Input type="date" className="h-8 w-[135px]" value={custom.from}
+          <Input type="date" className="h-10 w-[135px]" value={custom.from}
             onChange={(e) => setCustom({ ...custom, from: e.target.value })} />
           <span className="text-muted-foreground">–</span>
-          <Input type="date" className="h-8 w-[135px]" value={custom.to}
+          <Input type="date" className="h-10 w-[135px]" value={custom.to}
             onChange={(e) => setCustom({ ...custom, to: e.target.value })} />
         </div>
       )}
@@ -748,7 +748,7 @@ function MechanicAdvances({ mechanicId }: { mechanicId: string }) {
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="h-7 w-7"
+                  className="h-9 w-9"
                   onClick={() => {
                     (async () => {
                       const ok = await confirmActionCtx({
