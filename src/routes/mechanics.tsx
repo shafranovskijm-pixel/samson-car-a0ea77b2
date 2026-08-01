@@ -282,8 +282,25 @@ function MechanicDefaultPercent({ mechanic }: { mechanic: Mechanic }) {
     qc.invalidateQueries({ queryKey: ["expenses"] });
   };
 
+  // Начало текущего месяца по времени Уссурийска (UTC+10) в ISO.
+  const monthStartISO = (() => {
+    const d = new Date();
+    const y = Number(
+      new Intl.DateTimeFormat("ru-RU", { timeZone: "Asia/Vladivostok", year: "numeric" }).format(d),
+    );
+    const m = Number(
+      new Intl.DateTimeFormat("ru-RU", { timeZone: "Asia/Vladivostok", month: "numeric" }).format(d),
+    );
+    return ussLocalToInstant(`${y}-${String(m).padStart(2, "0")}-01`, "00:00").toISOString();
+  })();
+
   const recalcM = useMutation({
-    mutationFn: async (n: number) => recalcMechanicPayouts(mechanic.id, n),
+    mutationFn: async (v: { percent: number; all: boolean }) =>
+      recalcMechanicPayouts(
+        mechanic.id,
+        v.percent,
+        v.all ? { skipPaid: true } : { onlyFrom: monthStartISO, skipPaid: true },
+      ),
     onSuccess: (changed) => {
       invalidateMoney();
       toast.success(
@@ -299,12 +316,12 @@ function MechanicDefaultPercent({ mechanic }: { mechanic: Mechanic }) {
       invalidateMoney();
       toast.success("Процент сохранён");
       const ok = await confirm({
-        title: "Пересчитать выплаты?",
-        description: `Пересчитать сохранённые суммы выплат по всем записям мастера под ${n}%? Индивидуальные ставки за услугу останутся без изменений.`,
+        title: "Пересчитать выплаты за текущий месяц?",
+        description: `Записи текущего месяца будут пересчитаны под ${n}%. Закрытые (полностью оплаченные) записи и прошлые месяцы останутся без изменений. Новые услуги сразу считаются по новому проценту.`,
         confirmText: "Пересчитать",
         cancelText: "Не сейчас",
       });
-      if (ok) recalcM.mutate(n);
+      if (ok) recalcM.mutate({ percent: n, all: false });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -342,17 +359,26 @@ function MechanicDefaultPercent({ mechanic }: { mechanic: Mechanic }) {
           variant="outline"
           size="sm"
           disabled={recalcM.isPending}
+          onClick={() => recalcM.mutate({ percent: currentPercent, all: false })}
+        >
+          {recalcM.isPending ? "Пересчёт…" : "Пересчитать за месяц"}
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={recalcM.isPending}
           onClick={async () => {
             const ok = await confirm({
-              title: "Пересчитать выплаты?",
-              description: `Все сохранённые суммы выплат мастера будут пересчитаны под ${currentPercent}%. Ручные правки сумм будут перезаписаны.`,
-              confirmText: "Пересчитать",
+              title: "Пересчитать все записи?",
+              description: `Будут пересчитаны все НЕоплаченные и частично оплаченные записи мастера под ${currentPercent}%, включая прошлые месяцы. Полностью оплаченные записи не трогаем. Ручные правки сумм будут перезаписаны.`,
+              confirmText: "Пересчитать всё",
             });
-            if (ok) recalcM.mutate(currentPercent);
+            if (ok) recalcM.mutate({ percent: currentPercent, all: true });
           }}
         >
-          {recalcM.isPending ? "Пересчёт…" : "Пересчитать выплаты"}
+          Пересчитать всё
         </Button>
+
       </div>
     </div>
   );
