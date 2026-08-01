@@ -252,25 +252,67 @@ function MechanicsPage() {
 }
 
 // ================= SALARY =================
-type Period = "today" | "week" | "month" | "all";
-const PERIOD_LABELS: Record<Period, string> = {
-  today: "Сегодня",
-  week: "Неделя",
-  month: "Месяц",
-  all: "Всё время",
-};
-
-function periodStart(p: Period): number {
-  const now = new Date();
-  if (p === "all") return 0;
-  if (p === "today") {
-    const d = new Date(now);
-    d.setHours(0, 0, 0, 0);
-    return d.getTime();
-  }
-  if (p === "week") return now.getTime() - 7 * 24 * 60 * 60 * 1000;
-  return now.getTime() - 30 * 24 * 60 * 60 * 1000;
+// Периоды календарные (см. src/lib/period.ts): день / неделя с пн / календарный месяц,
+// плюс «Всё время» и произвольный период. По умолчанию — текущий календарный месяц.
+function usePeriodState() {
+  const [period, setPeriod] = useState<PeriodKey>("month");
+  const [anchor, setAnchor] = useState<Date>(() => new Date());
+  const [custom, setCustom] = useState<CustomRange>(() => defaultCustomRange());
+  const { start, end } = useMemo(
+    () => periodRange(period, anchor, custom),
+    [period, anchor, custom],
+  );
+  return { period, setPeriod, anchor, setAnchor, custom, setCustom, start, end };
 }
+
+type PeriodState = ReturnType<typeof usePeriodState>;
+
+function PeriodPicker({ state }: { state: PeriodState }) {
+  const { period, setPeriod, anchor, setAnchor, custom, setCustom } = state;
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <Select value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
+        <SelectTrigger className="h-8 w-32 sm:w-36"><SelectValue /></SelectTrigger>
+        <SelectContent>
+          {(["day", "week", "month", "all", "custom"] as PeriodKey[]).map((p) => (
+            <SelectItem key={p} value={p}>{PERIOD_LABELS[p]}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {canNavigate(period) && (
+        <div className="flex items-center gap-0.5 rounded-md border bg-card px-1">
+          <Button variant="ghost" size="icon" className="h-7 w-7"
+            onClick={() => setAnchor(stepAnchor(period, anchor, -1))}>
+            <ChevronLeft className="h-3.5 w-3.5" />
+          </Button>
+          <span className="min-w-[110px] text-center text-xs font-medium capitalize">
+            {periodRangeLabel(period, anchor, custom)}
+          </span>
+          <Button variant="ghost" size="icon" className="h-7 w-7"
+            onClick={() => setAnchor(stepAnchor(period, anchor, 1))}>
+            <ChevronRight className="h-3.5 w-3.5" />
+          </Button>
+          {!isCurrentPeriod(period, anchor) && (
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs"
+              onClick={() => setAnchor(new Date())}>
+              Сейчас
+            </Button>
+          )}
+        </div>
+      )}
+      {period === "custom" && (
+        <div className="flex items-center gap-1">
+          <Input type="date" className="h-8 w-[135px]" value={custom.from}
+            onChange={(e) => setCustom({ ...custom, from: e.target.value })} />
+          <span className="text-muted-foreground">–</span>
+          <Input type="date" className="h-8 w-[135px]" value={custom.to}
+            onChange={(e) => setCustom({ ...custom, to: e.target.value })} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 
 function todayUssISODate(): string {
   const d = new Date();
