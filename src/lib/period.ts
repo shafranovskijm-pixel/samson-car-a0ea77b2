@@ -1,20 +1,9 @@
 // Единые правила периодов для всей бухгалтерии.
 // Все периоды — КАЛЕНДАРНЫЕ (день / неделя с понедельника / календарный месяц),
 // плюс «всё время» и произвольный период.
-import {
-  startOfDay,
-  endOfDay,
-  startOfWeek,
-  endOfWeek,
-  startOfMonth,
-  endOfMonth,
-  addDays,
-  addWeeks,
-  addMonths,
-  isSameDay,
-  format,
-} from "date-fns";
-import { ru } from "date-fns/locale";
+// ВАЖНО: все границы считаются в часовом поясе Уссурийска (UTC+10),
+// независимо от настроек времени на компьютере пользователя.
+import { ussDateISO, ussLocalToInstant } from "./tz";
 
 export type PeriodKey = "day" | "week" | "month" | "all" | "custom";
 
@@ -26,16 +15,65 @@ export const PERIOD_LABELS: Record<PeriodKey, string> = {
   custom: "Период",
 };
 
-// Границы «всего времени» — заведомо шире любых данных мастерской.
-export const ALL_TIME_START = new Date(2000, 0, 1, 0, 0, 0, 0);
-export const ALL_TIME_END = new Date(2100, 0, 1, 23, 59, 59, 999);
+const MONTHS_GEN = [
+  "января", "февраля", "марта", "апреля", "мая", "июня",
+  "июля", "августа", "сентября", "октября", "ноября", "декабря",
+];
+const MONTHS_NOM = [
+  "январь", "февраль", "март", "апрель", "май", "июнь",
+  "июль", "август", "сентябрь", "октябрь", "ноябрь", "декабрь",
+];
+const MONTHS_SHORT = [
+  "янв", "фев", "мар", "апр", "мая", "июн",
+  "июл", "авг", "сен", "окт", "ноя", "дек",
+];
 
-export const isoDate = (d: Date) => format(d, "yyyy-MM-dd");
+// ---------- работа с календарной датой как строкой yyyy-MM-dd ----------
+
+const isoToUtc = (iso: string) => new Date(`${iso}T00:00:00Z`);
+const utcToIso = (d: Date) => d.toISOString().slice(0, 10);
+
+/** Календарная дата (Уссурийск) для инстанта. */
+export const isoDate = (d: Date) => ussDateISO(d);
+
+/** «Сегодня» в Уссурийске. */
+export const todayIso = () => ussDateISO(new Date());
+
+/** Начало календарного дня Уссурийска как инстант. */
+export const dayStart = (iso: string) => ussLocalToInstant(iso, "00:00");
+/** Конец календарного дня Уссурийска (23:59:59.999) как инстант. */
+export const dayEnd = (iso: string) =>
+  new Date(ussLocalToInstant(iso, "23:59").getTime() + 59_999);
+
+const addDaysIso = (iso: string, n: number) =>
+  utcToIso(new Date(isoToUtc(iso).getTime() + n * 86_400_000));
+
+const startOfMonthIso = (iso: string) => `${iso.slice(0, 7)}-01`;
+const endOfMonthIso = (iso: string) => {
+  const d = isoToUtc(iso);
+  return utcToIso(new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)));
+};
+const startOfWeekIso = (iso: string) => {
+  const dow = isoToUtc(iso).getUTCDay(); // 0 = вс
+  return addDaysIso(iso, dow === 0 ? -6 : 1 - dow);
+};
+const addMonthsIso = (iso: string, n: number) => {
+  const d = isoToUtc(iso);
+  const y = d.getUTCFullYear();
+  const m = d.getUTCMonth() + n;
+  const lastDay = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+  const day = Math.min(d.getUTCDate(), lastDay);
+  return utcToIso(new Date(Date.UTC(y, m, day)));
+};
+
+// Границы «всего времени» — заведомо шире любых данных мастерской.
+export const ALL_TIME_START = dayStart("2000-01-01");
+export const ALL_TIME_END = dayEnd("2100-01-01");
 
 export function parseIsoDate(s: string): Date | null {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
   if (!m) return null;
-  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  const d = dayStart(s);
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
@@ -45,32 +83,34 @@ export interface CustomRange {
 }
 
 export function defaultCustomRange(anchor: Date = new Date()): CustomRange {
-  return { from: isoDate(startOfMonth(anchor)), to: isoDate(endOfMonth(anchor)) };
+  const iso = isoDate(anchor);
+  return { from: startOfMonthIso(iso), to: endOfMonthIso(iso) };
 }
 
-/** Границы периода. Всегда [start 00:00:00.000 .. end 23:59:59.999]. */
+const isValidIso = (s?: string) => !!s && /^\d{4}-\d{2}-\d{2}$/.test(s);
+
+/** Границы периода. Всегда [start 00:00:00.000 .. end 23:59:59.999] по Уссурийску. */
 export function periodRange(
   period: PeriodKey,
   anchor: Date,
   custom?: CustomRange,
 ): { start: Date; end: Date } {
   if (period === "all") return { start: ALL_TIME_START, end: ALL_TIME_END };
+  const iso = isoDate(anchor);
+
   if (period === "custom") {
-    const f = custom ? parseIsoDate(custom.from) : null;
-    const t = custom ? parseIsoDate(custom.to) : null;
-    const start = startOfDay(f ?? startOfMonth(anchor));
-    const end = endOfDay(t ?? endOfMonth(anchor));
-    // Защита от перевёрнутого диапазона: считаем по одному дню start.
-    if (end.getTime() < start.getTime()) return { start, end: endOfDay(start) };
-    return { start, end };
+    let from = isValidIso(custom?.from) ? custom!.from : startOfMonthIso(iso);
+    let to = isValidIso(custom?.to) ? custom!.to : endOfMonthIso(iso);
+    // Перевёрнутый диапазон просто разворачиваем — считаем то, что человек имел в виду.
+    if (to < from) [from, to] = [to, from];
+    return { start: dayStart(from), end: dayEnd(to) };
   }
-  if (period === "day") return { start: startOfDay(anchor), end: endOfDay(anchor) };
-  if (period === "week")
-    return {
-      start: startOfWeek(anchor, { weekStartsOn: 1 }),
-      end: endOfWeek(anchor, { weekStartsOn: 1 }),
-    };
-  return { start: startOfMonth(anchor), end: endOfMonth(anchor) };
+  if (period === "day") return { start: dayStart(iso), end: dayEnd(iso) };
+  if (period === "week") {
+    const s = startOfWeekIso(iso);
+    return { start: dayStart(s), end: dayEnd(addDaysIso(s, 6)) };
+  }
+  return { start: dayStart(startOfMonthIso(iso)), end: dayEnd(endOfMonthIso(iso)) };
 }
 
 export function canNavigate(period: PeriodKey) {
@@ -78,11 +118,21 @@ export function canNavigate(period: PeriodKey) {
 }
 
 export function stepAnchor(period: PeriodKey, anchor: Date, dir: 1 | -1): Date {
-  if (period === "day") return addDays(anchor, dir);
-  if (period === "week") return addWeeks(anchor, dir);
-  if (period === "month") return addMonths(anchor, dir);
+  const iso = isoDate(anchor);
+  if (period === "day") return dayStart(addDaysIso(iso, dir));
+  if (period === "week") return dayStart(addDaysIso(iso, dir * 7));
+  if (period === "month") return dayStart(addMonthsIso(iso, dir));
   return anchor;
 }
+
+const fmtDay = (iso: string) => {
+  const [y, m, d] = iso.split("-");
+  return `${Number(d)} ${MONTHS_GEN[Number(m) - 1]} ${y}`;
+};
+const fmtDayShort = (iso: string, withYear: boolean) => {
+  const [y, m, d] = iso.split("-");
+  return `${Number(d)} ${MONTHS_SHORT[Number(m) - 1]}${withYear ? ` ${y}` : ""}`;
+};
 
 export function periodRangeLabel(
   period: PeriodKey,
@@ -91,10 +141,15 @@ export function periodRangeLabel(
 ): string {
   if (period === "all") return "Всё время";
   const { start, end } = periodRange(period, anchor, custom);
-  if (period === "day") return format(start, "d MMMM yyyy", { locale: ru });
-  if (period === "month") return format(start, "LLLL yyyy", { locale: ru });
-  const sameMonth = start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear();
-  return `${format(start, sameMonth ? "d" : "d MMM", { locale: ru })} – ${format(end, "d MMM yyyy", { locale: ru })}`;
+  const sIso = isoDate(start);
+  const eIso = isoDate(end);
+  if (period === "day") return fmtDay(sIso);
+  if (period === "month") {
+    const [y, m] = sIso.split("-");
+    return `${MONTHS_NOM[Number(m) - 1]} ${y}`;
+  }
+  const sameMonth = sIso.slice(0, 7) === eIso.slice(0, 7);
+  return `${sameMonth ? Number(sIso.slice(8)) : fmtDayShort(sIso, false)} – ${fmtDayShort(eIso, true)}`;
 }
 
 /** Короткая подпись «за …» для текстов. */
@@ -107,12 +162,11 @@ export function periodNoun(period: PeriodKey): string {
 }
 
 export function isCurrentPeriod(period: PeriodKey, anchor: Date): boolean {
-  const now = new Date();
-  if (period === "day") return isSameDay(anchor, now);
-  if (period === "week")
-    return isSameDay(startOfWeek(anchor, { weekStartsOn: 1 }), startOfWeek(now, { weekStartsOn: 1 }));
-  if (period === "month")
-    return anchor.getFullYear() === now.getFullYear() && anchor.getMonth() === now.getMonth();
+  const now = todayIso();
+  const iso = isoDate(anchor);
+  if (period === "day") return iso === now;
+  if (period === "week") return startOfWeekIso(iso) === startOfWeekIso(now);
+  if (period === "month") return iso.slice(0, 7) === now.slice(0, 7);
   return true;
 }
 
