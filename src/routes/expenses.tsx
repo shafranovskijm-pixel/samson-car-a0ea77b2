@@ -67,6 +67,20 @@ import {
 import { effectivePayout, type PayoutMechanic, type PayoutService } from "@/lib/payouts";
 import { ExpensesMonthlyTable } from "@/components/ExpensesMonthlyTable";
 import { ExpensesDrillDown, type DrillMetric } from "@/components/ExpensesDrillDown";
+import {
+  type PeriodKey,
+  type CustomRange,
+  PERIOD_LABELS,
+  periodRange,
+  periodRangeLabel,
+  periodNoun,
+  defaultCustomRange,
+  isoDate,
+  canNavigate,
+  stepAnchor,
+  isCurrentPeriod,
+} from "@/lib/period";
+
 
 
 export const Route = createFileRoute("/expenses")({
