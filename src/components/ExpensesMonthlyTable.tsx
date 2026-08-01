@@ -32,6 +32,7 @@ const UNASSIGNED = "__unassigned__";
 
 export function ExpensesMonthlyTable({
   month,
+  rangeLabel,
   appts,
   mechanics,
   advances,
@@ -39,12 +40,15 @@ export function ExpensesMonthlyTable({
   svcById,
 }: {
   month: Date;
+  /** Подпись периода (если не месяц) — используется в заголовке и имени файла. */
+  rangeLabel?: string;
   appts: AppointmentWithRelations[];
   mechanics: { id: string; full_name: string }[];
   advances: MechanicAdvance[];
   mechById: Map<string, PayoutMechanic>;
   svcById: Map<string, PayoutService>;
 }) {
+
   const [mechFilter, setMechFilter] = useState<string>("all");
 
   // Полный список «колонок»-мастеров (включая «Без мастера» если такие работы/авансы есть)
