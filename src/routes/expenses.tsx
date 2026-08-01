@@ -367,11 +367,12 @@ function ExpensesPage() {
                   ev.stopPropagation();
                   setDrill("expense");
                 }}
-                className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground transition-colors hover:text-amber-600"
+                className="inline-flex min-h-9 items-center gap-1 rounded-md border border-border bg-muted/40 px-2.5 py-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground transition-colors hover:border-amber-500/50 hover:bg-amber-500/10 hover:text-amber-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.97]"
               >
                 Подробнее
                 <ChevronRight className="h-3 w-3" />
               </button>
+
             </div>
           </CardContent>
         </Card>
