@@ -32,6 +32,7 @@ const UNASSIGNED = "__unassigned__";
 
 export function ExpensesMonthlyTable({
   month,
+  rangeLabel,
   appts,
   mechanics,
   advances,
@@ -39,12 +40,15 @@ export function ExpensesMonthlyTable({
   svcById,
 }: {
   month: Date;
+  /** Подпись периода (если не месяц) — используется в заголовке и имени файла. */
+  rangeLabel?: string;
   appts: AppointmentWithRelations[];
   mechanics: { id: string; full_name: string }[];
   advances: MechanicAdvance[];
   mechById: Map<string, PayoutMechanic>;
   svcById: Map<string, PayoutService>;
 }) {
+
   const [mechFilter, setMechFilter] = useState<string>("all");
 
   // Полный список «колонок»-мастеров (включая «Без мастера» если такие работы/авансы есть)
@@ -92,8 +96,11 @@ export function ExpensesMonthlyTable({
         const stored = Number(s.mechanic_payout ?? 0);
         const mech = a.mechanic_id ? mechById.get(a.mechanic_id) ?? null : null;
         const svc = s.service_id ? svcById.get(s.service_id) ?? null : null;
-        const percent = effectivePercent(mech, svc);
         const payout = effectivePayout({ storedPayout: stored, price, mechanic: mech, service: svc });
+        // Показываем ФАКТИЧЕСКИЙ процент этой работы (из сохранённой суммы),
+        // а не текущую ставку мастера — иначе старые работы выглядят пересчитанными.
+        const percent = price > 0 ? Math.round((payout / price) * 100) : effectivePercent(mech, svc);
+
 
         let advance = 0;
         if (idx === 0) {
@@ -169,7 +176,7 @@ export function ExpensesMonthlyTable({
     return acc;
   }, [totalsByMech]);
 
-  const monthLabel = format(month, "LLLL yyyy", { locale: ru });
+  const monthLabel = rangeLabel ?? format(month, "LLLL yyyy", { locale: ru });
 
   const handlePrint = () => window.print();
 
@@ -227,8 +234,9 @@ export function ExpensesMonthlyTable({
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Свод");
-    const safeMonth = format(month, "yyyy-MM");
+    const safeMonth = (rangeLabel ?? format(month, "yyyy-MM")).replace(/[^\wа-яА-Я\d-]+/g, "_");
     XLSX.writeFile(wb, `Свод_${safeMonth}.xlsx`);
+
   };
 
   return (

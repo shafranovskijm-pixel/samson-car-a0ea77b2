@@ -1,20 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  format,
-  parseISO,
-  startOfMonth,
-  endOfMonth,
-  addMonths,
-  startOfDay,
-  endOfDay,
-  addDays,
-  startOfWeek,
-  endOfWeek,
-  addWeeks,
-  isSameDay,
-} from "date-fns";
+import { format, parseISO, startOfMonth } from "date-fns";
+
 import { ru } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 
@@ -67,6 +55,20 @@ import {
 import { effectivePayout, type PayoutMechanic, type PayoutService } from "@/lib/payouts";
 import { ExpensesMonthlyTable } from "@/components/ExpensesMonthlyTable";
 import { ExpensesDrillDown, type DrillMetric } from "@/components/ExpensesDrillDown";
+import {
+  type PeriodKey,
+  type CustomRange,
+  PERIOD_LABELS,
+  periodRange,
+  periodRangeLabel,
+  periodNoun,
+  defaultCustomRange,
+  isoDate,
+  canNavigate,
+  stepAnchor,
+  isCurrentPeriod,
+} from "@/lib/period";
+
 
 
 export const Route = createFileRoute("/expenses")({
@@ -83,39 +85,23 @@ export const Route = createFileRoute("/expenses")({
 const fmt = (n: number) =>
   new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(Math.round(n)) + " ₽";
 
-const isoDate = (d: Date) => format(d, "yyyy-MM-dd");
-
-type Period = "day" | "week" | "month";
-
 function ExpensesPage() {
-  const [period, setPeriod] = useState<Period>("month");
+  const [period, setPeriod] = useState<PeriodKey>("month");
   const [anchor, setAnchor] = useState<Date>(() => new Date());
+  const [custom, setCustom] = useState<CustomRange>(() => defaultCustomRange());
   const [drill, setDrill] = useState<DrillMetric | null>(null);
 
   const { rangeStart, rangeEnd } = useMemo(() => {
-    if (period === "day") {
-      return { rangeStart: startOfDay(anchor), rangeEnd: endOfDay(anchor) };
-    }
-    if (period === "week") {
-      return {
-        rangeStart: startOfWeek(anchor, { weekStartsOn: 1 }),
-        rangeEnd: endOfWeek(anchor, { weekStartsOn: 1 }),
-      };
-    }
-    return { rangeStart: startOfMonth(anchor), rangeEnd: endOfMonth(anchor) };
-  }, [anchor, period]);
+    const { start, end } = periodRange(period, anchor, custom);
+    return { rangeStart: start, rangeEnd: end };
+  }, [anchor, period, custom]);
 
   const fromIso = isoDate(rangeStart);
   const toIso = isoDate(rangeEnd);
 
-  const periodLabel =
-    period === "day" ? "день" : period === "week" ? "неделю" : "месяц";
-  const rangeLabel = (() => {
-    if (period === "day") return format(rangeStart, "d MMMM yyyy", { locale: ru });
-    if (period === "week")
-      return `${format(rangeStart, "d MMM", { locale: ru })} – ${format(rangeEnd, "d MMM yyyy", { locale: ru })}`;
-    return format(rangeStart, "LLLL yyyy", { locale: ru });
-  })();
+  const periodLabel = periodNoun(period);
+  const rangeLabel = periodRangeLabel(period, anchor, custom);
+
 
   const { data: appts = [] } = useQuery({
     queryKey: ["appointments", "expenses-range", fromIso, toIso],
@@ -240,7 +226,10 @@ function ExpensesPage() {
             setPeriod={setPeriod}
             anchor={anchor}
             setAnchor={setAnchor}
+            custom={custom}
+            setCustom={setCustom}
           />
+
         </div>
       </header>
 
@@ -398,9 +387,8 @@ function ExpensesPage() {
           <TabsTrigger value="summary">Сводка</TabsTrigger>
           <TabsTrigger value="mechanics">По мастерам</TabsTrigger>
           <TabsTrigger value="services">По услугам</TabsTrigger>
-          {period === "month" && (
-            <TabsTrigger value="table">Сводная таблица</TabsTrigger>
-          )}
+          <TabsTrigger value="table">Сводная таблица</TabsTrigger>
+
         </TabsList>
 
         <TabsContent value="summary" className="mt-4">
@@ -430,18 +418,18 @@ function ExpensesPage() {
           <ServicesBlock appts={doneAppts} effPayout={effPayout} />
         </TabsContent>
 
-        {period === "month" && (
-          <TabsContent value="table" className="mt-4">
-            <ExpensesMonthlyTable
-              month={startOfMonth(anchor)}
-              appts={doneAppts}
-              mechanics={mechanics}
-              advances={advances}
-              mechById={mechById}
-              svcById={svcById}
-            />
-          </TabsContent>
-        )}
+        <TabsContent value="table" className="mt-4">
+          <ExpensesMonthlyTable
+            month={rangeStart}
+            rangeLabel={period === "month" ? undefined : rangeLabel}
+            appts={doneAppts}
+            mechanics={mechanics}
+            advances={advances}
+            mechById={mechById}
+            svcById={svcById}
+          />
+        </TabsContent>
+
 
       </Tabs>
 
@@ -474,73 +462,78 @@ function RangePicker({
   setPeriod,
   anchor,
   setAnchor,
+  custom,
+  setCustom,
 }: {
-  period: Period;
-  setPeriod: (p: Period) => void;
+  period: PeriodKey;
+  setPeriod: (p: PeriodKey) => void;
   anchor: Date;
   setAnchor: (d: Date) => void;
+  custom: CustomRange;
+  setCustom: (c: CustomRange) => void;
 }) {
-  const step = (dir: 1 | -1) => {
-    if (period === "day") setAnchor(addDays(anchor, dir));
-    else if (period === "week") setAnchor(addWeeks(anchor, dir));
-    else setAnchor(addMonths(anchor, dir));
-  };
-  const label = (() => {
-    if (period === "day") return format(anchor, "d MMM yyyy", { locale: ru });
-    if (period === "week") {
-      const s = startOfWeek(anchor, { weekStartsOn: 1 });
-      const e = endOfWeek(anchor, { weekStartsOn: 1 });
-      const sameMonth = s.getMonth() === e.getMonth();
-      return `${format(s, "d")}${sameMonth ? "" : " " + format(s, "MMM", { locale: ru })} – ${format(e, "d MMM yyyy", { locale: ru })}`;
-    }
-    return format(anchor, "LLLL yyyy", { locale: ru });
-  })();
+  const label = periodRangeLabel(period, anchor, custom);
   const todayLabel = period === "day" ? "Сегодня" : period === "week" ? "Эта неделя" : "Этот месяц";
-  const isNow = (() => {
-    const now = new Date();
-    if (period === "day") return isSameDay(anchor, now);
-    if (period === "week")
-      return isSameDay(
-        startOfWeek(anchor, { weekStartsOn: 1 }),
-        startOfWeek(now, { weekStartsOn: 1 }),
-      );
-    return (
-      anchor.getFullYear() === now.getFullYear() && anchor.getMonth() === now.getMonth()
-    );
-  })();
+  const isNow = isCurrentPeriod(period, anchor);
+  const navigable = canNavigate(period);
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)}>
+      <Tabs value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
         <TabsList>
-          <TabsTrigger value="day">День</TabsTrigger>
-          <TabsTrigger value="week">Неделя</TabsTrigger>
-          <TabsTrigger value="month">Месяц</TabsTrigger>
+          {(["day", "week", "month", "all", "custom"] as PeriodKey[]).map((p) => (
+            <TabsTrigger key={p} value={p}>
+              {PERIOD_LABELS[p]}
+            </TabsTrigger>
+          ))}
         </TabsList>
       </Tabs>
-      <div className="flex items-center gap-1 rounded-lg border bg-card px-2 py-1">
-        <Button variant="ghost" size="icon" onClick={() => step(-1)}>
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-        <div className="min-w-[150px] text-center text-sm font-medium capitalize">
-          {label}
+      {navigable && (
+        <div className="flex items-center gap-1 rounded-lg border bg-card px-2 py-1">
+          <Button variant="ghost" size="icon" onClick={() => setAnchor(stepAnchor(period, anchor, -1))}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <div className="min-w-[150px] text-center text-sm font-medium capitalize">{label}</div>
+          <Button variant="ghost" size="icon" onClick={() => setAnchor(stepAnchor(period, anchor, 1))}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="ml-1"
+            disabled={isNow}
+            onClick={() => setAnchor(new Date())}
+          >
+            {todayLabel}
+          </Button>
         </div>
-        <Button variant="ghost" size="icon" onClick={() => step(1)}>
-          <ChevronRight className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="ml-1"
-          disabled={isNow}
-          onClick={() => setAnchor(new Date())}
-        >
-          {todayLabel}
-        </Button>
-      </div>
+      )}
+      {period === "all" && (
+        <div className="rounded-lg border bg-card px-3 py-2 text-sm font-medium">
+          Всё время (все данные)
+        </div>
+      )}
+      {period === "custom" && (
+        <div className="flex flex-wrap items-center gap-1 rounded-lg border bg-card px-2 py-1">
+          <Input
+            type="date"
+            value={custom.from}
+            className="h-8 w-[140px]"
+            onChange={(e) => setCustom({ ...custom, from: e.target.value })}
+          />
+          <span className="text-muted-foreground">–</span>
+          <Input
+            type="date"
+            value={custom.to}
+            className="h-8 w-[140px]"
+            onChange={(e) => setCustom({ ...custom, to: e.target.value })}
+          />
+        </div>
+      )}
     </div>
   );
 }
+
 
 
 
@@ -644,7 +637,10 @@ function ExpensesBlock({
 
         {expenses.length === 0 ? (
           <div className="rounded-lg border border-dashed py-10 text-center text-sm text-muted-foreground">
-            За этот {periodLabel === "день" ? "день" : periodLabel === "неделю" ? "неделю" : "месяц"} ещё нет записей о расходах.
+            {periodLabel === "всё время"
+              ? "Записей о расходах пока нет."
+              : `За ${periodLabel === "период" ? "выбранный период" : "этот " + periodLabel} ещё нет записей о расходах.`}
+
           </div>
         ) : (
           <div className="space-y-2">

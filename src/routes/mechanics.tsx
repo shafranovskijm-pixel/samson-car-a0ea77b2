@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Trash2, Pencil, UserCog, Wallet, CalendarClock, ArrowLeft, ChevronDown, ChevronRight, Percent, BadgeDollarSign } from "lucide-react";
+import { Plus, Trash2, Pencil, UserCog, Wallet, CalendarClock, ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Percent, BadgeDollarSign } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,21 @@ import { STATUS_LABELS } from "@/lib/types";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { effectivePayout, type PayoutMechanic, type PayoutService } from "@/lib/payouts";
 import { ussLocalToInstant } from "@/lib/tz";
+import {
+  type PeriodKey,
+  type CustomRange,
+  PERIOD_LABELS,
+  periodRange,
+  periodRangeLabel,
+  defaultCustomRange,
+  canNavigate,
+  stepAnchor,
+  isCurrentPeriod,
+  inRange,
+  inDayRange,
+
+} from "@/lib/period";
+
 
 
 const COLORS = [
@@ -252,25 +267,67 @@ function MechanicsPage() {
 }
 
 // ================= SALARY =================
-type Period = "today" | "week" | "month" | "all";
-const PERIOD_LABELS: Record<Period, string> = {
-  today: "Сегодня",
-  week: "Неделя",
-  month: "Месяц",
-  all: "Всё время",
-};
-
-function periodStart(p: Period): number {
-  const now = new Date();
-  if (p === "all") return 0;
-  if (p === "today") {
-    const d = new Date(now);
-    d.setHours(0, 0, 0, 0);
-    return d.getTime();
-  }
-  if (p === "week") return now.getTime() - 7 * 24 * 60 * 60 * 1000;
-  return now.getTime() - 30 * 24 * 60 * 60 * 1000;
+// Периоды календарные (см. src/lib/period.ts): день / неделя с пн / календарный месяц,
+// плюс «Всё время» и произвольный период. По умолчанию — текущий календарный месяц.
+function usePeriodState() {
+  const [period, setPeriod] = useState<PeriodKey>("month");
+  const [anchor, setAnchor] = useState<Date>(() => new Date());
+  const [custom, setCustom] = useState<CustomRange>(() => defaultCustomRange());
+  const { start, end } = useMemo(
+    () => periodRange(period, anchor, custom),
+    [period, anchor, custom],
+  );
+  return { period, setPeriod, anchor, setAnchor, custom, setCustom, start, end };
 }
+
+type PeriodState = ReturnType<typeof usePeriodState>;
+
+function PeriodPicker({ state }: { state: PeriodState }) {
+  const { period, setPeriod, anchor, setAnchor, custom, setCustom } = state;
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <Select value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
+        <SelectTrigger className="h-8 w-32 sm:w-36"><SelectValue /></SelectTrigger>
+        <SelectContent>
+          {(["day", "week", "month", "all", "custom"] as PeriodKey[]).map((p) => (
+            <SelectItem key={p} value={p}>{PERIOD_LABELS[p]}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {canNavigate(period) && (
+        <div className="flex items-center gap-0.5 rounded-md border bg-card px-1">
+          <Button variant="ghost" size="icon" className="h-7 w-7"
+            onClick={() => setAnchor(stepAnchor(period, anchor, -1))}>
+            <ChevronLeft className="h-3.5 w-3.5" />
+          </Button>
+          <span className="min-w-[110px] text-center text-xs font-medium capitalize">
+            {periodRangeLabel(period, anchor, custom)}
+          </span>
+          <Button variant="ghost" size="icon" className="h-7 w-7"
+            onClick={() => setAnchor(stepAnchor(period, anchor, 1))}>
+            <ChevronRight className="h-3.5 w-3.5" />
+          </Button>
+          {!isCurrentPeriod(period, anchor) && (
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs"
+              onClick={() => setAnchor(new Date())}>
+              Сейчас
+            </Button>
+          )}
+        </div>
+      )}
+      {period === "custom" && (
+        <div className="flex items-center gap-1">
+          <Input type="date" className="h-8 w-[135px]" value={custom.from}
+            onChange={(e) => setCustom({ ...custom, from: e.target.value })} />
+          <span className="text-muted-foreground">–</span>
+          <Input type="date" className="h-8 w-[135px]" value={custom.to}
+            onChange={(e) => setCustom({ ...custom, to: e.target.value })} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 
 function todayUssISODate(): string {
   const d = new Date();
@@ -379,18 +436,20 @@ function MechanicDefaultPercent({ mechanic }: { mechanic: Mechanic }) {
         <Button
           variant="ghost"
           size="sm"
+          className="text-destructive hover:text-destructive"
           disabled={recalcM.isPending}
           onClick={async () => {
             const ok = await confirm({
               title: "Пересчитать все записи?",
-              description: `Будут пересчитаны все НЕоплаченные и частично оплаченные записи мастера под ${currentPercent}%, включая прошлые месяцы. Полностью оплаченные записи не трогаем. Ручные правки сумм будут перезаписаны.`,
-              confirmText: "Пересчитать всё",
+              description: `Опасно: будут пересчитаны ВСЕ неоплаченные и частично оплаченные записи мастера под ${currentPercent}%, включая прошлые месяцы, когда действовал другой процент. Обычно нужна кнопка «Пересчитать с даты». Ручные правки сумм будут перезаписаны.`,
+              confirmText: "Всё равно пересчитать всё",
             });
             if (ok) recalcM.mutate({ percent: currentPercent, from: null });
           }}
         >
           Пересчитать всё
         </Button>
+
 
       </div>
     </div>
@@ -409,7 +468,8 @@ function MechanicSalary({ mechanicId, defaultPercent }: { mechanicId: string; de
     queryKey: ["mechanic-advances", mechanicId],
     queryFn: () => listMechanicAdvances({ mechanic_id: mechanicId }),
   });
-  const [period, setPeriod] = useState<Period>("month");
+  const periodState = usePeriodState();
+  const { period, start, end } = periodState;
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const mechForPayout: PayoutMechanic = {
@@ -431,16 +491,16 @@ function MechanicSalary({ mechanicId, defaultPercent }: { mechanicId: string; de
     });
 
   const filtered = useMemo(() => {
-    const start = periodStart(period);
     return rows
-      .filter((r) => r.status === "done" && new Date(r.starts_at).getTime() >= start)
+      .filter((r) => r.status === "done" && inRange(new Date(r.starts_at), start, end))
       .sort((a, b) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime());
-  }, [rows, period]);
+  }, [rows, start, end]);
 
-  const advancesInPeriod = useMemo(() => {
-    const start = periodStart(period);
-    return advances.filter((a) => new Date(a.paid_at).getTime() >= start);
-  }, [advances, period]);
+  const advancesInPeriod = useMemo(
+    () => advances.filter((a) => inDayRange(a.paid_at, start, end)),
+    [advances, start, end],
+  );
+
 
   const pending = useMemo(
     () => rows.filter((r) => r.status !== "done" && r.status !== "cancelled"),
@@ -471,14 +531,8 @@ function MechanicSalary({ mechanicId, defaultPercent }: { mechanicId: string; de
           <Wallet className="h-5 w-5" />
           <h2 className="text-lg font-semibold">Зарплата</h2>
         </div>
-        <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
-          <SelectTrigger className="w-32 sm:w-40"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {(Object.keys(PERIOD_LABELS) as Period[]).map((p) => (
-              <SelectItem key={p} value={p}>{PERIOD_LABELS[p]}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <PeriodPicker state={periodState} />
+
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -595,7 +649,8 @@ function MechanicSalary({ mechanicId, defaultPercent }: { mechanicId: string; de
 function MechanicAdvances({ mechanicId }: { mechanicId: string }) {
   const qc = useQueryClient();
   const confirmActionCtx = useConfirm();
-  const [period, setPeriod] = useState<Period>("month");
+  const periodState = usePeriodState();
+  const { period, start, end } = periodState;
   const [open, setOpen] = useState(false);
   const today = new Date().toISOString().slice(0, 10);
   const [form, setForm] = useState({ paid_at: today, amount: "", note: "" });
@@ -605,10 +660,11 @@ function MechanicAdvances({ mechanicId }: { mechanicId: string }) {
     queryFn: () => listMechanicAdvances({ mechanic_id: mechanicId }),
   });
 
-  const filtered = useMemo(() => {
-    const start = periodStart(period);
-    return advances.filter((a) => new Date(a.paid_at).getTime() >= start);
-  }, [advances, period]);
+  const filtered = useMemo(
+    () => advances.filter((a) => inDayRange(a.paid_at, start, end)),
+    [advances, start, end],
+  );
+
 
   const total = filtered.reduce((s, a) => s + Number(a.amount ?? 0), 0);
 
@@ -650,14 +706,8 @@ function MechanicAdvances({ mechanicId }: { mechanicId: string }) {
           <h2 className="text-lg font-semibold">Авансы</h2>
         </div>
         <div className="flex items-center gap-2">
-          <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
-            <SelectTrigger className="w-32 sm:w-40"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {(Object.keys(PERIOD_LABELS) as Period[]).map((p) => (
-                <SelectItem key={p} value={p}>{PERIOD_LABELS[p]}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <PeriodPicker state={periodState} />
+
           <Button size="sm" onClick={() => setOpen(true)}>
             <Plus className="mr-1 h-4 w-4" />Аванс
           </Button>
