@@ -213,14 +213,14 @@ function ExpensesPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
-      <header className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-start sm:justify-between">
+      <header className="mb-6 flex flex-col gap-3 sm:mb-8">
         <div className="min-w-0">
-          <h1 className="truncate text-xl font-bold sm:text-2xl">Расходы</h1>
-          <p className="mt-0.5 truncate text-xs text-muted-foreground sm:text-sm">
+          <h1 className="text-xl font-bold sm:text-2xl">Расходы</h1>
+          <p className="mt-0.5 text-xs text-muted-foreground sm:text-sm">
             Оборот, прибыль, ЗП мастеров и авансы за {periodLabel}
           </p>
         </div>
-        <div className="shrink-0">
+        <div className="-mx-4 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <RangePicker
             period={period}
             setPeriod={setPeriod}
@@ -229,9 +229,9 @@ function ExpensesPage() {
             custom={custom}
             setCustom={setCustom}
           />
-
         </div>
       </header>
+
 
       <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
         {/* Прибыль (кассовая) — герой */}
