@@ -249,7 +249,7 @@ function MechanicsPage() {
                     key={c}
                     type="button"
                     onClick={() => setForm({ ...form, color: c })}
-                    className={`h-8 w-8 rounded-md border-2 ${form.color === c ? "border-foreground" : "border-transparent"}`}
+                    className={`h-10 w-10 cursor-pointer rounded-md border-2 transition hover:ring-2 hover:ring-ring/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95 ${form.color === c ? "border-foreground" : "border-border/60"}`}
                     style={{ background: c }}
                   />
                 ))}

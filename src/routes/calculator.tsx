@@ -1091,7 +1091,7 @@ function LandingPage() {
                                   e.stopPropagation();
                                   renameCategoryPrompt(c);
                                 }}
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white/80 backdrop-blur transition hover:bg-black/80 hover:text-white"
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white/80 backdrop-blur transition hover:bg-black/80 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 active:scale-95"
                               >
                                 <Pencil className="h-4 w-4" />
                               </button>
@@ -1102,7 +1102,7 @@ function LandingPage() {
                                   e.stopPropagation();
                                   deleteCategoryPrompt(c);
                                 }}
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-red-300 backdrop-blur transition hover:bg-black/80 hover:text-red-200"
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-red-400/30 bg-black/60 text-red-300 backdrop-blur transition hover:bg-black/80 hover:text-red-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/70 active:scale-95"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </button>
