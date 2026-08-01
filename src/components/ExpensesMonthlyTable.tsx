@@ -173,7 +173,7 @@ export function ExpensesMonthlyTable({
     return acc;
   }, [totalsByMech]);
 
-  const monthLabel = format(month, "LLLL yyyy", { locale: ru });
+  const monthLabel = rangeLabel ?? format(month, "LLLL yyyy", { locale: ru });
 
   const handlePrint = () => window.print();
 
