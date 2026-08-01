@@ -526,14 +526,16 @@ function MechanicSalary({ mechanicId, defaultPercent }: { mechanicId: string; de
 
   return (
     <div>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+      <div className="mb-3 flex flex-col gap-2">
         <div className="flex items-center gap-2">
           <Wallet className="h-5 w-5" />
           <h2 className="text-lg font-semibold">Зарплата</h2>
         </div>
-        <PeriodPicker state={periodState} />
-
+        <div className="toolbar-scroll -mx-1 px-1">
+          <PeriodPicker state={periodState} />
+        </div>
       </div>
+
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-lg border bg-card p-4">
