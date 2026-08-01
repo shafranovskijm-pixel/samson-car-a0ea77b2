@@ -16,7 +16,8 @@ import {
 import {
   createMechanic, createMechanicAdvance, createMechanicShift, deleteMechanic,
   deleteMechanicAdvance, deleteMechanicShift, listMechanicAdvances, listMechanicPayouts,
-  listMechanicServiceRates, listMechanicShifts, listMechanics, listServices, updateMechanic,
+  listMechanicServiceRates, listMechanicShifts, listMechanics, listServices,
+  recalcMechanicPayouts, updateMechanic,
   updateMechanicDefaultPayoutPercent, upsertMechanicServiceRate,
 } from "@/lib/api";
 import type { Mechanic, MechanicShift } from "@/lib/types";
