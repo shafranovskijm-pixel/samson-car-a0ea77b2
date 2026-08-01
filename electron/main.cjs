@@ -1,7 +1,29 @@
 // Electron main process (CommonJS — package.json is "type": "module").
 const { app, BrowserWindow, shell } = require("electron");
 const fs = require("fs");
+const http = require("http");
 const path = require("path");
+
+const CLIENT_DIR = path.join(__dirname, "..", "dist-electron-web", "client");
+
+const MIME = {
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".mjs": "text/javascript; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".svg": "image/svg+xml",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".webp": "image/webp",
+  ".ico": "image/x-icon",
+  ".woff": "font/woff",
+  ".woff2": "font/woff2",
+  ".ttf": "font/ttf",
+  ".map": "application/json; charset=utf-8",
+};
 
 function renderFatalPage(title, message) {
   return `<!doctype html>
@@ -22,7 +44,41 @@ function renderFatalPage(title, message) {
 </html>`;
 }
 
-function createWindow() {
+// Локальный http-сервер: file:// в Chromium блокирует ES-модули (CORS),
+// поэтому статику отдаём через 127.0.0.1 с SPA-фолбэком на index.html.
+function startLocalServer() {
+  return new Promise((resolve, reject) => {
+    const server = http.createServer((req, res) => {
+      let urlPath;
+      try {
+        urlPath = decodeURIComponent(new URL(req.url, "http://127.0.0.1").pathname);
+      } catch {
+        urlPath = "/";
+      }
+
+      let filePath = path.join(CLIENT_DIR, urlPath);
+      if (!filePath.startsWith(CLIENT_DIR)) filePath = path.join(CLIENT_DIR, "index.html");
+      if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
+        filePath = path.join(CLIENT_DIR, "index.html");
+      }
+
+      const ext = path.extname(filePath).toLowerCase();
+      res.writeHead(200, {
+        "content-type": MIME[ext] || "application/octet-stream",
+        "cache-control": "no-cache",
+      });
+      fs.createReadStream(filePath).pipe(res);
+    });
+
+    server.on("error", reject);
+    server.listen(0, "127.0.0.1", () => {
+      const { port } = server.address();
+      resolve(`http://127.0.0.1:${port}`);
+    });
+  });
+}
+
+async function createWindow() {
   const win = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -50,11 +106,7 @@ function createWindow() {
     console.error("[electron] render-process-gone", details);
   });
 
-  win.webContents.on("console-message", (_event, level, message, line, sourceId) => {
-    console.log("[electron:web]", { level, message, line, sourceId });
-  });
-
-  const indexPath = path.join(__dirname, "..", "dist-electron-web", "client", "index.html");
+  const indexPath = path.join(CLIENT_DIR, "index.html");
   if (!fs.existsSync(indexPath)) {
     const expected = path.relative(path.join(__dirname, ".."), indexPath);
     win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(renderFatalPage(
@@ -64,13 +116,16 @@ function createWindow() {
     return;
   }
 
-  win.loadFile(indexPath, { hash: "/login" }).catch((error) => {
-    console.error("[electron] loadFile failed", error);
+  try {
+    const origin = await startLocalServer();
+    await win.loadURL(`${origin}/login`);
+  } catch (error) {
+    console.error("[electron] load failed", error);
     win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(renderFatalPage(
       "CRM не открылась",
-      String(error?.message || error),
+      String((error && error.message) || error),
     ))}`);
-  });
+  }
 }
 
 app.whenReady().then(createWindow);
