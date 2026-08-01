@@ -673,6 +673,58 @@ export const updateMechanicDefaultPayoutPercent = async (id: string, percent: nu
   if (error) throw error;
 };
 
+/**
+ * Пересчитывает сохранённые суммы mechanic_payout во всех услугах мастера
+ * по актуальному проценту (индивидуальная ставка за услугу имеет приоритет).
+ * Нужно после смены процента: старые записи хранят сумму, посчитанную по прежнему %.
+ */
+export const recalcMechanicPayouts = async (
+  mechanicId: string,
+  percent: number,
+  opts?: { onlyFrom?: string },
+): Promise<number> => {
+  let aq = anySb
+    .from("appointments")
+    .select("id")
+    .eq("mechanic_id", mechanicId)
+    .is("deleted_at", null);
+  if (opts?.onlyFrom) aq = aq.gte("starts_at", opts.onlyFrom);
+  const appts = (throwIf(await aq) as { id: string }[]) ?? [];
+  if (!appts.length) return 0;
+  const ids = appts.map((a) => a.id);
+
+  const rates = await listMechanicServiceRates(mechanicId);
+  const rateBySvc = new Map(rates.map((r) => [r.service_id, Number(r.amount ?? 0)]));
+
+  const rows =
+    (throwIf(
+      await anySb
+        .from("appointment_services")
+        .select("appointment_id, service_id, price, mechanic_payout")
+        .in("appointment_id", ids),
+    ) as { appointment_id: string; service_id: string; price: number; mechanic_payout: number }[]) ??
+    [];
+
+  let changed = 0;
+  for (const r of rows) {
+    const override = rateBySvc.get(r.service_id);
+    const next =
+      override != null && override > 0
+        ? Math.round(override)
+        : Math.round((Number(r.price ?? 0) * percent) / 100);
+    if (next === Math.round(Number(r.mechanic_payout ?? 0))) continue;
+    const { error } = await anySb
+      .from("appointment_services")
+      .update({ mechanic_payout: next })
+      .eq("appointment_id", r.appointment_id)
+      .eq("service_id", r.service_id);
+    if (error) throw error;
+    changed += 1;
+  }
+  return changed;
+};
+
+
 // EXPENSES
 export type Expense = {
   id: string;
