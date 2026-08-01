@@ -418,18 +418,18 @@ function ExpensesPage() {
           <ServicesBlock appts={doneAppts} effPayout={effPayout} />
         </TabsContent>
 
-        {period === "month" && (
-          <TabsContent value="table" className="mt-4">
-            <ExpensesMonthlyTable
-              month={startOfMonth(anchor)}
-              appts={doneAppts}
-              mechanics={mechanics}
-              advances={advances}
-              mechById={mechById}
-              svcById={svcById}
-            />
-          </TabsContent>
-        )}
+        <TabsContent value="table" className="mt-4">
+          <ExpensesMonthlyTable
+            month={rangeStart}
+            rangeLabel={period === "month" ? undefined : rangeLabel}
+            appts={doneAppts}
+            mechanics={mechanics}
+            advances={advances}
+            mechById={mechById}
+            svcById={svcById}
+          />
+        </TabsContent>
+
 
       </Tabs>
 
