@@ -122,3 +122,9 @@ export function inRange(d: Date | string | number, start: Date, end: Date): bool
   if (Number.isNaN(t)) return false;
   return t >= start.getTime() && t <= end.getTime();
 }
+
+/** Попадает ли календарная дата (yyyy-MM-dd, напр. дата аванса/расхода) в период. */
+export function inDayRange(day: string | Date, start: Date, end: Date): boolean {
+  const s = typeof day === "string" ? day.slice(0, 10) : isoDate(day);
+  return s >= isoDate(start) && s <= isoDate(end);
+}
