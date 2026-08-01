@@ -31,6 +31,7 @@ import {
   createServiceCategory,
   updateServiceCategory,
   deleteServiceCategory,
+  deleteService,
   upsertServiceByCategoryName,
   humanizeSupabaseError,
 } from "@/lib/api";
@@ -437,6 +438,29 @@ function LandingPage() {
       toast.error(humanizeSupabaseError(e));
     }
   };
+
+  const deleteServicePrompt = async (s: { id: string; name: string }) => {
+    const ok = await confirm({
+      title: "Удалить услугу?",
+      description: `«${s.name}» будет удалена из прайса. Уже созданные записи не изменятся.`,
+      confirmText: "Удалить",
+      destructive: true,
+    });
+    if (!ok) return;
+    try {
+      await deleteService(s.id);
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.delete(s.id);
+        return next;
+      });
+      toast.success("Услуга удалена");
+      qc.invalidateQueries({ queryKey: ["services"] });
+    } catch (e) {
+      toast.error(humanizeSupabaseError(e));
+    }
+  };
+
 
   const popularServices = useMemo(() => {
     const ids = topServiceIds(6);
