@@ -478,7 +478,8 @@ function RangePicker({
   const navigable = canNavigate(period);
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex w-max min-w-full flex-nowrap items-center gap-2 sm:w-auto sm:flex-wrap">
+
       <Tabs value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
         <TabsList>
           {(["day", "week", "month", "all", "custom"] as PeriodKey[]).map((p) => (
