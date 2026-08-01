@@ -1,0 +1,1 @@
+ALTER TABLE public.mechanics ADD COLUMN IF NOT EXISTS payout_percent_since date;
