@@ -665,11 +665,14 @@ export const listMechanicPayouts = async (
   });
 };
 
-export const updateMechanicDefaultPayoutPercent = async (id: string, percent: number) => {
-  const { error } = await anySb
-    .from("mechanics")
-    .update({ default_payout_percent: percent })
-    .eq("id", id);
+export const updateMechanicDefaultPayoutPercent = async (
+  id: string,
+  percent: number,
+  since?: string | null, // YYYY-MM-DD — с какой даты действует процент
+) => {
+  const patch: Record<string, unknown> = { default_payout_percent: percent };
+  if (since !== undefined) patch.payout_percent_since = since;
+  const { error } = await anySb.from("mechanics").update(patch).eq("id", id);
   if (error) throw error;
 };
 

@@ -272,10 +272,22 @@ function periodStart(p: Period): number {
   return now.getTime() - 30 * 24 * 60 * 60 * 1000;
 }
 
+function todayUssISODate(): string {
+  const d = new Date();
+  const y = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Vladivostok",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d);
+  return y; // YYYY-MM-DD
+}
+
 function MechanicDefaultPercent({ mechanic }: { mechanic: Mechanic }) {
   const qc = useQueryClient();
   const confirm = useConfirm();
   const [value, setValue] = useState<string>(String(mechanic.default_payout_percent ?? 50));
+  const [since, setSince] = useState<string>(mechanic.payout_percent_since ?? todayUssISODate());
 
   const invalidateMoney = () => {
     qc.invalidateQueries({ queryKey: ["mechanics"] });
@@ -284,24 +296,15 @@ function MechanicDefaultPercent({ mechanic }: { mechanic: Mechanic }) {
     qc.invalidateQueries({ queryKey: ["expenses"] });
   };
 
-  // Начало текущего месяца по времени Уссурийска (UTC+10) в ISO.
-  const monthStartISO = (() => {
-    const d = new Date();
-    const y = Number(
-      new Intl.DateTimeFormat("ru-RU", { timeZone: "Asia/Vladivostok", year: "numeric" }).format(d),
-    );
-    const m = Number(
-      new Intl.DateTimeFormat("ru-RU", { timeZone: "Asia/Vladivostok", month: "numeric" }).format(d),
-    );
-    return ussLocalToInstant(`${y}-${String(m).padStart(2, "0")}-01`, "00:00").toISOString();
-  })();
+  // Дата «действует с» в ISO (00:00 по Уссурийску).
+  const sinceISO = (d: string) => ussLocalToInstant(d, "00:00").toISOString();
 
   const recalcM = useMutation({
-    mutationFn: async (v: { percent: number; all: boolean }) =>
+    mutationFn: async (v: { percent: number; from: string | null }) =>
       recalcMechanicPayouts(
         mechanic.id,
         v.percent,
-        v.all ? { skipPaid: true } : { onlyFrom: monthStartISO, skipPaid: true },
+        v.from ? { onlyFrom: sinceISO(v.from), skipPaid: true } : { skipPaid: true },
       ),
     onSuccess: (changed) => {
       invalidateMoney();
@@ -313,17 +316,13 @@ function MechanicDefaultPercent({ mechanic }: { mechanic: Mechanic }) {
   });
 
   const saveM = useMutation({
-    mutationFn: async (n: number) => updateMechanicDefaultPayoutPercent(mechanic.id, n),
-    onSuccess: async (_d, n) => {
+    mutationFn: async (v: { percent: number; since: string }) =>
+      updateMechanicDefaultPayoutPercent(mechanic.id, v.percent, v.since),
+    onSuccess: (_d, v) => {
       invalidateMoney();
-      toast.success("Процент сохранён");
-      const ok = await confirm({
-        title: "Пересчитать выплаты за текущий месяц?",
-        description: `Записи текущего месяца будут пересчитаны под ${n}%. Закрытые (полностью оплаченные) записи и прошлые месяцы останутся без изменений. Новые услуги сразу считаются по новому проценту.`,
-        confirmText: "Пересчитать",
-        cancelText: "Не сейчас",
-      });
-      if (ok) recalcM.mutate({ percent: n, all: false });
+      toast.success(`Процент ${v.percent}% действует с ${v.since}`);
+      // Автоматический пересчёт только записей после указанной даты.
+      recalcM.mutate({ percent: v.percent, from: v.since });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -337,7 +336,7 @@ function MechanicDefaultPercent({ mechanic }: { mechanic: Mechanic }) {
         <div>
           <div className="text-sm font-medium">Процент по умолчанию</div>
           <div className="text-xs text-muted-foreground">
-            Применяется, если нет индивидуальной ставки за услугу
+            Пересчёт применяется только к записям с даты «действует с». Более ранние работы не трогаем.
           </div>
         </div>
       </div>
@@ -353,17 +352,29 @@ function MechanicDefaultPercent({ mechanic }: { mechanic: Mechanic }) {
               setValue(String(currentPercent));
               return;
             }
-            if (n !== currentPercent) saveM.mutate(n);
+            if (n !== currentPercent) saveM.mutate({ percent: n, since });
           }}
         />
         <span className="text-sm text-muted-foreground">%</span>
+        <Label className="text-xs text-muted-foreground">действует с</Label>
+        <Input
+          type="date"
+          className="h-9 w-40"
+          value={since}
+          onChange={(e) => setSince(e.target.value)}
+          onBlur={() => {
+            if (since && since !== (mechanic.payout_percent_since ?? "")) {
+              saveM.mutate({ percent: currentPercent, since });
+            }
+          }}
+        />
         <Button
           variant="outline"
           size="sm"
           disabled={recalcM.isPending}
-          onClick={() => recalcM.mutate({ percent: currentPercent, all: false })}
+          onClick={() => recalcM.mutate({ percent: currentPercent, from: since })}
         >
-          {recalcM.isPending ? "Пересчёт…" : "Пересчитать за месяц"}
+          {recalcM.isPending ? "Пересчёт…" : "Пересчитать с даты"}
         </Button>
         <Button
           variant="ghost"
@@ -375,7 +386,7 @@ function MechanicDefaultPercent({ mechanic }: { mechanic: Mechanic }) {
               description: `Будут пересчитаны все НЕоплаченные и частично оплаченные записи мастера под ${currentPercent}%, включая прошлые месяцы. Полностью оплаченные записи не трогаем. Ручные правки сумм будут перезаписаны.`,
               confirmText: "Пересчитать всё",
             });
-            if (ok) recalcM.mutate({ percent: currentPercent, all: true });
+            if (ok) recalcM.mutate({ percent: currentPercent, from: null });
           }}
         >
           Пересчитать всё
@@ -385,6 +396,7 @@ function MechanicDefaultPercent({ mechanic }: { mechanic: Mechanic }) {
     </div>
   );
 }
+
 
 
 function MechanicSalary({ mechanicId, defaultPercent }: { mechanicId: string; defaultPercent: number }) {
