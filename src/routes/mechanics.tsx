@@ -703,14 +703,8 @@ function MechanicAdvances({ mechanicId }: { mechanicId: string }) {
           <h2 className="text-lg font-semibold">Авансы</h2>
         </div>
         <div className="flex items-center gap-2">
-          <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
-            <SelectTrigger className="w-32 sm:w-40"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {(Object.keys(PERIOD_LABELS) as Period[]).map((p) => (
-                <SelectItem key={p} value={p}>{PERIOD_LABELS[p]}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <PeriodPicker state={periodState} />
+
           <Button size="sm" onClick={() => setOpen(true)}>
             <Plus className="mr-1 h-4 w-4" />Аванс
           </Button>
