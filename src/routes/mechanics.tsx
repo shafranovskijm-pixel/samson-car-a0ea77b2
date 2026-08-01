@@ -528,14 +528,8 @@ function MechanicSalary({ mechanicId, defaultPercent }: { mechanicId: string; de
           <Wallet className="h-5 w-5" />
           <h2 className="text-lg font-semibold">Зарплата</h2>
         </div>
-        <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
-          <SelectTrigger className="w-32 sm:w-40"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {(Object.keys(PERIOD_LABELS) as Period[]).map((p) => (
-              <SelectItem key={p} value={p}>{PERIOD_LABELS[p]}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <PeriodPicker state={periodState} />
+
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
