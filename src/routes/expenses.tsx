@@ -383,13 +383,15 @@ function ExpensesPage() {
 
 
       <Tabs defaultValue="summary">
-        <TabsList className="no-print">
-          <TabsTrigger value="summary">Сводка</TabsTrigger>
-          <TabsTrigger value="mechanics">По мастерам</TabsTrigger>
-          <TabsTrigger value="services">По услугам</TabsTrigger>
-          <TabsTrigger value="table">Сводная таблица</TabsTrigger>
+        <div className="toolbar-scroll no-print -mx-1 px-1">
+          <TabsList>
+            <TabsTrigger value="summary">Сводка</TabsTrigger>
+            <TabsTrigger value="mechanics">По мастерам</TabsTrigger>
+            <TabsTrigger value="services">По услугам</TabsTrigger>
+            <TabsTrigger value="table">Сводная таблица</TabsTrigger>
+          </TabsList>
+        </div>
 
-        </TabsList>
 
         <TabsContent value="summary" className="mt-4">
           <ExpensesBlock
