@@ -40,6 +40,7 @@ import { toast } from "sonner";
 
 import {
   listAppointments,
+  listAppointmentsByIds,
   listExpenses,
   createExpense,
   deleteExpense,
@@ -230,7 +231,7 @@ function ExpensesPage() {
   // Это убирает перекос «работа в июле — оплата в августе».
   const apptById = useMemo(() => {
     const m = new Map<string, ApptRow>();
-    paymentAppts.forEach((a) => m.set(a.id, a as ApptRow));
+    paymentAppts.forEach((a: ApptRow) => m.set(a.id, a));
     return m;
   }, [paymentAppts]);
 
