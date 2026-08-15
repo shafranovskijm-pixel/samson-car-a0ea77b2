@@ -123,6 +123,29 @@ function ExpensesPage() {
     queryKey: ["payments-range", fromIso, toIso],
     queryFn: () => listPaymentsRange(fromIso, toIso),
   });
+  // Записи, к которым относятся платежи периода (могут быть из другого месяца).
+  const paymentApptIds = useMemo(
+    () => Array.from(new Set(payments.map((p) => p.appointment_id).filter(Boolean))),
+    [payments],
+  );
+  const { data: paymentAppts = [] } = useQuery({
+    queryKey: ["appointments", "by-payments", paymentApptIds],
+    queryFn: () => listAppointmentsByIds(paymentApptIds),
+    enabled: paymentApptIds.length > 0,
+  });
+  // Всё с начала работы и до конца периода — для сальдо по мастерам (долг прошлых месяцев).
+  const { data: allApptsToDate = [] } = useQuery({
+    queryKey: ["appointments", "to-date", toIso],
+    queryFn: () => listAppointments(undefined, rangeEnd),
+  });
+  const { data: allAdvancesToDate = [] } = useQuery({
+    queryKey: ["mechanic_advances", "to-date", toIso],
+    queryFn: () => listMechanicAdvances({ to: toIso }),
+  });
+  const { data: allExpensesToDate = [] } = useQuery({
+    queryKey: ["expenses", "to-date", toIso],
+    queryFn: () => listExpenses(undefined, toIso),
+  });
 
   // Только выполненные записи участвуют в «начислении» ЗП и обязательств.
   const doneAppts = useMemo(() => appts.filter((a) => a.status === "done"), [appts]);
