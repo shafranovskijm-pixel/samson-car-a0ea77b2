@@ -344,6 +344,23 @@ export const listAppointments = async (
 export const getAppointment = async (id: string): Promise<AppointmentWithRelations> =>
   throwIf(await supabase.from("appointments").select(APPT_SELECT).eq("id", id).single()) as AppointmentWithRelations;
 
+/** Записи по списку id — нужно для кассового расчёта ЗП по датам платежей. */
+export const listAppointmentsByIds = async (
+  ids: string[],
+): Promise<AppointmentWithRelations[]> => {
+  const unique = Array.from(new Set(ids)).filter(Boolean);
+  if (unique.length === 0) return [];
+  const out: AppointmentWithRelations[] = [];
+  for (let i = 0; i < unique.length; i += 100) {
+    const chunk = unique.slice(i, i + 100);
+    const rows = throwIf(
+      await supabase.from("appointments").select(APPT_SELECT).in("id", chunk),
+    ) as AppointmentWithRelations[];
+    out.push(...(rows ?? []));
+  }
+  return out;
+};
+
 type ApptServiceInput = { service_id: string; price: number; mechanic_payout: number };
 
 export const createAppointment = async (input: {
