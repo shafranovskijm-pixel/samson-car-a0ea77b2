@@ -40,6 +40,7 @@ import { toast } from "sonner";
 
 import {
   listAppointments,
+  listAppointmentsByIds,
   listExpenses,
   createExpense,
   deleteExpense,
@@ -123,6 +124,29 @@ function ExpensesPage() {
     queryKey: ["payments-range", fromIso, toIso],
     queryFn: () => listPaymentsRange(fromIso, toIso),
   });
+  // Записи, к которым относятся платежи периода (могут быть из другого месяца).
+  const paymentApptIds = useMemo(
+    () => Array.from(new Set(payments.map((p) => p.appointment_id).filter(Boolean))),
+    [payments],
+  );
+  const { data: paymentAppts = [] } = useQuery({
+    queryKey: ["appointments", "by-payments", paymentApptIds],
+    queryFn: () => listAppointmentsByIds(paymentApptIds),
+    enabled: paymentApptIds.length > 0,
+  });
+  // Всё с начала работы и до конца периода — для сальдо по мастерам (долг прошлых месяцев).
+  const { data: allApptsToDate = [] } = useQuery({
+    queryKey: ["appointments", "to-date", toIso],
+    queryFn: () => listAppointments(undefined, rangeEnd),
+  });
+  const { data: allAdvancesToDate = [] } = useQuery({
+    queryKey: ["mechanic_advances", "to-date", toIso],
+    queryFn: () => listMechanicAdvances({ to: toIso }),
+  });
+  const { data: allExpensesToDate = [] } = useQuery({
+    queryKey: ["expenses", "to-date", toIso],
+    queryFn: () => listExpenses(undefined, toIso),
+  });
 
   // Только выполненные записи участвуют в «начислении» ЗП и обязательств.
   const doneAppts = useMemo(() => appts.filter((a) => a.status === "done"), [appts]);
@@ -200,16 +224,59 @@ function ExpensesPage() {
 
   // Начислено мастерам (по всем выполненным работам периода) — с учётом % мастера/услуги.
   const mechanicsAccrued = doneAppts.reduce((s, a) => s + apptPayout(a), 0);
-  // Фактически выплачено мастерам за период (авансы)
-  const mechanicsPaid = advances.reduce((s, a) => s + Number(a.amount ?? 0), 0);
   // Оборот по выполненным работам (начисление, независимо от даты оплаты)
   const accruedRevenue = doneAppts.reduce((s, a) => s + Number(a.total_price ?? 0), 0);
 
+  // ЗП КАССОВЫМ методом: доля выплаты мастеру от каждого фактического платежа периода.
+  // Это убирает перекос «работа в июле — оплата в августе».
+  const apptById = useMemo(() => {
+    const m = new Map<string, ApptRow>();
+    paymentAppts.forEach((a: ApptRow) => m.set(a.id, a));
+    return m;
+  }, [paymentAppts]);
 
-  const otherExpenses = expenses.reduce((s, e) => s + Number(e.amount ?? 0), 0);
-  const cashProfit = revenue - mechanicsAccrued - otherExpenses;
+  const cashPayout = useMemo(
+    () =>
+      payments.reduce((s, p) => {
+        const a = apptById.get(p.appointment_id);
+        if (!a) return s;
+        const total = Number(a.total_price ?? 0);
+        const full = apptPayout(a);
+        if (total <= 0 || full <= 0) return s;
+        const share = (full * Number(p.amount ?? 0)) / total;
+        return s + Math.min(full, Math.max(0, share));
+      }, 0),
+    // apptPayout зависит от справочников, они в этих же зависимостях
+    [payments, apptById, mechById, svcById],
+  );
+
+  // Расходы: выплаты ЗП/авансов помечаются флагом и НЕ вычитаются из прибыли повторно.
+  const operationalExpenses = expenses.filter((e) => !e.is_payroll);
+  const payrollExpenses = expenses.filter((e) => e.is_payroll);
+  const otherExpenses = operationalExpenses.reduce((s, e) => s + Number(e.amount ?? 0), 0);
+  const payrollExpensesTotal = payrollExpenses.reduce((s, e) => s + Number(e.amount ?? 0), 0);
+
+  // Фактически выплачено мастерам за период: авансы + расходы с пометкой «выплата ЗП».
+  const mechanicsPaid =
+    advances.reduce((s, a) => s + Number(a.amount ?? 0), 0) + payrollExpensesTotal;
+
+  const cashProfit = revenue - cashPayout - otherExpenses;
   const accruedProfit = accruedRevenue - mechanicsAccrued - otherExpenses;
   const mechanicsDebt = mechanicsAccrued - mechanicsPaid;
+
+  // Полное сальдо по мастерам с учётом прошлых периодов (входящий долг).
+  const accruedToDate = useMemo(
+    () =>
+      allApptsToDate
+        .filter((a) => a.status === "done")
+        .reduce((s, a) => s + apptPayout(a as ApptRow), 0),
+    [allApptsToDate, mechById, svcById],
+  );
+  const paidToDate =
+    allAdvancesToDate.reduce((s, a) => s + Number(a.amount ?? 0), 0) +
+    allExpensesToDate.filter((e) => e.is_payroll).reduce((s, e) => s + Number(e.amount ?? 0), 0);
+  const mechanicsDebtTotal = accruedToDate - paidToDate;
+  const openingDebt = mechanicsDebtTotal - mechanicsDebt;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
@@ -313,26 +380,29 @@ function ExpensesPage() {
               Зарплаты (мастера)
             </div>
             <div className="mt-1.5 break-words text-xl font-bold sm:text-2xl text-amber-600">
-              {fmt(mechanicsAccrued)}
+              {fmt(cashPayout)}
             </div>
             <div className="mt-1 text-[11px] text-muted-foreground">
-              Начислено в этом периоде
+              По оплаченным работам (в прибыли учитывается эта сумма)
+            </div>
+            <div className="mt-1 text-[10px] text-muted-foreground">
+              начислено за {periodLabel}: {fmt(mechanicsAccrued)}
             </div>
             <div className="mt-auto border-t pt-3">
               <div className="flex items-center justify-between gap-2">
                 <span className="min-w-0 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                  {mechanicsDebt >= 0 ? "К выплате" : "Переплата"}
+                  {mechanicsDebtTotal >= 0 ? "Долг мастерам всего" : "Переплата мастерам"}
                 </span>
                 <span
                   className={`shrink-0 text-sm font-semibold ${
-                    mechanicsDebt > 0
+                    mechanicsDebtTotal > 0
                       ? "text-amber-600"
-                      : mechanicsDebt < 0
+                      : mechanicsDebtTotal < 0
                         ? "text-red-600"
                         : "text-green-600"
                   }`}
                 >
-                  {fmt(Math.abs(mechanicsDebt))}
+                  {fmt(Math.abs(mechanicsDebtTotal))}
                 </span>
               </div>
               <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-muted">
@@ -340,15 +410,16 @@ function ExpensesPage() {
                   className="h-full bg-amber-500 transition-all"
                   style={{
                     width: `${
-                      mechanicsAccrued > 0
-                        ? Math.min(100, Math.round((mechanicsPaid / mechanicsAccrued) * 100))
+                      accruedToDate > 0
+                        ? Math.min(100, Math.round((paidToDate / accruedToDate) * 100))
                         : 0
                     }%`,
                   }}
                 />
               </div>
               <div className="mt-1 text-[10px] leading-snug text-muted-foreground">
-                начислено {fmt(mechanicsAccrued)} − авансы {fmt(mechanicsPaid)}
+                с прошлых периодов {fmt(openingDebt)} + за {periodLabel} начислено{" "}
+                {fmt(mechanicsAccrued)} − выплачено {fmt(mechanicsPaid)}
               </div>
             </div>
           </CardContent>
@@ -461,6 +532,7 @@ function ExpensesPage() {
         svcById={svcById}
         revenue={revenue}
         mechanicsAccrued={mechanicsAccrued}
+        cashPayout={cashPayout}
         otherExpenses={otherExpenses}
         cashProfit={cashProfit}
       />
@@ -599,6 +671,7 @@ function ExpensesBlock({
     title: "",
     amount: "",
     note: "",
+    is_payroll: false,
   });
 
   const invalidate = () =>
@@ -611,11 +684,12 @@ function ExpensesBlock({
         title: form.title.trim(),
         amount: Number(form.amount) || 0,
         note: form.note.trim() || null,
+        is_payroll: form.is_payroll,
       }),
     onSuccess: () => {
       invalidate();
       setOpen(false);
-      setForm({ spent_at: defaultDate, title: "", amount: "", note: "" });
+      setForm({ spent_at: defaultDate, title: "", amount: "", note: "", is_payroll: false });
       toast.success("Расход добавлен");
     },
     onError: (e: Error) => toast.error(e.message),
@@ -662,12 +736,20 @@ function ExpensesBlock({
                 className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 rounded-lg border p-3"
               >
                 <div className="min-w-0">
-                  <div className="truncate text-sm font-medium">{e.title}</div>
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="truncate text-sm font-medium">{e.title}</span>
+                    {e.is_payroll && (
+                      <span className="shrink-0 rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-amber-600">
+                        ЗП
+                      </span>
+                    )}
+                  </div>
                   <div className="truncate text-xs text-muted-foreground">
                     {format(parseISO(e.spent_at), "d MMM yyyy", { locale: ru })}
                     {e.note ? ` · ${e.note}` : ""}
                   </div>
                 </div>
+
                 <div className="text-right text-sm font-semibold">{fmt(Number(e.amount))}</div>
                 <Button
                   variant="ghost"
@@ -724,7 +806,23 @@ function ExpensesBlock({
                 rows={2}
               />
             </div>
+            <label className="flex cursor-pointer items-start gap-3 rounded-lg border p-3">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 accent-primary"
+                checked={form.is_payroll}
+                onChange={(ev) => setForm((f) => ({ ...f, is_payroll: ev.target.checked }))}
+              />
+              <span className="text-sm leading-snug">
+                Это выплата зарплаты / аванса мастеру
+                <span className="mt-0.5 block text-xs text-muted-foreground">
+                  Такая выплата уменьшает долг перед мастером и не вычитается из прибыли
+                  повторно.
+                </span>
+              </span>
+            </label>
           </div>
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>
               Отмена

@@ -344,6 +344,23 @@ export const listAppointments = async (
 export const getAppointment = async (id: string): Promise<AppointmentWithRelations> =>
   throwIf(await supabase.from("appointments").select(APPT_SELECT).eq("id", id).single()) as AppointmentWithRelations;
 
+/** Записи по списку id — нужно для кассового расчёта ЗП по датам платежей. */
+export const listAppointmentsByIds = async (
+  ids: string[],
+): Promise<AppointmentWithRelations[]> => {
+  const unique = Array.from(new Set(ids)).filter(Boolean);
+  if (unique.length === 0) return [];
+  const out: AppointmentWithRelations[] = [];
+  for (let i = 0; i < unique.length; i += 100) {
+    const chunk = unique.slice(i, i + 100);
+    const rows = throwIf(
+      await supabase.from("appointments").select(APPT_SELECT).in("id", chunk),
+    ) as AppointmentWithRelations[];
+    out.push(...(rows ?? []));
+  }
+  return out;
+};
+
 type ApptServiceInput = { service_id: string; price: number; mechanic_payout: number };
 
 export const createAppointment = async (input: {
@@ -750,6 +767,8 @@ export type Expense = {
   amount: number;
   title: string;
   note: string | null;
+  /** true — это выплата ЗП/аванса мастеру: в прибыли не учитывается повторно. */
+  is_payroll: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -764,7 +783,13 @@ export const listExpenses = async (from?: string, to?: string): Promise<Expense[
 };
 
 export const createExpense = async (
-  input: { spent_at: string; amount: number; title: string; note: string | null },
+  input: {
+    spent_at: string;
+    amount: number;
+    title: string;
+    note: string | null;
+    is_payroll?: boolean;
+  },
 ): Promise<Expense> => {
   const { data, error } = await anySb.from("expenses").insert(input).select().single();
   if (error) throw error;
@@ -773,7 +798,13 @@ export const createExpense = async (
 
 export const updateExpense = async (
   id: string,
-  input: Partial<{ spent_at: string; amount: number; title: string; note: string | null }>,
+  input: Partial<{
+    spent_at: string;
+    amount: number;
+    title: string;
+    note: string | null;
+    is_payroll: boolean;
+  }>,
 ): Promise<Expense> => {
   const { data, error } = await anySb.from("expenses").update(input).eq("id", id).select().single();
   if (error) throw error;

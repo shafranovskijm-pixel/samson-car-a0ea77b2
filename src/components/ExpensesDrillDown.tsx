@@ -52,6 +52,8 @@ type Props = {
   svcById: Map<string, PayoutService>;
   revenue: number;
   mechanicsAccrued: number;
+  /** ЗП кассовым методом: доля выплат мастерам от фактических платежей периода. */
+  cashPayout: number;
   otherExpenses: number;
   cashProfit: number;
 };
@@ -142,12 +144,12 @@ function ProfitView(p: Props) {
           {fmt(p.cashProfit)}
         </div>
         <div className="mt-3 rounded-md bg-background p-3 font-mono text-xs leading-6">
-          Прибыль = Касса − ЗП мастеров − Прочие расходы
+          Прибыль = Касса − ЗП по оплаченным работам − Прочие расходы
           <br />
           <span className={p.cashProfit >= 0 ? "text-green-600" : "text-red-600"}>
             {fmt(p.cashProfit)}
           </span>{" "}
-          = {fmt(p.revenue)} − {fmt(p.mechanicsAccrued)} − {fmt(p.otherExpenses)}
+          = {fmt(p.revenue)} − {fmt(p.cashPayout)} − {fmt(p.otherExpenses)}
         </div>
       </div>
       <div className="space-y-2">
@@ -158,18 +160,19 @@ function ProfitView(p: Props) {
           onClick={() => p.onOpenMetric("income")}
         />
         <Row
-          label="Начислено мастерам"
-          value={"− " + fmt(p.mechanicsAccrued)}
+          label="ЗП мастеров с оплаченных работ"
+          value={"− " + fmt(p.cashPayout)}
           tone="warn"
           onClick={() => p.onOpenMetric("payout")}
         />
         <Row
-          label="Прочие расходы"
+          label="Прочие расходы (без выплат ЗП)"
           value={"− " + fmt(p.otherExpenses)}
           tone="warn"
           onClick={() => p.onOpenMetric("expense")}
         />
       </div>
+
       <p className="text-xs text-muted-foreground">
         Учитываем кассовые поступления в этот период. Начисленная ЗП считается
         по услугам в выполненных за период записях. Нажмите на строку —
@@ -395,6 +398,11 @@ function PayoutView(p: Props) {
         <div className="mt-1 text-3xl font-bold text-amber-600 tabular-nums">
           {fmt(p.mechanicsAccrued)}
         </div>
+        <div className="mt-1 text-xs text-muted-foreground">
+          В прибыль за период попадает ЗП с фактически оплаченных работ:{" "}
+          <span className="font-semibold text-foreground">{fmt(p.cashPayout)}</span>
+        </div>
+
         <div className="mt-2 rounded-md border bg-muted/30 p-3 text-xs leading-6">
           Формула по услуге: ставка мастера, если задана; иначе % услуги;
           иначе 50%. Если в услуге вручную указана сумма выплаты — берётся она.
