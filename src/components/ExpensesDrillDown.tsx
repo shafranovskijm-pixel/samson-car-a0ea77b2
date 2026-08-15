@@ -23,7 +23,7 @@ import {
   type PayoutService,
 } from "@/lib/payouts";
 
-export type DrillMetric = "profit" | "income" | "payout" | "expense";
+export type DrillMetric = "profit" | "income" | "payout" | "expense" | "debt";
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(
@@ -56,6 +56,16 @@ type Props = {
   cashPayout: number;
   otherExpenses: number;
   cashProfit: number;
+  /** Входящий долг/переплата до начала текущего периода. */
+  openingDebt: number;
+  /** Всего выплачено мастерам за текущий период (авансы + расходы ЗП). */
+  mechanicsPaid: number;
+  /** Итоговый долг/переплата мастерам на конец периода. */
+  mechanicsDebtTotal: number;
+  /** Все выплаты мастерам до конца периода (для прогресса). */
+  paidToDate?: number;
+  /** Все начисления мастерам до конца периода (для прогресса). */
+  accruedToDate?: number;
 };
 
 const TITLE: Record<DrillMetric, string> = {
@@ -63,6 +73,7 @@ const TITLE: Record<DrillMetric, string> = {
   income: "Доходы (касса)",
   payout: "Зарплаты мастеров",
   expense: "Прочие расходы",
+  debt: "Долг / переплата мастерам",
 };
 
 export function ExpensesDrillDown(props: Props) {
@@ -83,6 +94,7 @@ export function ExpensesDrillDown(props: Props) {
           {metric === "income" && <IncomeView {...props} />}
           {metric === "payout" && <PayoutView {...props} />}
           {metric === "expense" && <ExpenseView {...props} />}
+          {metric === "debt" && <DebtView {...props} />}
         </div>
       </DialogContent>
     </Dialog>
@@ -528,6 +540,122 @@ function PayoutView(p: Props) {
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+function DebtView(p: Props) {
+  const {
+    openingDebt,
+    mechanicsAccrued,
+    mechanicsPaid,
+    mechanicsDebtTotal,
+    accruedToDate,
+    paidToDate,
+  } = p;
+  const isOverpaid = mechanicsDebtTotal < 0;
+
+  return (
+    <div className="space-y-5">
+      <div className="rounded-lg border-2 border-amber-500/30 bg-amber-50 p-4 dark:bg-amber-950/20">
+        <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+          {isOverpaid ? "Переплата мастерам" : "Долг мастерам на конец периода"}
+        </div>
+        <div
+          className={`mt-1 text-3xl font-bold tabular-nums ${isOverpaid ? "text-red-600" : "text-amber-600"}`}
+        >
+          {fmt(Math.abs(mechanicsDebtTotal))}
+        </div>
+        <div className="mt-3 rounded-md bg-background p-3 font-mono text-xs leading-6">
+          {isOverpaid
+            ? "Переплата = Выплачено больше, чем начислено"
+            : "Долг = Начислено мастерам за всё время − Выплачено за всё время"}
+          <br />
+          <span className={isOverpaid ? "text-red-600" : "text-amber-600"}>
+            {fmt(Math.abs(mechanicsDebtTotal))}
+          </span>{" "}
+          = {fmt(openingDebt)} + {fmt(mechanicsAccrued)} − {fmt(mechanicsPaid)}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Row
+          label="Входящий долг / переплата на начало периода"
+          value={openingDebt >= 0 ? fmt(openingDebt) : "− " + fmt(Math.abs(openingDebt))}
+          tone={openingDebt > 0 ? "warn" : openingDebt < 0 ? "bad" : "good"}
+          strong
+        />
+        <Row
+          label="+ Начислено за текущий период"
+          value={fmt(mechanicsAccrued)}
+          tone="neutral"
+        />
+        <Row
+          label="− Выплачено за текущий период (авансы + выплаты ЗП)"
+          value={fmt(mechanicsPaid)}
+          tone="neutral"
+        />
+        <div className="flex items-center justify-between gap-3 rounded-lg border-2 border-amber-500/20 bg-amber-50/50 p-3 text-sm dark:bg-amber-950/10">
+          <span className="font-semibold">
+            = {isOverpaid ? "Переплата" : "Долг мастерам"} на конец периода
+          </span>
+          <span
+            className={`font-bold tabular-nums ${isOverpaid ? "text-red-600" : "text-amber-600"}`}
+          >
+            {fmt(Math.abs(mechanicsDebtTotal))}
+          </span>
+        </div>
+      </div>
+
+      {accruedToDate !== undefined && paidToDate !== undefined && accruedToDate > 0 && (
+        <div className="rounded-lg border p-3">
+          <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            Выплачено за всё время
+          </div>
+          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+            <div
+              className="h-full bg-amber-500 transition-all"
+              style={{
+                width: `${Math.min(100, Math.round((paidToDate / accruedToDate) * 100))}%`,
+              }}
+            />
+          </div>
+          <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+            <span>Начислено: {fmt(accruedToDate)}</span>
+            <span>Выплачено: {fmt(paidToDate)}</span>
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-3 text-xs text-muted-foreground leading-relaxed">
+        <p>
+          <strong className="text-foreground">Что значит «с прошлых периодов»?</strong>{" "}
+          Это разница между начисленной и выплаченной ЗП мастерам, накопленная до
+          начала текущего периода. Если число положительное — мы должны мастерам
+          деньги за выполненную раньше работу. Если отрицательное — мы выплатили
+          больше, чем они уже заработали.
+        </p>
+        <p>
+          <strong className="text-foreground">Почему это важно?</strong>{" "}
+          Прибыль считается только по текущему периоду (касса − текущая ЗП −
+          расходы). Но долг прошлых месяцев не исчезает: он показывает, сколько
+          реально нужно отдать мастерам «сейчас», чтобы закрыть все старые
+          обязательства.
+        </p>
+        <p>
+          <strong className="text-foreground">Как используется?</strong>{" "}
+          «К выплате» в карточке мастера = его долг за текущий период + его долг
+          за все предыдущие периоды. Поэтому общая сумма «Долг мастерам всего»
+          может быть больше, чем «К выплате» только за выбранный месяц.
+        </p>
+      </div>
+
+      <div className="rounded border border-dashed bg-muted/20 p-3 text-[11px] leading-relaxed text-muted-foreground">
+        Пример: если в июле начислили 100 000 ₽, а выплатили 80 000 ₽, осталось
+        долг 20 000 ₽. В августе начислили ещё 100 000 ₽ и выплатили 90 000 ₽, то
+        «с прошлых периодов» будет 20 000 ₽, за август — 10 000 ₽, и общий долг
+        30 000 ₽.
+      </div>
     </div>
   );
 }
