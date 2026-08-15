@@ -671,6 +671,7 @@ function ExpensesBlock({
     title: "",
     amount: "",
     note: "",
+    is_payroll: false,
   });
 
   const invalidate = () =>
@@ -683,11 +684,12 @@ function ExpensesBlock({
         title: form.title.trim(),
         amount: Number(form.amount) || 0,
         note: form.note.trim() || null,
+        is_payroll: form.is_payroll,
       }),
     onSuccess: () => {
       invalidate();
       setOpen(false);
-      setForm({ spent_at: defaultDate, title: "", amount: "", note: "" });
+      setForm({ spent_at: defaultDate, title: "", amount: "", note: "", is_payroll: false });
       toast.success("Расход добавлен");
     },
     onError: (e: Error) => toast.error(e.message),
