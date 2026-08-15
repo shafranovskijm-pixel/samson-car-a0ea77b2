@@ -372,9 +372,13 @@ function ExpensesPage() {
         </Card>
 
         {/* ЗП мастерам */}
-        <Card role="button" onClick={() => setDrill("payout")}
+        <Card
+          role="button"
+          onClick={() => setDrill("payout")}
           tabIndex={0}
-          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setDrill("payout"); } }} className="cursor-pointer transition-all hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.99]">
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setDrill("payout"); } }}
+          className="cursor-pointer transition-all hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.99]"
+        >
           <CardContent className="flex h-full flex-col p-4 sm:p-5">
             <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
               Зарплаты (мастера)
@@ -389,38 +393,51 @@ function ExpensesPage() {
               начислено за {periodLabel}: {fmt(mechanicsAccrued)}
             </div>
             <div className="mt-auto border-t pt-3">
-              <div className="flex items-center justify-between gap-2">
-                <span className="min-w-0 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                  {mechanicsDebtTotal >= 0 ? "Долг мастерам всего" : "Переплата мастерам"}
-                </span>
-                <span
-                  className={`shrink-0 text-sm font-semibold ${
-                    mechanicsDebtTotal > 0
-                      ? "text-amber-600"
-                      : mechanicsDebtTotal < 0
-                        ? "text-red-600"
-                        : "text-green-600"
-                  }`}
-                >
-                  {fmt(Math.abs(mechanicsDebtTotal))}
-                </span>
-              </div>
-              <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full bg-amber-500 transition-all"
-                  style={{
-                    width: `${
-                      accruedToDate > 0
-                        ? Math.min(100, Math.round((paidToDate / accruedToDate) * 100))
-                        : 0
-                    }%`,
-                  }}
-                />
-              </div>
-              <div className="mt-1 text-[10px] leading-snug text-muted-foreground">
-                с прошлых периодов {fmt(openingDebt)} + за {periodLabel} начислено{" "}
-                {fmt(mechanicsAccrued)} − выплачено {fmt(mechanicsPaid)}
-              </div>
+              <button
+                type="button"
+                onClick={(ev) => {
+                  ev.stopPropagation();
+                  setDrill("debt");
+                }}
+                className="w-full"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="min-w-0 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    {mechanicsDebtTotal >= 0 ? "Долг мастерам всего" : "Переплата мастерам"}
+                  </span>
+                  <span
+                    className={`shrink-0 text-sm font-semibold ${
+                      mechanicsDebtTotal > 0
+                        ? "text-amber-600"
+                        : mechanicsDebtTotal < 0
+                          ? "text-red-600"
+                          : "text-green-600"
+                    }`}
+                  >
+                    {fmt(Math.abs(mechanicsDebtTotal))}
+                  </span>
+                </div>
+                <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full bg-amber-500 transition-all"
+                    style={{
+                      width: `${
+                        accruedToDate > 0
+                          ? Math.min(100, Math.round((paidToDate / accruedToDate) * 100))
+                          : 0
+                      }%`,
+                    }}
+                  />
+                </div>
+                <div className="mt-1 text-[10px] leading-snug text-muted-foreground">
+                  с прошлых периодов {fmt(openingDebt)} + за {periodLabel} начислено{" "}
+                  {fmt(mechanicsAccrued)} − выплачено {fmt(mechanicsPaid)}
+                </div>
+                <div className="mt-1 flex items-center gap-1 text-[10px] text-amber-600">
+                  <span className="inline-block h-3 w-3 rounded-full border border-current flex items-center justify-center text-[8px]">?</span>
+                  Нажмите, чтобы разобрать долг
+                </div>
+              </button>
             </div>
           </CardContent>
         </Card>
