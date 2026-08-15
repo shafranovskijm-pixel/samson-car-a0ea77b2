@@ -532,6 +532,7 @@ function ExpensesPage() {
         svcById={svcById}
         revenue={revenue}
         mechanicsAccrued={mechanicsAccrued}
+        cashPayout={cashPayout}
         otherExpenses={otherExpenses}
         cashProfit={cashProfit}
       />
