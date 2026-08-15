@@ -736,12 +736,20 @@ function ExpensesBlock({
                 className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 rounded-lg border p-3"
               >
                 <div className="min-w-0">
-                  <div className="truncate text-sm font-medium">{e.title}</div>
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="truncate text-sm font-medium">{e.title}</span>
+                    {e.is_payroll && (
+                      <span className="shrink-0 rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-amber-600">
+                        ЗП
+                      </span>
+                    )}
+                  </div>
                   <div className="truncate text-xs text-muted-foreground">
                     {format(parseISO(e.spent_at), "d MMM yyyy", { locale: ru })}
                     {e.note ? ` · ${e.note}` : ""}
                   </div>
                 </div>
+
                 <div className="text-right text-sm font-semibold">{fmt(Number(e.amount))}</div>
                 <Button
                   variant="ghost"
