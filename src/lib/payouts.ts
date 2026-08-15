@@ -15,9 +15,10 @@ export function effectivePercent(
   service?: PayoutService,
 ): number {
   const mp = Number(mechanic?.default_payout_percent);
-  if (Number.isFinite(mp) && mp > 0) return mp;
+  // 0% — валидное значение (стажёр/акция), поэтому проверяем на null, а не на > 0.
+  if (mechanic?.default_payout_percent != null && Number.isFinite(mp) && mp >= 0) return mp;
   const sp = Number(service?.default_payout_percent);
-  if (Number.isFinite(sp) && sp > 0) return sp;
+  if (service?.default_payout_percent != null && Number.isFinite(sp) && sp >= 0) return sp;
   return DEFAULT_PAYOUT_PERCENT;
 }
 

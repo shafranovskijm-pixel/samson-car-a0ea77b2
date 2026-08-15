@@ -384,15 +384,25 @@ export const updateAppointment = async (
 ) => {
   const { services, ...appt } = input;
   throwIf(await supabase.from("appointments").update(appt).eq("id", id).select().single());
-  const { error: delErr } = await supabase
-    .from("appointment_services")
-    .delete()
-    .eq("appointment_id", id);
+
+  // ВАЖНО для бухгалтерии: не удаляем все услуги разом.
+  // Иначе стоимость записи на мгновение становится 0, и триггеры пересчёта
+  // рассинхронизируют оплаченную сумму. Делаем точечный diff.
+  const keepIds = services.map((s) => s.service_id);
+  let delQ = supabase.from("appointment_services").delete().eq("appointment_id", id);
+  if (keepIds.length > 0) {
+    delQ = delQ.not("service_id", "in", `(${keepIds.join(",")})`);
+  }
+  const { error: delErr } = await delQ;
   if (delErr) throw delErr;
+
   if (services.length > 0) {
     const { error } = await supabase
       .from("appointment_services")
-      .insert(services.map((s) => ({ ...s, appointment_id: id })));
+      .upsert(
+        services.map((s) => ({ ...s, appointment_id: id })),
+        { onConflict: "appointment_id,service_id" },
+      );
     if (error) throw error;
   }
 };
