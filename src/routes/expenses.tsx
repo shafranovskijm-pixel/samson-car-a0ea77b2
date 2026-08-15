@@ -798,7 +798,23 @@ function ExpensesBlock({
                 rows={2}
               />
             </div>
+            <label className="flex cursor-pointer items-start gap-3 rounded-lg border p-3">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 accent-primary"
+                checked={form.is_payroll}
+                onChange={(ev) => setForm((f) => ({ ...f, is_payroll: ev.target.checked }))}
+              />
+              <span className="text-sm leading-snug">
+                Это выплата зарплаты / аванса мастеру
+                <span className="mt-0.5 block text-xs text-muted-foreground">
+                  Такая выплата уменьшает долг перед мастером и не вычитается из прибыли
+                  повторно.
+                </span>
+              </span>
+            </label>
           </div>
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>
               Отмена
