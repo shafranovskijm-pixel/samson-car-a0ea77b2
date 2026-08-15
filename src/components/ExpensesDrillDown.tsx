@@ -398,6 +398,11 @@ function PayoutView(p: Props) {
         <div className="mt-1 text-3xl font-bold text-amber-600 tabular-nums">
           {fmt(p.mechanicsAccrued)}
         </div>
+        <div className="mt-1 text-xs text-muted-foreground">
+          В прибыль за период попадает ЗП с фактически оплаченных работ:{" "}
+          <span className="font-semibold text-foreground">{fmt(p.cashPayout)}</span>
+        </div>
+
         <div className="mt-2 rounded-md border bg-muted/30 p-3 text-xs leading-6">
           Формула по услуге: ставка мастера, если задана; иначе % услуги;
           иначе 50%. Если в услуге вручную указана сумма выплаты — берётся она.
