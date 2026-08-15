@@ -94,6 +94,7 @@ export function ExpensesDrillDown(props: Props) {
           {metric === "income" && <IncomeView {...props} />}
           {metric === "payout" && <PayoutView {...props} />}
           {metric === "expense" && <ExpenseView {...props} />}
+          {metric === "debt" && <DebtView {...props} />}
         </div>
       </DialogContent>
     </Dialog>
