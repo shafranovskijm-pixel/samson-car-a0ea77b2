@@ -7,6 +7,7 @@ import * as XLSX from "xlsx";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import type { AppointmentWithRelations, MechanicAdvance } from "@/lib/api";
+import { ussDateISO } from "@/lib/tz";
 import {
   effectivePercent,
   effectivePayout,
@@ -83,7 +84,8 @@ export function ExpensesMonthlyTable({
 
     for (const a of sortedAppts) {
       if (a.status !== "done") continue;
-      const dateOnly = a.starts_at.slice(0, 10);
+      // Дата работы по Уссурийску (UTC+10), иначе утренние записи уезжают на прошлый день/месяц.
+      const dateOnly = ussDateISO(new Date(a.starts_at));
       const carName = [a.car?.brand?.name, a.car?.model].filter(Boolean).join(" ") || "—";
       const plate = a.car?.license_plate ?? "";
       const mechanicId = a.mechanic_id ?? UNASSIGNED;

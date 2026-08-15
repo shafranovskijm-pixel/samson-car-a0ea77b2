@@ -179,6 +179,12 @@ export function inRange(d: Date | string | number, start: Date, end: Date): bool
 
 /** Попадает ли календарная дата (yyyy-MM-dd, напр. дата аванса/расхода) в период. */
 export function inDayRange(day: string | Date, start: Date, end: Date): boolean {
-  const s = typeof day === "string" ? day.slice(0, 10) : isoDate(day);
+  let s: string;
+  if (typeof day === "string") {
+    // Чистая дата (yyyy-MM-dd) — берём как есть; полный timestamp — переводим в дату Уссурийска.
+    s = /^\d{4}-\d{2}-\d{2}$/.test(day.trim()) ? day.trim() : ussDateISO(new Date(day));
+  } else {
+    s = isoDate(day);
+  }
   return s >= isoDate(start) && s <= isoDate(end);
 }
