@@ -576,6 +576,7 @@ export type Database = {
           amount: number
           created_at: string
           id: string
+          is_payroll: boolean
           note: string | null
           spent_at: string
           title: string
@@ -585,6 +586,7 @@ export type Database = {
           amount?: number
           created_at?: string
           id?: string
+          is_payroll?: boolean
           note?: string | null
           spent_at?: string
           title: string
@@ -594,6 +596,7 @@ export type Database = {
           amount?: number
           created_at?: string
           id?: string
+          is_payroll?: boolean
           note?: string | null
           spent_at?: string
           title?: string
