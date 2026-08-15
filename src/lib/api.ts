@@ -750,6 +750,8 @@ export type Expense = {
   amount: number;
   title: string;
   note: string | null;
+  /** true — это выплата ЗП/аванса мастеру: в прибыли не учитывается повторно. */
+  is_payroll: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -764,7 +766,13 @@ export const listExpenses = async (from?: string, to?: string): Promise<Expense[
 };
 
 export const createExpense = async (
-  input: { spent_at: string; amount: number; title: string; note: string | null },
+  input: {
+    spent_at: string;
+    amount: number;
+    title: string;
+    note: string | null;
+    is_payroll?: boolean;
+  },
 ): Promise<Expense> => {
   const { data, error } = await anySb.from("expenses").insert(input).select().single();
   if (error) throw error;
@@ -773,7 +781,13 @@ export const createExpense = async (
 
 export const updateExpense = async (
   id: string,
-  input: Partial<{ spent_at: string; amount: number; title: string; note: string | null }>,
+  input: Partial<{
+    spent_at: string;
+    amount: number;
+    title: string;
+    note: string | null;
+    is_payroll: boolean;
+  }>,
 ): Promise<Expense> => {
   const { data, error } = await anySb.from("expenses").update(input).eq("id", id).select().single();
   if (error) throw error;
