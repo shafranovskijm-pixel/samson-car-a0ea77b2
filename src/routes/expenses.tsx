@@ -552,6 +552,11 @@ function ExpensesPage() {
         cashPayout={cashPayout}
         otherExpenses={otherExpenses}
         cashProfit={cashProfit}
+        openingDebt={openingDebt}
+        mechanicsPaid={mechanicsPaid}
+        mechanicsDebtTotal={mechanicsDebtTotal}
+        accruedToDate={accruedToDate}
+        paidToDate={paidToDate}
       />
     </div>
   );
