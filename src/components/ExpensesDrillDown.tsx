@@ -73,6 +73,7 @@ const TITLE: Record<DrillMetric, string> = {
   income: "Доходы (касса)",
   payout: "Зарплаты мастеров",
   expense: "Прочие расходы",
+  debt: "Долг / переплата мастерам",
 };
 
 export function ExpensesDrillDown(props: Props) {
