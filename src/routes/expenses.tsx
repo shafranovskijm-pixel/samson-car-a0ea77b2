@@ -200,16 +200,59 @@ function ExpensesPage() {
 
   // Начислено мастерам (по всем выполненным работам периода) — с учётом % мастера/услуги.
   const mechanicsAccrued = doneAppts.reduce((s, a) => s + apptPayout(a), 0);
-  // Фактически выплачено мастерам за период (авансы)
-  const mechanicsPaid = advances.reduce((s, a) => s + Number(a.amount ?? 0), 0);
   // Оборот по выполненным работам (начисление, независимо от даты оплаты)
   const accruedRevenue = doneAppts.reduce((s, a) => s + Number(a.total_price ?? 0), 0);
 
+  // ЗП КАССОВЫМ методом: доля выплаты мастеру от каждого фактического платежа периода.
+  // Это убирает перекос «работа в июле — оплата в августе».
+  const apptById = useMemo(() => {
+    const m = new Map<string, ApptRow>();
+    paymentAppts.forEach((a) => m.set(a.id, a as ApptRow));
+    return m;
+  }, [paymentAppts]);
 
-  const otherExpenses = expenses.reduce((s, e) => s + Number(e.amount ?? 0), 0);
-  const cashProfit = revenue - mechanicsAccrued - otherExpenses;
+  const cashPayout = useMemo(
+    () =>
+      payments.reduce((s, p) => {
+        const a = apptById.get(p.appointment_id);
+        if (!a) return s;
+        const total = Number(a.total_price ?? 0);
+        const full = apptPayout(a);
+        if (total <= 0 || full <= 0) return s;
+        const share = (full * Number(p.amount ?? 0)) / total;
+        return s + Math.min(full, Math.max(0, share));
+      }, 0),
+    // apptPayout зависит от справочников, они в этих же зависимостях
+    [payments, apptById, mechById, svcById],
+  );
+
+  // Расходы: выплаты ЗП/авансов помечаются флагом и НЕ вычитаются из прибыли повторно.
+  const operationalExpenses = expenses.filter((e) => !e.is_payroll);
+  const payrollExpenses = expenses.filter((e) => e.is_payroll);
+  const otherExpenses = operationalExpenses.reduce((s, e) => s + Number(e.amount ?? 0), 0);
+  const payrollExpensesTotal = payrollExpenses.reduce((s, e) => s + Number(e.amount ?? 0), 0);
+
+  // Фактически выплачено мастерам за период: авансы + расходы с пометкой «выплата ЗП».
+  const mechanicsPaid =
+    advances.reduce((s, a) => s + Number(a.amount ?? 0), 0) + payrollExpensesTotal;
+
+  const cashProfit = revenue - cashPayout - otherExpenses;
   const accruedProfit = accruedRevenue - mechanicsAccrued - otherExpenses;
   const mechanicsDebt = mechanicsAccrued - mechanicsPaid;
+
+  // Полное сальдо по мастерам с учётом прошлых периодов (входящий долг).
+  const accruedToDate = useMemo(
+    () =>
+      allApptsToDate
+        .filter((a) => a.status === "done")
+        .reduce((s, a) => s + apptPayout(a as ApptRow), 0),
+    [allApptsToDate, mechById, svcById],
+  );
+  const paidToDate =
+    allAdvancesToDate.reduce((s, a) => s + Number(a.amount ?? 0), 0) +
+    allExpensesToDate.filter((e) => e.is_payroll).reduce((s, e) => s + Number(e.amount ?? 0), 0);
+  const mechanicsDebtTotal = accruedToDate - paidToDate;
+  const openingDebt = mechanicsDebtTotal - mechanicsDebt;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
