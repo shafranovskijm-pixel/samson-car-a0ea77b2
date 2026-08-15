@@ -426,7 +426,12 @@ function MechanicDefaultPercent({ mechanic }: { mechanic: Mechanic }) {
             onChange={(e) => setSince(e.target.value)}
             onBlur={() => {
               if (since && since !== (mechanic.payout_percent_since ?? "")) {
-                saveM.mutate({ percent: currentPercent, since });
+                // Берём процент из поля ввода, а не из ещё не обновившихся пропсов,
+                // иначе быстрая правка двух полей подряд откатывает процент.
+                const n = Number(value);
+                const percent =
+                  Number.isFinite(n) && n >= 0 && n <= 100 ? n : currentPercent;
+                saveM.mutate({ percent, since });
               }
             }}
           />
