@@ -380,26 +380,29 @@ function ExpensesPage() {
               Зарплаты (мастера)
             </div>
             <div className="mt-1.5 break-words text-xl font-bold sm:text-2xl text-amber-600">
-              {fmt(mechanicsAccrued)}
+              {fmt(cashPayout)}
             </div>
             <div className="mt-1 text-[11px] text-muted-foreground">
-              Начислено в этом периоде
+              По оплаченным работам (в прибыли учитывается эта сумма)
+            </div>
+            <div className="mt-1 text-[10px] text-muted-foreground">
+              начислено за {periodLabel}: {fmt(mechanicsAccrued)}
             </div>
             <div className="mt-auto border-t pt-3">
               <div className="flex items-center justify-between gap-2">
                 <span className="min-w-0 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                  {mechanicsDebt >= 0 ? "К выплате" : "Переплата"}
+                  {mechanicsDebtTotal >= 0 ? "Долг мастерам всего" : "Переплата мастерам"}
                 </span>
                 <span
                   className={`shrink-0 text-sm font-semibold ${
-                    mechanicsDebt > 0
+                    mechanicsDebtTotal > 0
                       ? "text-amber-600"
-                      : mechanicsDebt < 0
+                      : mechanicsDebtTotal < 0
                         ? "text-red-600"
                         : "text-green-600"
                   }`}
                 >
-                  {fmt(Math.abs(mechanicsDebt))}
+                  {fmt(Math.abs(mechanicsDebtTotal))}
                 </span>
               </div>
               <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-muted">
@@ -407,15 +410,16 @@ function ExpensesPage() {
                   className="h-full bg-amber-500 transition-all"
                   style={{
                     width: `${
-                      mechanicsAccrued > 0
-                        ? Math.min(100, Math.round((mechanicsPaid / mechanicsAccrued) * 100))
+                      accruedToDate > 0
+                        ? Math.min(100, Math.round((paidToDate / accruedToDate) * 100))
                         : 0
                     }%`,
                   }}
                 />
               </div>
               <div className="mt-1 text-[10px] leading-snug text-muted-foreground">
-                начислено {fmt(mechanicsAccrued)} − авансы {fmt(mechanicsPaid)}
+                с прошлых периодов {fmt(openingDebt)} + за {periodLabel} начислено{" "}
+                {fmt(mechanicsAccrued)} − выплачено {fmt(mechanicsPaid)}
               </div>
             </div>
           </CardContent>
