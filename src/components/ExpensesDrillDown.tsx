@@ -23,7 +23,7 @@ import {
   type PayoutService,
 } from "@/lib/payouts";
 
-export type DrillMetric = "profit" | "income" | "payout" | "expense";
+export type DrillMetric = "profit" | "income" | "payout" | "expense" | "debt";
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(
@@ -56,6 +56,16 @@ type Props = {
   cashPayout: number;
   otherExpenses: number;
   cashProfit: number;
+  /** Входящий долг/переплата до начала текущего периода. */
+  openingDebt: number;
+  /** Всего выплачено мастерам за текущий период (авансы + расходы ЗП). */
+  mechanicsPaid: number;
+  /** Итоговый долг/переплата мастерам на конец периода. */
+  mechanicsDebtTotal: number;
+  /** Все выплаты мастерам до конца периода (для прогресса). */
+  paidToDate?: number;
+  /** Все начисления мастерам до конца периода (для прогресса). */
+  accruedToDate?: number;
 };
 
 const TITLE: Record<DrillMetric, string> = {
