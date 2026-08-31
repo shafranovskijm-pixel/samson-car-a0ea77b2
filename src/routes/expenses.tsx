@@ -231,13 +231,18 @@ function ExpensesPage() {
   // Это убирает перекос «работа в июле — оплата в августе».
   const apptById = useMemo(() => {
     const m = new Map<string, ApptRow>();
+    // Основной источник для кассовой ЗП: запись и её услуги приходят вместе
+    // с платежом, поэтому расчёт не зависит от отдельного запроса по списку id.
+    payments.forEach((p) => {
+      if (p.appointment) m.set(p.appointment_id, p.appointment as ApptRow);
+    });
     // Фолбэк: если точечный запрос по id не прошёл (прокси/сеть), берём записи,
     // которые уже загружены за период и за всё время до конца периода.
     (allApptsToDate as ApptRow[]).forEach((a) => m.set(a.id, a));
     (appts as ApptRow[]).forEach((a) => m.set(a.id, a));
     paymentAppts.forEach((a: ApptRow) => m.set(a.id, a));
     return m;
-  }, [paymentAppts, appts, allApptsToDate]);
+  }, [payments, paymentAppts, appts, allApptsToDate]);
 
   const cashPayout = useMemo(
     () =>
