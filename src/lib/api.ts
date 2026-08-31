@@ -351,12 +351,17 @@ export const listAppointmentsByIds = async (
   const unique = Array.from(new Set(ids)).filter(Boolean);
   if (unique.length === 0) return [];
   const out: AppointmentWithRelations[] = [];
-  for (let i = 0; i < unique.length; i += 100) {
-    const chunk = unique.slice(i, i + 100);
-    const rows = throwIf(
-      await supabase.from("appointments").select(APPT_SELECT).in("id", chunk),
-    ) as AppointmentWithRelations[];
-    out.push(...(rows ?? []));
+  // Небольшие пачки: длинный URL с сотней id может обрезаться прокси (ошибка 414) на проде.
+  for (let i = 0; i < unique.length; i += 25) {
+    const chunk = unique.slice(i, i + 25);
+    try {
+      const rows = throwIf(
+        await supabase.from("appointments").select(APPT_SELECT).in("id", chunk),
+      ) as AppointmentWithRelations[];
+      out.push(...(rows ?? []));
+    } catch (e) {
+      console.error("listAppointmentsByIds chunk failed", e);
+    }
   }
   return out;
 };
