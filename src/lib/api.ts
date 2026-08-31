@@ -878,6 +878,20 @@ export type AppointmentPayment = {
   updated_at: string;
 };
 
+export type AppointmentPaymentWithAppointment = AppointmentPayment & {
+  appointment: {
+    id: string;
+    total_price: number;
+    mechanic_id: string | null;
+    deleted_at: string | null;
+    services: {
+      service_id: string;
+      price: number;
+      mechanic_payout: number;
+    }[];
+  };
+};
+
 export const listAppointmentPayments = async (
   appointment_id: string,
 ): Promise<AppointmentPayment[]> => {
@@ -924,19 +938,25 @@ export const clearAppointmentPayments = async (appointment_id: string) => {
 export const listPaymentsRange = async (
   from: string,
   to: string,
-): Promise<AppointmentPayment[]> => {
+): Promise<AppointmentPaymentWithAppointment[]> => {
   const { data, error } = await anySb
     .from("appointment_payments")
-    .select("*, appointment:appointments!inner(deleted_at)")
+    .select(`
+      *,
+      appointment:appointments!inner(
+        id,
+        total_price,
+        mechanic_id,
+        deleted_at,
+        services:appointment_services(service_id, price, mechanic_payout)
+      )
+    `)
     .gte("paid_at", from)
     .lte("paid_at", to)
     .is("appointment.deleted_at", null)
     .order("paid_at", { ascending: false });
   if (error) throw error;
-  return ((data ?? []) as (AppointmentPayment & { appointment?: unknown })[]).map((p) => {
-    const { appointment: _drop, ...rest } = p;
-    return rest as AppointmentPayment;
-  });
+  return (data ?? []) as AppointmentPaymentWithAppointment[];
 };
 
 

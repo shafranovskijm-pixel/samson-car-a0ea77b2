@@ -194,7 +194,7 @@ function ExpensesPage() {
       mechanic: mechanicId ? mechById.get(mechanicId) ?? null : null,
       service: serviceId ? svcById.get(serviceId) ?? null : null,
     });
-  const apptPayout = (a: ApptRow) =>
+  const apptPayout = (a: PayoutAppointment) =>
     (a.services ?? []).reduce(
       (s, x) =>
         s +
@@ -230,14 +230,19 @@ function ExpensesPage() {
   // ЗП КАССОВЫМ методом: доля выплаты мастеру от каждого фактического платежа периода.
   // Это убирает перекос «работа в июле — оплата в августе».
   const apptById = useMemo(() => {
-    const m = new Map<string, ApptRow>();
+    const m = new Map<string, PayoutAppointment>();
+    // Основной источник для кассовой ЗП: запись и её услуги приходят вместе
+    // с платежом, поэтому расчёт не зависит от отдельного запроса по списку id.
+    payments.forEach((p) => {
+      if (p.appointment) m.set(p.appointment_id, p.appointment);
+    });
     // Фолбэк: если точечный запрос по id не прошёл (прокси/сеть), берём записи,
     // которые уже загружены за период и за всё время до конца периода.
     (allApptsToDate as ApptRow[]).forEach((a) => m.set(a.id, a));
     (appts as ApptRow[]).forEach((a) => m.set(a.id, a));
     paymentAppts.forEach((a: ApptRow) => m.set(a.id, a));
     return m;
-  }, [paymentAppts, appts, allApptsToDate]);
+  }, [payments, paymentAppts, appts, allApptsToDate]);
 
   const cashPayout = useMemo(
     () =>
@@ -891,6 +896,17 @@ function ExpensesBlock({
 
 // -------- Mechanics block --------
 type ApptRow = Awaited<ReturnType<typeof listAppointments>>[number];
+type PayoutAppointment = {
+  id: string;
+  total_price: number;
+  mechanic_id: string | null;
+  services: Array<{
+    service_id: string;
+    price: number;
+    mechanic_payout: number;
+    service?: ApptRow["services"][number]["service"];
+  }>;
+};
 
 function MechanicsBlock({
   mechanics,
