@@ -896,7 +896,17 @@ function ExpensesBlock({
 
 // -------- Mechanics block --------
 type ApptRow = Awaited<ReturnType<typeof listAppointments>>[number];
-type PayoutAppointment = Pick<ApptRow, "id" | "total_price" | "mechanic_id" | "services">;
+type PayoutAppointment = {
+  id: string;
+  total_price: number;
+  mechanic_id: string | null;
+  services: Array<{
+    service_id: string;
+    price: number;
+    mechanic_payout: number;
+    service?: ApptRow["services"][number]["service"];
+  }>;
+};
 
 function MechanicsBlock({
   mechanics,
