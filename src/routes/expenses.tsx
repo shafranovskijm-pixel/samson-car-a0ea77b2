@@ -231,9 +231,13 @@ function ExpensesPage() {
   // Это убирает перекос «работа в июле — оплата в августе».
   const apptById = useMemo(() => {
     const m = new Map<string, ApptRow>();
+    // Фолбэк: если точечный запрос по id не прошёл (прокси/сеть), берём записи,
+    // которые уже загружены за период и за всё время до конца периода.
+    (allApptsToDate as ApptRow[]).forEach((a) => m.set(a.id, a));
+    (appts as ApptRow[]).forEach((a) => m.set(a.id, a));
     paymentAppts.forEach((a: ApptRow) => m.set(a.id, a));
     return m;
-  }, [paymentAppts]);
+  }, [paymentAppts, appts, allApptsToDate]);
 
   const cashPayout = useMemo(
     () =>
