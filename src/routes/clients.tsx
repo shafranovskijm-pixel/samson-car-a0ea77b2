@@ -677,6 +677,16 @@ function ClientsPage() {
       </section>
 
 
+      {/* CAR HISTORY */}
+      <CarHistoryDialog
+        open={carHistory.open}
+        car={carHistory.car}
+        brandName={
+          brands.find((b) => b.id === carHistory.car?.brand_id)?.name ?? ""
+        }
+        onOpenChange={(v) => setCarHistory((s) => ({ ...s, open: v }))}
+      />
+
       {/* PICK CAR FOR CALCULATOR */}
       <Dialog open={pickCarOpen} onOpenChange={setPickCarOpen}>
         <DialogContent className="max-w-md">
