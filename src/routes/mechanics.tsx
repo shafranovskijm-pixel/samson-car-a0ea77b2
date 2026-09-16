@@ -782,7 +782,13 @@ function MechanicAdvances({ mechanicId }: { mechanicId: string }) {
                 {a.note && <span className="ml-2 text-muted-foreground">· {a.note}</span>}
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                <span className="font-semibold">{Number(a.amount).toLocaleString("ru-RU")} ₽</span>
+                <span
+                  className={`font-semibold ${Number(a.amount) < 0 ? "text-emerald-600" : ""}`}
+                >
+                  {Number(a.amount) < 0
+                    ? `− ${Math.abs(Number(a.amount)).toLocaleString("ru-RU")} ₽ (удержание)`
+                    : `${Number(a.amount).toLocaleString("ru-RU")} ₽`}
+                </span>
                 <Button
                   size="icon"
                   variant="ghost"
