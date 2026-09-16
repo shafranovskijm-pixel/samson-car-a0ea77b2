@@ -667,7 +667,12 @@ function MechanicAdvances({ mechanicId }: { mechanicId: string }) {
   const { period, start, end } = periodState;
   const [open, setOpen] = useState(false);
   const today = new Date().toISOString().slice(0, 10);
-  const [form, setForm] = useState({ paid_at: today, amount: "", note: "" });
+  const [form, setForm] = useState<{
+    paid_at: string;
+    amount: string;
+    note: string;
+    kind: "advance" | "deduction";
+  }>({ paid_at: today, amount: "", note: "", kind: "advance" });
 
   const { data: advances = [] } = useQuery({
     queryKey: ["mechanic-advances", mechanicId],
