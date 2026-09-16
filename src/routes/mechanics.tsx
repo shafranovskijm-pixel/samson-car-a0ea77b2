@@ -816,9 +816,32 @@ function MechanicAdvances({ mechanicId }: { mechanicId: string }) {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Новый аванс</DialogTitle>
+            <DialogTitle>
+              {form.kind === "deduction" ? "Удержание переплаты" : "Новый аванс"}
+            </DialogTitle>
           </DialogHeader>
           <div className="grid gap-3">
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                variant={form.kind === "advance" ? "default" : "outline"}
+                onClick={() => setForm({ ...form, kind: "advance" })}
+              >
+                Аванс
+              </Button>
+              <Button
+                type="button"
+                variant={form.kind === "deduction" ? "default" : "outline"}
+                onClick={() => setForm({ ...form, kind: "deduction" })}
+              >
+                Удержание
+              </Button>
+            </div>
+            {form.kind === "deduction" && (
+              <p className="text-xs text-muted-foreground">
+                Уменьшит выданные авансы — используйте, если мастеру переплатили.
+              </p>
+            )}
             <div>
               <Label>Дата</Label>
               <Input
