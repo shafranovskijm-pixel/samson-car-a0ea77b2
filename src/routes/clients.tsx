@@ -75,6 +75,10 @@ function ClientsPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [pickCarOpen, setPickCarOpen] = useState(false);
+  const [carHistory, setCarHistory] = useState<{ open: boolean; car: Car | null }>({
+    open: false,
+    car: null,
+  });
   const { data: clients = [] } = useQuery({ queryKey: ["clients"], queryFn: listClients });
   const { data: cars = [] } = useQuery({ queryKey: ["cars"], queryFn: listCars });
   const { data: brands = [] } = useQuery({ queryKey: ["brands"], queryFn: listBrands });
