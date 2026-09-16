@@ -726,9 +726,29 @@ function MechanicAdvances({ mechanicId }: { mechanicId: string }) {
             <BadgeDollarSign className="h-5 w-5" />
             <h2 className="text-lg font-semibold">Авансы</h2>
           </div>
-          <Button size="sm" className="h-10" onClick={() => setOpen(true)}>
-            <Plus className="mr-1 h-4 w-4" />Аванс
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-10"
+              onClick={() => {
+                setForm({ paid_at: today, amount: "", note: "", kind: "deduction" });
+                setOpen(true);
+              }}
+            >
+              − Удержать
+            </Button>
+            <Button
+              size="sm"
+              className="h-10"
+              onClick={() => {
+                setForm({ paid_at: today, amount: "", note: "", kind: "advance" });
+                setOpen(true);
+              }}
+            >
+              <Plus className="mr-1 h-4 w-4" />Аванс
+            </Button>
+          </div>
         </div>
         <div className="toolbar-scroll -mx-1 px-1">
           <PeriodPicker state={periodState} />
