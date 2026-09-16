@@ -483,6 +483,7 @@ function MechanicSalary({ mechanicId, defaultPercent }: { mechanicId: string; de
   const periodState = usePeriodState();
   const { period, start, end } = periodState;
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [showPending, setShowPending] = useState(false);
 
   const mechForPayout: PayoutMechanic = {
     default_payout_percent: defaultPercent > 0 ? defaultPercent : null,
@@ -570,12 +571,69 @@ function MechanicSalary({ mechanicId, defaultPercent }: { mechanicId: string; de
             {toPay < 0 ? " · переплата авансами" : ""}
           </div>
         </div>
-        <div className="rounded-lg border bg-card p-4">
-          <div className="text-xs text-muted-foreground">Ожидает (в работе / запланировано)</div>
+        <button
+          type="button"
+          onClick={() => setShowPending((v) => !v)}
+          className="rounded-lg border bg-card p-4 text-left transition hover:bg-muted/40"
+        >
+          <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+            <span>Ожидает (в работе / запланировано)</span>
+            {showPending ? (
+              <ChevronDown className="h-3.5 w-3.5 shrink-0" />
+            ) : (
+              <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+            )}
+          </div>
           <div className="mt-1 text-2xl font-bold">{fmt(pendingTotal)}</div>
-          <div className="mt-1 text-xs text-muted-foreground">{pending.length} услуг</div>
-        </div>
+          <div className="mt-1 text-xs text-muted-foreground">
+            {pending.length} услуг · нажмите, чтобы посмотреть
+          </div>
+        </button>
       </div>
+
+      {showPending && (
+        <div className="mt-3 rounded-lg border bg-card">
+          <div className="border-b px-3 py-2 text-xs font-semibold">
+            Из чего складывается «Ожидает»
+          </div>
+          {pending.length === 0 ? (
+            <div className="px-3 py-3 text-xs text-muted-foreground">Незавершённых работ нет</div>
+          ) : (
+            <div className="divide-y">
+              {pending.map((r, i) => {
+                const dt = new Date(r.starts_at);
+                const payout = effPayout(r);
+                return (
+                  <div
+                    key={`pending:${r.appointment_id}:${r.service_id}:${i}`}
+                    className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-3 py-2 text-xs"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-medium">{r.service_name ?? "—"}</div>
+                      <div className="truncate text-muted-foreground">
+                        {dt.toLocaleDateString("ru-RU")} ·{" "}
+                        {STATUS_LABELS[r.status as keyof typeof STATUS_LABELS] ?? r.status}
+                        {r.client_name ? ` · ${r.client_name}` : ""}
+                        {r.car_label ? ` · ${r.car_label}` : ""}
+                        {r.license_plate ? ` · ${r.license_plate}` : ""}
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-3">
+                      <span className="text-muted-foreground">{r.price} ₽</span>
+                      <span className="font-semibold">{payout} ₽</span>
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="flex items-center justify-between px-3 py-2 text-xs font-semibold">
+                <span>Итого ожидает</span>
+                <span>{fmt(pendingTotal)}</span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
 
 
       {filtered.length > 0 && (
