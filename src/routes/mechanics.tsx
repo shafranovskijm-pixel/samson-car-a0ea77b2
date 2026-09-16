@@ -758,7 +758,7 @@ function MechanicAdvances({ mechanicId }: { mechanicId: string }) {
 
       <div className="rounded-lg border bg-card p-4">
         <div className="text-xs text-muted-foreground">
-          Выдано авансов ({PERIOD_LABELS[period].toLowerCase()})
+          Выдано авансов за вычетом удержаний ({PERIOD_LABELS[period].toLowerCase()})
         </div>
         <div className="mt-1 text-2xl font-bold">{total.toLocaleString("ru-RU")} ₽</div>
         <div className="mt-1 text-xs text-muted-foreground">{filtered.length} выплат</div>
