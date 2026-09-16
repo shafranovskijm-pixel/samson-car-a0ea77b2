@@ -598,14 +598,19 @@ function ClientsPage() {
                   return (
                     <div key={car.id} className="rounded-lg border bg-card p-4">
                       <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <div className="font-semibold">
+                        <button
+                          type="button"
+                          onClick={() => setCarHistory({ open: true, car })}
+                          title="История работ по этой машине"
+                          className="min-w-0 text-left transition hover:text-primary"
+                        >
+                          <div className="font-semibold underline-offset-4 hover:underline">
                             {brand?.name ?? "—"} {car.model}
                           </div>
                           <div className="mt-1 text-xs text-muted-foreground">
                             {[car.year, car.color].filter(Boolean).join(" · ") || "—"}
                           </div>
-                        </div>
+                        </button>
                         <div className="flex gap-1">
                           <Link
                             to="/calculator"
