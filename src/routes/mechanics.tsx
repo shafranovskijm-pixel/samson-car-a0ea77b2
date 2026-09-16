@@ -667,7 +667,12 @@ function MechanicAdvances({ mechanicId }: { mechanicId: string }) {
   const { period, start, end } = periodState;
   const [open, setOpen] = useState(false);
   const today = new Date().toISOString().slice(0, 10);
-  const [form, setForm] = useState({ paid_at: today, amount: "", note: "" });
+  const [form, setForm] = useState<{
+    paid_at: string;
+    amount: string;
+    note: string;
+    kind: "advance" | "deduction";
+  }>({ paid_at: today, amount: "", note: "", kind: "advance" });
 
   const { data: advances = [] } = useQuery({
     queryKey: ["mechanic-advances", mechanicId],
@@ -684,21 +689,22 @@ function MechanicAdvances({ mechanicId }: { mechanicId: string }) {
 
   const create = useMutation({
     mutationFn: async () => {
-      const n = Number(form.amount);
+      const n = Math.abs(Number(form.amount));
       if (!Number.isFinite(n) || n <= 0) throw new Error("Введите сумму");
+      const isDeduction = form.kind === "deduction";
       await createMechanicAdvance({
         mechanic_id: mechanicId,
         paid_at: form.paid_at,
-        amount: n,
-        note: form.note.trim() || null,
+        amount: isDeduction ? -n : n,
+        note: form.note.trim() || (isDeduction ? "Удержание переплаты" : null),
       });
     },
     onSuccess: () => {
-      toast.success("Аванс добавлен");
+      toast.success(form.kind === "deduction" ? "Удержание записано" : "Аванс добавлен");
       qc.invalidateQueries({ queryKey: ["mechanic-advances", mechanicId] });
       qc.invalidateQueries({ queryKey: ["mechanic_advances"] });
       setOpen(false);
-      setForm({ paid_at: today, amount: "", note: "" });
+      setForm({ paid_at: today, amount: "", note: "", kind: "advance" });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -720,9 +726,29 @@ function MechanicAdvances({ mechanicId }: { mechanicId: string }) {
             <BadgeDollarSign className="h-5 w-5" />
             <h2 className="text-lg font-semibold">Авансы</h2>
           </div>
-          <Button size="sm" className="h-10" onClick={() => setOpen(true)}>
-            <Plus className="mr-1 h-4 w-4" />Аванс
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-10"
+              onClick={() => {
+                setForm({ paid_at: today, amount: "", note: "", kind: "deduction" });
+                setOpen(true);
+              }}
+            >
+              − Удержать
+            </Button>
+            <Button
+              size="sm"
+              className="h-10"
+              onClick={() => {
+                setForm({ paid_at: today, amount: "", note: "", kind: "advance" });
+                setOpen(true);
+              }}
+            >
+              <Plus className="mr-1 h-4 w-4" />Аванс
+            </Button>
+          </div>
         </div>
         <div className="toolbar-scroll -mx-1 px-1">
           <PeriodPicker state={periodState} />
@@ -732,7 +758,7 @@ function MechanicAdvances({ mechanicId }: { mechanicId: string }) {
 
       <div className="rounded-lg border bg-card p-4">
         <div className="text-xs text-muted-foreground">
-          Выдано авансов ({PERIOD_LABELS[period].toLowerCase()})
+          Выдано авансов за вычетом удержаний ({PERIOD_LABELS[period].toLowerCase()})
         </div>
         <div className="mt-1 text-2xl font-bold">{total.toLocaleString("ru-RU")} ₽</div>
         <div className="mt-1 text-xs text-muted-foreground">{filtered.length} выплат</div>
@@ -756,7 +782,13 @@ function MechanicAdvances({ mechanicId }: { mechanicId: string }) {
                 {a.note && <span className="ml-2 text-muted-foreground">· {a.note}</span>}
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                <span className="font-semibold">{Number(a.amount).toLocaleString("ru-RU")} ₽</span>
+                <span
+                  className={`font-semibold ${Number(a.amount) < 0 ? "text-emerald-600" : ""}`}
+                >
+                  {Number(a.amount) < 0
+                    ? `− ${Math.abs(Number(a.amount)).toLocaleString("ru-RU")} ₽ (удержание)`
+                    : `${Number(a.amount).toLocaleString("ru-RU")} ₽`}
+                </span>
                 <Button
                   size="icon"
                   variant="ghost"
@@ -784,9 +816,32 @@ function MechanicAdvances({ mechanicId }: { mechanicId: string }) {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Новый аванс</DialogTitle>
+            <DialogTitle>
+              {form.kind === "deduction" ? "Удержание переплаты" : "Новый аванс"}
+            </DialogTitle>
           </DialogHeader>
           <div className="grid gap-3">
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                variant={form.kind === "advance" ? "default" : "outline"}
+                onClick={() => setForm({ ...form, kind: "advance" })}
+              >
+                Аванс
+              </Button>
+              <Button
+                type="button"
+                variant={form.kind === "deduction" ? "default" : "outline"}
+                onClick={() => setForm({ ...form, kind: "deduction" })}
+              >
+                Удержание
+              </Button>
+            </div>
+            {form.kind === "deduction" && (
+              <p className="text-xs text-muted-foreground">
+                Уменьшит выданные авансы — используйте, если мастеру переплатили.
+              </p>
+            )}
             <div>
               <Label>Дата</Label>
               <Input
