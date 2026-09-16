@@ -689,21 +689,22 @@ function MechanicAdvances({ mechanicId }: { mechanicId: string }) {
 
   const create = useMutation({
     mutationFn: async () => {
-      const n = Number(form.amount);
+      const n = Math.abs(Number(form.amount));
       if (!Number.isFinite(n) || n <= 0) throw new Error("Введите сумму");
+      const isDeduction = form.kind === "deduction";
       await createMechanicAdvance({
         mechanic_id: mechanicId,
         paid_at: form.paid_at,
-        amount: n,
-        note: form.note.trim() || null,
+        amount: isDeduction ? -n : n,
+        note: form.note.trim() || (isDeduction ? "Удержание переплаты" : null),
       });
     },
     onSuccess: () => {
-      toast.success("Аванс добавлен");
+      toast.success(form.kind === "deduction" ? "Удержание записано" : "Аванс добавлен");
       qc.invalidateQueries({ queryKey: ["mechanic-advances", mechanicId] });
       qc.invalidateQueries({ queryKey: ["mechanic_advances"] });
       setOpen(false);
-      setForm({ paid_at: today, amount: "", note: "" });
+      setForm({ paid_at: today, amount: "", note: "", kind: "advance" });
     },
     onError: (e: Error) => toast.error(e.message),
   });
