@@ -1805,3 +1805,124 @@ function ClientComments({ clientId }: { clientId: string }) {
   );
 }
 
+
+// ============ CAR HISTORY ============
+function CarHistoryDialog({
+  open,
+  car,
+  brandName,
+  onOpenChange,
+}: {
+  open: boolean;
+  car: Car | null;
+  brandName: string;
+  onOpenChange: (v: boolean) => void;
+}) {
+  const { data: items = [], isLoading } = useQuery({
+    queryKey: ["client-history", car?.client_id ?? ""],
+    queryFn: () => listAppointmentsByClient(car!.client_id),
+    enabled: open && !!car,
+  });
+
+  const rows = useMemo(
+    () => (car ? items.filter((a) => a.car_id === car.id) : []),
+    [items, car],
+  );
+  const totals = useMemo(() => {
+    let sum = 0;
+    let paid = 0;
+    for (const a of rows) {
+      sum += Number(a.total_price ?? 0);
+      paid += Number(a.paid_amount ?? 0);
+    }
+    return { sum, paid, debt: Math.max(0, sum - paid) };
+  }, [rows]);
+
+  const money = (n: number) => `${Number(n || 0).toLocaleString("ru-RU")} ₽`;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            История работ · {brandName} {car?.model}
+            {car?.license_plate ? ` · ${car.license_plate}` : ""}
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="rounded-lg border p-2">
+            <div className="text-[11px] text-muted-foreground">Работ</div>
+            <div className="text-lg font-bold tabular-nums">{rows.length}</div>
+          </div>
+          <div className="rounded-lg border p-2">
+            <div className="text-[11px] text-muted-foreground">Сумма</div>
+            <div className="text-lg font-bold tabular-nums">{money(totals.sum)}</div>
+          </div>
+          <div className="rounded-lg border p-2">
+            <div className="text-[11px] text-muted-foreground">Долг</div>
+            <div className="text-lg font-bold tabular-nums">{money(totals.debt)}</div>
+          </div>
+        </div>
+
+        {isLoading ? (
+          <div className="py-8 text-center text-sm text-muted-foreground">Загрузка…</div>
+        ) : rows.length === 0 ? (
+          <div className="rounded-lg border border-dashed py-10 text-center text-sm text-muted-foreground">
+            По этой машине пока нет работ
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {rows.map((a) => (
+              <div key={a.id} className="rounded-lg border bg-card p-3">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <div className="text-sm font-semibold">
+                    {new Date(a.starts_at).toLocaleString("ru-RU", {
+                      dateStyle: "short",
+                      timeStyle: "short",
+                    })}
+                  </div>
+                  <div className="text-base font-bold tabular-nums">
+                    {money(a.total_price ?? 0)}
+                  </div>
+                </div>
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  {a.mechanic && (
+                    <span className="inline-flex items-center gap-1.5">
+                      <span
+                        className="h-2 w-2 rounded-full"
+                        style={{ background: a.mechanic.color }}
+                      />
+                      {a.mechanic.full_name}
+                    </span>
+                  )}
+                  <span>{STATUS_LABELS[a.status] ?? a.status}</span>
+                  <span>
+                    Оплачено: {money(a.paid_amount ?? 0)}
+                    {Number(a.paid_amount ?? 0) < Number(a.total_price ?? 0)
+                      ? ` · долг ${money(Number(a.total_price ?? 0) - Number(a.paid_amount ?? 0))}`
+                      : ""}
+                  </span>
+                  {a.mileage != null && <span>Пробег: {a.mileage} км</span>}
+                </div>
+                <ul className="mt-2 space-y-1 text-sm">
+                  {a.services.map((sv, i) => (
+                    <li key={`${a.id}-${i}`} className="flex justify-between gap-3">
+                      <span className="min-w-0 truncate">{sv.service?.name ?? "Услуга"}</span>
+                      <span className="tabular-nums text-muted-foreground">
+                        {money(sv.price ?? 0)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                {a.comment && (
+                  <div className="mt-2 text-xs text-muted-foreground">{a.comment}</div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
