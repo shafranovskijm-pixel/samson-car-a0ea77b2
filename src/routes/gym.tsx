@@ -207,6 +207,9 @@ function GymPage() {
         note: null,
         sessions_total: Number(pkg) || 1,
         sessions_used: 0,
+        paid_amount: paidNow ? sum : 0,
+        valid_until: validUntil || null,
+        frozen: false,
       });
       savePrice(pkg, sum);
     },
