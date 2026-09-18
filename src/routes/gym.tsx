@@ -369,8 +369,8 @@ function GymPage() {
             <TabsTrigger value="salary" className="shrink-0">Зарплата</TabsTrigger>
             <TabsTrigger value="payouts" className="shrink-0">Выплаты</TabsTrigger>
             <TabsTrigger value="debts" className="shrink-0">Долги</TabsTrigger>
-            <TabsTrigger value="expenses" className="shrink-0">Расходы</TabsTrigger>
-            <TabsTrigger value="monthly" className="shrink-0">По месяцам</TabsTrigger>
+            <TabsTrigger value="expenses" className="shrink-0">Касса</TabsTrigger>
+            <TabsTrigger value="monthly" className="shrink-0">Сводка</TabsTrigger>
             <TabsTrigger value="people" className="shrink-0">Люди</TabsTrigger>
           </TabsList>
 
@@ -607,71 +607,57 @@ function GymPage() {
           </TabsContent>
 
           <TabsContent value="debts" className="space-y-3">
-            <div className="text-sm">
-              Неоплаченных занятий: {unpaid.length} на {money(totals.debt)}
-            </div>
-            <ul className="divide-y rounded-md border">
-              {unpaid.length === 0 && <li className="px-2 py-2 text-sm text-muted-foreground">Долгов нет</li>}
-              {unpaid.map((r) => (
-                <li key={r.id} className="flex flex-wrap items-center gap-2 px-2 py-2 text-sm">
-                  <span className="whitespace-nowrap">{dmy(r.entry_date)}</span>
-                  <span className="font-medium">{r.client_name}</span>
-                  <span className="text-muted-foreground">{trainerName(r.trainer_id)}</span>
-                  {paidSum(r) > 0 && (
-                    <span className="text-xs text-muted-foreground">
-                      внесено {money(paidSum(r))} из {money(Number(r.amount))}
-                    </span>
-                  )}
-                  <span className="ml-auto font-semibold text-amber-600">{money(restSum(r))}</span>
-                  <PartialPayInline entry={r} onChanged={invalidate} />
-                  <Button size="sm" onClick={() => togglePaid.mutate({ id: r.id, paid: true })}>
-                    Оплачено полностью
-                  </Button>
-                </li>
-              ))}
-            </ul>
+            <LedgerSection
+              title="Долги клиентов"
+              subtitle={`${unpaid.length} неоплаченных записей`}
+              totalLabel="Осталось получить"
+              totalValue={money(totals.debt)}
+            >
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[760px] border-collapse text-sm">
+                  <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
+                    <tr><th className="border p-2 text-left">Дата</th><th className="border p-2 text-left">Клиент</th><th className="border p-2 text-left">Тренер</th><th className="border p-2 text-right">Стоимость</th><th className="border p-2 text-right">Внесено</th><th className="border p-2 text-right">Долг</th><th className="border p-2 print:hidden" /></tr>
+                  </thead>
+                  <tbody>
+                    {unpaid.length === 0 && <tr><td colSpan={7} className="h-28 border p-4 text-center text-muted-foreground">Долгов нет</td></tr>}
+                    {unpaid.map((r) => (
+                      <tr key={r.id} className="hover:bg-accent/30">
+                        <td className="border p-2 whitespace-nowrap">{dmy(r.entry_date)}</td>
+                        <td className="border p-2 font-medium">{r.client_name}</td>
+                        <td className="border p-2 text-muted-foreground">{trainerName(r.trainer_id)}</td>
+                        <td className="border p-2 text-right tabular-nums">{money(Number(r.amount))}</td>
+                        <td className="border p-2 text-right tabular-nums">{money(paidSum(r))}</td>
+                        <td className="border p-2 text-right font-semibold tabular-nums text-destructive">{money(restSum(r))}</td>
+                        <td className="border p-2 print:hidden"><div className="flex justify-end gap-2"><PartialPayInline entry={r} onChanged={invalidate} /><Button size="sm" onClick={() => togglePaid.mutate({ id: r.id, paid: true })}>Закрыть долг</Button></div></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </LedgerSection>
           </TabsContent>
 
           <TabsContent value="expenses" className="space-y-3">
             <ExpensesTab
               rows={expRows}
+              cash={cash}
               onChanged={() => qc.invalidateQueries({ queryKey: ["gym-expenses"] })}
             />
           </TabsContent>
 
           <TabsContent value="monthly" className="space-y-3">
-            <div className="flex items-center gap-2 print:hidden">
-              <Button variant="outline" size="sm" onClick={() => window.print()}>
-                <Printer className="mr-1 h-4 w-4" /> Печать сводки
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  downloadCsv("zal-po-mesyacam.csv", [
-                    ["Месяц", "Поступило", "Тренерам", "Расходы", "Прибыль"],
-                    ...monthly.map((m) => [
-                      monthLabel(m.m),
-                      Math.round(m.income),
-                      Math.round(m.payout),
-                      Math.round(m.spent),
-                      Math.round(m.income - m.payout - m.spent),
-                    ]),
-                  ])
-                }
-              >
-                <Download className="mr-1 h-4 w-4" /> Экспорт
-              </Button>
-            </div>
-            <div className="overflow-x-auto rounded-md border">
+            <LedgerSection
+              title="Сводка по месяцам"
+              subtitle="Поступления, выплаты и результат зала"
+              totalLabel="Касса сейчас"
+              totalValue={money(cash.left)}
+              actions={<><Button variant="outline" size="icon" title="Печать" onClick={() => window.print()}><Printer className="h-4 w-4" /></Button><Button variant="outline" size="icon" title="Экспорт" onClick={() => downloadCsv("zal-po-mesyacam.csv", [["Месяц", "Поступило", "Тренерам", "Расходы", "Прибыль"], ...monthly.map((m) => [monthLabel(m.m), Math.round(m.income), Math.round(m.payout), Math.round(m.spent), Math.round(m.income - m.payout - m.spent)])])}><Download className="h-4 w-4" /></Button></>}
+            >
+            <div className="overflow-x-auto">
               <table className="w-full min-w-[560px] text-sm">
-                <thead className="bg-muted/50">
+                <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
                   <tr className="text-left">
-                    <th className="p-2">Месяц</th>
-                    <th className="p-2 text-right">Поступило</th>
-                    <th className="p-2 text-right">Тренерам</th>
-                    <th className="p-2 text-right">Расходы</th>
-                    <th className="p-2 text-right">Прибыль</th>
+                    <th className="border p-2">Месяц</th><th className="border p-2 text-right">Поступило</th><th className="border p-2 text-right">Тренерам</th><th className="border p-2 text-right">Расходы</th><th className="border p-2 text-right">Прибыль</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -680,11 +666,7 @@ function GymPage() {
                   )}
                   {monthly.map((m) => (
                     <tr key={m.m} className="border-t">
-                      <td className="p-2">{monthLabel(m.m)}</td>
-                      <td className="p-2 text-right">{money(m.income)}</td>
-                      <td className="p-2 text-right">{money(m.payout)}</td>
-                      <td className="p-2 text-right">{money(m.spent)}</td>
-                      <td className="p-2 text-right font-medium text-emerald-600">
+                      <td className="border p-2 font-medium">{monthLabel(m.m)}</td><td className="border p-2 text-right tabular-nums">{money(m.income)}</td><td className="border p-2 text-right tabular-nums">{money(m.payout)}</td><td className="border p-2 text-right tabular-nums">{money(m.spent)}</td><td className="border p-2 text-right font-semibold tabular-nums text-primary">
                         {money(m.income - m.payout - m.spent)}
                       </td>
                     </tr>
@@ -692,13 +674,15 @@ function GymPage() {
                 </tbody>
               </table>
             </div>
+            </LedgerSection>
           </TabsContent>
 
 
-          <TabsContent value="people" className="grid gap-3 sm:grid-cols-2">
-            <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-sm">Тренеры</CardTitle></CardHeader>
-              <CardContent className="space-y-2">
+          <TabsContent value="people">
+            <LedgerSection title="Люди" subtitle="Тренеры и клиенты зала" totalLabel="Всего" totalValue={String((trainers.data ?? []).length + (clients.data ?? []).length)}>
+              <div className="grid divide-y sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+              <div className="space-y-2 p-3">
+                <div className="flex items-baseline justify-between"><h2 className="font-display text-xl">Тренеры</h2><span className="text-xs text-muted-foreground">{(trainers.data ?? []).length}</span></div>
                 <AddRow
                   placeholder="Имя тренера"
                   onAdd={async (name) => {
@@ -709,14 +693,15 @@ function GymPage() {
                 {(trainers.data ?? []).map((t) => (
                   <TrainerRow key={t.id} trainer={t} onChanged={() => qc.invalidateQueries({ queryKey: ["gym-trainers"] })} />
                 ))}
-              </CardContent>
-            </Card>
+              </div>
             <PeopleCard
               title="Клиенты"
               items={(clients.data ?? []).map((c) => ({ id: c.id, label: c.name }))}
               onAdd={async (name) => { await createGymClient(name); qc.invalidateQueries({ queryKey: ["gym-clients"] }); }}
               onDelete={async (id) => { await deleteGymClient(id); qc.invalidateQueries({ queryKey: ["gym-clients"] }); }}
             />
+              </div>
+            </LedgerSection>
           </TabsContent>
         </Tabs>
       </div>
