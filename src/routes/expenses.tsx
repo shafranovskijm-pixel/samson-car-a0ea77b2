@@ -148,6 +148,21 @@ function ExpensesPage() {
     queryFn: () => listExpenses(undefined, toIso),
   });
 
+  // Касса «сейчас»: не зависит от выбранного периода — всё с начала работы до сегодня.
+  const todayIso = isoDate(new Date());
+  const { data: paymentsNow = [] } = useQuery({
+    queryKey: ["payments-range", "to-now", todayIso],
+    queryFn: () => listPaymentsRange("1970-01-01", todayIso),
+  });
+  const { data: advancesNow = [] } = useQuery({
+    queryKey: ["mechanic_advances", "to-now", todayIso],
+    queryFn: () => listMechanicAdvances({ to: todayIso }),
+  });
+  const { data: expensesNow = [] } = useQuery({
+    queryKey: ["expenses", "to-now", todayIso],
+    queryFn: () => listExpenses(undefined, todayIso),
+  });
+
   // Только выполненные записи участвуют в «начислении» ЗП и обязательств.
   const doneAppts = useMemo(() => appts.filter((a) => a.status === "done"), [appts]);
   // Запланированные/в работе — потенциальные поступления (если не отменятся).
@@ -287,6 +302,18 @@ function ExpensesPage() {
   const mechanicsDebtTotal = accruedToDate - paidToDate;
   const openingDebt = mechanicsDebtTotal - mechanicsDebt;
 
+  // Касса сейчас: все платежи клиентов минус выплаты мастерам (авансы, удержания, ЗП)
+  // и прочие расходы — с начала работы по сегодняшний день.
+  const cashInNow = paymentsNow.reduce((s, p) => s + Number(p.amount ?? 0), 0);
+  const payrollOutNow =
+    advancesNow.reduce((s, a) => s + Number(a.amount ?? 0), 0) +
+    expensesNow.filter((e) => e.is_payroll).reduce((s, e) => s + Number(e.amount ?? 0), 0);
+  const otherOutNow = expensesNow
+    .filter((e) => !e.is_payroll)
+    .reduce((s, e) => s + Number(e.amount ?? 0), 0);
+  const cashNow = cashInNow - payrollOutNow - otherOutNow;
+
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
       <header className="mb-6 flex flex-col gap-3 sm:mb-8">
@@ -307,6 +334,48 @@ function ExpensesPage() {
           />
         </div>
       </header>
+
+      {/* Касса сейчас — сколько денег должно быть в кассе на сегодня */}
+      <Card
+        className={`mb-6 border-2 ${cashNow >= 0 ? "border-green-500/40 bg-green-500/5" : "border-red-500/40 bg-red-500/5"}`}
+      >
+        <CardContent className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+          <div className="min-w-0">
+            <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              Касса сейчас
+            </div>
+            <div
+              className={`mt-1 text-2xl font-bold tracking-tight tabular-nums sm:text-3xl ${
+                cashNow >= 0 ? "text-green-600" : "text-red-600"
+              }`}
+            >
+              {fmt(cashNow)}
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-3 text-right sm:gap-6">
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Поступило
+              </div>
+              <div className="mt-0.5 text-sm font-semibold tabular-nums">{fmt(cashInNow)}</div>
+            </div>
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Мастерам
+              </div>
+              <div className="mt-0.5 text-sm font-semibold tabular-nums">{fmt(payrollOutNow)}</div>
+            </div>
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Расходы
+              </div>
+              <div className="mt-0.5 text-sm font-semibold tabular-nums">{fmt(otherOutNow)}</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+
 
 
       <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
