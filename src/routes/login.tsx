@@ -117,7 +117,7 @@ function LoginPage() {
               <Input id="p" type="password" value={p} onChange={(e) => setP(e.target.value)} autoComplete="current-password" />
             </div>
             {err && <p className="text-sm text-destructive">{err}</p>}
-            <Button type="submit" className="w-full">Войти</Button>
+            <Button type="submit" className="w-full" disabled={busy}>Войти</Button>
             <Button type="button" variant="ghost" className="w-full" onClick={() => setSection(null)}>
               Назад
             </Button>
