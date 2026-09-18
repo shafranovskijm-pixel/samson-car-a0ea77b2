@@ -199,6 +199,7 @@ function GymPage() {
   const [selectedTrainer, setSelectedTrainer] = useState<string | null>(null);
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const [editing, setEditing] = useState<GymEntry | null>(null);
+  const [showAdd, setShowAdd] = useState(false);
 
   useEffect(() => {
     const price = loadPrices()[pkg];
@@ -358,53 +359,7 @@ function GymPage() {
         </div>
       </header>
 
-      <div className="space-y-4 p-3 sm:p-4">
-        <div className="flex flex-wrap items-end gap-2 print:hidden">
-          <div className="flex gap-1 rounded-md border p-1">
-            {([
-              ["day", "День"],
-              ["week", "Неделя"],
-              ["month", "Месяц"],
-              ["all", "Всё время"],
-            ] as [PeriodKind, string][]).map(([k, label]) => (
-              <Button key={k} size="sm" variant={kind === k ? "default" : "ghost"} onClick={() => setKind(k)}>
-                {label}
-              </Button>
-            ))}
-          </div>
-          {kind !== "all" && (
-            <Input type="date" value={anchor} onChange={(e) => setAnchor(e.target.value)} className="w-[160px]" />
-          )}
-          <div className="text-sm text-muted-foreground">{periodLabel(kind, from, to)}</div>
-          <div className="ml-auto flex gap-2">
-            <Button variant="outline" size="sm" onClick={exportEntries}>
-              <Download className="mr-1 h-4 w-4" /> Экспорт
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => window.print()}>
-              <Printer className="mr-1 h-4 w-4" /> Печать
-            </Button>
-          </div>
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          <Stat title="Доход" value={money(totals.income)} />
-          <Stat title="Тренерам" value={money(totals.payout)} />
-          <Stat title="Расходы зала" value={money(totals.spent)} />
-          <Stat title="Прибыль зала" value={money(totals.profit)} accent="text-emerald-600" />
-          <Stat title="Долг клиентов" value={money(totals.debt)} accent={totals.debt ? "text-amber-600" : undefined} />
-        </div>
-
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm">Касса зала сейчас (за всё время)</CardTitle></CardHeader>
-          <CardContent className="space-y-1">
-            <div className="text-2xl font-semibold text-emerald-600">{money(cash.left)}</div>
-            <div className="text-xs text-muted-foreground">
-              Поступило {money(cash.got)} − тренерам {money(cash.toTrainers)} − расходы {money(cash.spent)}
-            </div>
-          </CardContent>
-        </Card>
-
-
+      <div className="space-y-3 bg-muted/40 p-2 sm:p-4">
         <Tabs defaultValue="table">
           <TabsList className="flex w-full justify-start gap-1 overflow-x-auto print:hidden">
             <TabsTrigger value="table" className="shrink-0">Занятия</TabsTrigger>
@@ -420,11 +375,21 @@ function GymPage() {
           </TabsList>
 
           <TabsContent value="table" className="space-y-3">
-            <Card className="print:hidden">
+            <LedgerTable
+              rows={rows}
+              trainers={trainers.data ?? []}
+              month={anchor.slice(0, 7)}
+              totals={totals}
+              cash={cash}
+              onMonthChange={(value) => { setKind("month"); setAnchor(`${value}-01`); }}
+              onAdd={() => setShowAdd((value) => !value)}
+              onEdit={setEditing}
+              onExport={exportEntries}
+            />
+
+            {showAdd && <Card className="print:hidden rounded-sm">
               <CardContent className="space-y-3 p-3">
-                <Button className="w-full" size="lg" onClick={() => addEntry.mutate()} disabled={addEntry.isPending}>
-                  <Plus className="mr-1 h-4 w-4" /> Добавить занятие
-                </Button>
+                <div className="font-display text-xl">Новая запись</div>
                 <div className="grid gap-2 sm:grid-cols-5">
                   <div>
                     <Label>Дата</Label>
@@ -488,97 +453,11 @@ function GymPage() {
                 >
                   {paidNow ? "Оплачено сразу" : "В долг"}
                 </Button>
+                <Button onClick={() => addEntry.mutate()} disabled={addEntry.isPending}>
+                  <Plus className="mr-1 h-4 w-4" /> Записать в ведомость
+                </Button>
               </CardContent>
-            </Card>
-
-            <div className="space-y-2 sm:hidden">
-              {rows.length === 0 && <p className="p-4 text-center text-sm text-muted-foreground">Нет записей за период</p>}
-              {rows.map((r) => (
-                <Card key={r.id}>
-                  <CardContent className="space-y-2 p-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">{dmy(r.entry_date)}</span>
-                      <span className="truncate text-sm">{r.client_name}</span>
-                      <span className="ml-auto font-semibold">{money(Number(r.amount))}</span>
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {trainerName(r.trainer_id)} · {r.package} зан. · тренеру {money(share(r))}
-                      {Number(r.sessions_total) > 1 && ` · осталось ${Number(r.sessions_total) - Number(r.sessions_used)}`}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant={r.paid ? "secondary" : "outline"}
-                        size="sm"
-                        className="flex-1"
-                        onClick={() => togglePaid.mutate({ id: r.id, paid: !r.paid })}
-                      >
-                        {r.paid ? "Оплачено" : "Не оплачено"}
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => setEditing(r)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => removeEntry.mutate(r.id)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            <div className="hidden overflow-x-auto rounded-md border sm:block">
-              <table className="w-full min-w-[820px] text-sm">
-                <thead className="bg-muted/50">
-                  <tr className="text-left">
-                    <th className="p-2">Число</th>
-                    <th className="p-2">Клиент</th>
-                    <th className="p-2">Тренер</th>
-                    <th className="p-2">Пакет</th>
-                    <th className="p-2 text-right">Сумма</th>
-                    <th className="p-2 text-right">Тренеру</th>
-                    <th className="p-2">Оплата</th>
-                    <th className="p-2 print:hidden" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.length === 0 && (
-                    <tr><td colSpan={8} className="p-4 text-center text-muted-foreground">Нет записей за период</td></tr>
-                  )}
-                  {rows.map((r) => (
-                    <tr key={r.id} className="border-t">
-                      <td className="p-2 whitespace-nowrap">{dmy(r.entry_date)}</td>
-                      <td className="p-2">{r.client_name}</td>
-                      <td className="p-2">{trainerName(r.trainer_id)}</td>
-                      <td className="p-2">
-                        {r.package}
-                        {Number(r.sessions_total) > 1 && (
-                          <span className="text-xs text-muted-foreground"> · {r.sessions_used}/{r.sessions_total}</span>
-                        )}
-                      </td>
-                      <td className="p-2 text-right">{money(Number(r.amount))}</td>
-                      <td className="p-2 text-right">{money(share(r))}</td>
-                      <td className="p-2">
-                        <Button
-                          variant={r.paid ? "secondary" : "outline"}
-                          size="sm"
-                          onClick={() => togglePaid.mutate({ id: r.id, paid: !r.paid })}
-                        >
-                          {r.paid ? "Оплачено" : "Не оплачено"}
-                        </Button>
-                      </td>
-                      <td className="p-2 text-right print:hidden">
-                        <Button variant="ghost" size="icon" onClick={() => setEditing(r)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => removeEntry.mutate(r.id)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            </Card>}
           </TabsContent>
 
           <TabsContent value="subs" className="space-y-3">
@@ -852,6 +731,144 @@ function GymPage() {
         }}
       />
     </div>
+  );
+}
+
+function LedgerTable({
+  rows,
+  trainers,
+  month,
+  totals,
+  cash,
+  onMonthChange,
+  onAdd,
+  onEdit,
+  onExport,
+}: {
+  rows: GymEntry[];
+  trainers: GymTrainer[];
+  month: string;
+  totals: { income: number; payout: number; debt: number; spent: number; profit: number };
+  cash: { got: number; toTrainers: number; spent: number; left: number };
+  onMonthChange: (value: string) => void;
+  onAdd: () => void;
+  onEdit: (entry: GymEntry) => void;
+  onExport: () => void;
+}) {
+  const packageCount = (value: string) => rows.filter((r) => r.package === value).length;
+
+  return (
+    <section className="overflow-hidden rounded-sm border bg-card shadow-sm">
+      <div className="flex flex-col gap-3 border-b bg-muted/40 p-3 sm:flex-row sm:items-end sm:justify-between sm:p-4">
+        <div>
+          <h1 className="font-display text-3xl capitalize text-foreground">{monthLabel(month)}</h1>
+          <p className="text-xs font-medium uppercase text-muted-foreground">Реестр посещений и оплат</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 print:hidden">
+          <Input
+            type="month"
+            value={month}
+            onChange={(event) => onMonthChange(event.target.value)}
+            className="w-[150px] bg-background"
+            aria-label="Выбрать месяц"
+          />
+          <Button variant="outline" size="icon" title="Экспорт" onClick={onExport}>
+            <Download className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" size="icon" title="Печать" onClick={() => window.print()}>
+            <Printer className="h-4 w-4" />
+          </Button>
+          <Button onClick={onAdd}>
+            <Plus className="mr-1 h-4 w-4" /> Добавить
+          </Button>
+        </div>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-max border-collapse text-[11px] leading-tight">
+          <thead>
+            <tr className="bg-muted/50">
+              <th className="sticky left-0 z-20 w-16 border bg-muted p-2 text-center font-bold uppercase text-muted-foreground">Число</th>
+              {trainers.map((trainer) => (
+                <th
+                  key={trainer.id}
+                  className="h-28 w-12 min-w-12 border p-1 align-middle font-medium text-muted-foreground"
+                >
+                  <span className="inline-block [writing-mode:vertical-rl] rotate-180 whitespace-nowrap">{trainer.name}</span>
+                </th>
+              ))}
+              {PACKAGES.map((pack) => (
+                <th key={pack.value} className="h-28 w-9 min-w-9 border bg-accent/40 p-1 align-middle font-semibold text-muted-foreground">
+                  <span className="inline-block [writing-mode:vertical-rl] rotate-180 whitespace-nowrap">{pack.label}</span>
+                </th>
+              ))}
+              <th className="sticky right-24 z-20 min-w-24 border bg-muted p-2 text-right font-bold uppercase">Сумма</th>
+              <th className="sticky right-0 z-20 min-w-24 border bg-muted p-2 text-right font-bold uppercase">
+                Тренеру<span className="mt-1 block text-[9px] font-normal text-muted-foreground">по проценту</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody className="font-mono">
+            {rows.length === 0 && (
+              <tr>
+                <td colSpan={trainers.length + 6} className="h-28 border p-4 text-center text-muted-foreground">
+                  В этом месяце записей нет
+                </td>
+              </tr>
+            )}
+            {rows.map((entry) => (
+              <tr key={entry.id} className="group h-10 hover:bg-accent/30">
+                <td className="sticky left-0 z-10 border bg-card p-2 text-center text-muted-foreground group-hover:bg-accent">{dmy(entry.entry_date)}</td>
+                {trainers.map((trainer) => (
+                  <td key={trainer.id} className="max-w-24 border p-1.5 text-center">
+                    {entry.trainer_id === trainer.id && (
+                      <button
+                        type="button"
+                        title={`${entry.client_name}: ${money(Number(entry.amount))}`}
+                        onClick={() => onEdit(entry)}
+                        className="max-w-20 truncate font-medium text-primary underline-offset-2 hover:underline"
+                      >
+                        {entry.client_name}
+                      </button>
+                    )}
+                  </td>
+                ))}
+                {PACKAGES.map((pack) => (
+                  <td key={pack.value} className="border bg-accent/20 p-1 text-center font-bold">
+                    {entry.package === pack.value ? "+" : ""}
+                  </td>
+                ))}
+                <td className="sticky right-24 z-10 border bg-card p-2 text-right font-bold tabular-nums group-hover:bg-accent">
+                  {money(Number(entry.amount))}
+                  {restSum(entry) > 0 && <span className="block text-[9px] font-normal text-destructive">долг {money(restSum(entry))}</span>}
+                </td>
+                <td className="sticky right-0 z-10 border bg-muted/70 p-2 text-right font-bold tabular-nums text-primary">
+                  {money(sharePaid(entry))}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr className="bg-foreground font-semibold text-background">
+              <td className="sticky left-0 z-20 border border-background/20 bg-foreground p-2 text-center">Итого</td>
+              <td colSpan={trainers.length} className="border border-background/20 p-2 text-right text-[10px] font-normal">
+                Касса сейчас {money(cash.left)} · долг клиентов {money(totals.debt)}
+              </td>
+              {PACKAGES.map((pack) => (
+                <td key={pack.value} className="border border-background/20 p-2 text-center tabular-nums">{packageCount(pack.value)}</td>
+              ))}
+              <td className="sticky right-24 z-20 border border-background/20 bg-foreground p-2 text-right tabular-nums">{money(totals.income)}</td>
+              <td className="sticky right-0 z-20 border border-background/20 bg-foreground p-2 text-right tabular-nums">{money(totals.payout)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <div className="flex flex-wrap justify-between gap-2 border-t bg-muted/30 px-3 py-2 text-[10px] uppercase text-muted-foreground">
+        <span>Нажмите имя клиента, чтобы изменить запись</span>
+        <span>Поступило {money(totals.income)} · зал {money(totals.profit)} · расходы {money(totals.spent)}</span>
+      </div>
+    </section>
   );
 }
 
