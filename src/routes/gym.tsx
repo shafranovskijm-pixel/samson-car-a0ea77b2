@@ -690,6 +690,118 @@ function TrainerRow({ trainer, onChanged }: { trainer: GymTrainer; onChanged: ()
   );
 }
 
+type TrainerPayout = {
+  id: string;
+  amount: number;
+  paid_at: string;
+  status: string;
+  confirmed_at: string | null;
+  note: string | null;
+};
+
+function TrainerDetail({
+  trainer,
+  payouts,
+  onBack,
+}: {
+  trainer: GymTrainer;
+  payouts: TrainerPayout[];
+  onBack: () => void;
+}) {
+  const entries = useQuery({
+    queryKey: ["gym-trainer-entries", trainer.id],
+    queryFn: () => listTrainerEntries(trainer.id),
+  });
+
+  const all = entries.data ?? [];
+  const paidRows = all.filter((r) => r.paid);
+  const accrued = paidRows.reduce(
+    (a, r) => a + (Number(r.amount) * Number(r.trainer_percent)) / 100,
+    0,
+  );
+  const paidOut = payouts.reduce((a, p) => a + Number(p.amount), 0);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Button variant="outline" size="sm" onClick={onBack}>
+          <ChevronLeft className="mr-1 h-4 w-4" /> Все тренеры
+        </Button>
+        <div className="font-medium">
+          {trainer.name} · {trainer.percent}%
+        </div>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Начислено за всё время</CardTitle></CardHeader>
+          <CardContent className="text-2xl font-semibold">{money(accrued)}</CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Получил всего</CardTitle></CardHeader>
+          <CardContent className="text-2xl font-semibold">{money(paidOut)}</CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">К выдаче</CardTitle></CardHeader>
+          <CardContent className="text-2xl font-semibold text-emerald-600">{money(accrued - paidOut)}</CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader className="pb-2"><CardTitle className="text-sm">Выплаты — когда и сколько получил</CardTitle></CardHeader>
+        <CardContent>
+          <ul className="divide-y rounded-md border">
+            {payouts.length === 0 && (
+              <li className="px-2 py-2 text-sm text-muted-foreground">Выплат ещё не было</li>
+            )}
+            {payouts.map((p) => (
+              <li key={p.id} className="flex flex-wrap items-center gap-2 px-2 py-1.5 text-sm">
+                <span className="whitespace-nowrap">{p.paid_at.split("-").reverse().join(".")}</span>
+                <span className="font-medium">{money(Number(p.amount))}</span>
+                {p.status === "confirmed" ? (
+                  <span className="inline-flex items-center gap-1 text-emerald-600">
+                    <CheckCircle2 className="h-4 w-4" />
+                    получено{p.confirmed_at ? ` ${new Date(p.confirmed_at).toLocaleDateString("ru-RU")}` : ""}
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-amber-600">
+                    <Clock className="h-4 w-4" /> ждёт подтверждения
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-2"><CardTitle className="text-sm">Начисления — все тренировки</CardTitle></CardHeader>
+        <CardContent>
+          <ul className="divide-y rounded-md border">
+            {all.length === 0 && (
+              <li className="px-2 py-2 text-sm text-muted-foreground">
+                {entries.isLoading ? "Загрузка…" : "Занятий нет"}
+              </li>
+            )}
+            {all.map((r) => (
+              <li key={r.id} className="flex flex-wrap items-center gap-2 px-2 py-1.5 text-sm">
+                <span className="whitespace-nowrap">{dmy(r.entry_date)}</span>
+                <span className="truncate">{r.client_name}</span>
+                <span className="text-muted-foreground">{r.package} зан.</span>
+                <span className="ml-auto">{money(Number(r.amount))}</span>
+                <span className="font-medium">
+                  тренеру {money((Number(r.amount) * Number(r.trainer_percent)) / 100)} ({Number(r.trainer_percent)}%)
+                </span>
+                {!r.paid && <span className="text-xs text-amber-600">не оплачено</span>}
+              </li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 function AddRow({ placeholder, onAdd }: { placeholder: string; onAdd: (name: string) => Promise<void> }) {
   const [name, setName] = useState("");
   return (
