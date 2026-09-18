@@ -335,6 +335,48 @@ function ExpensesPage() {
         </div>
       </header>
 
+      {/* Касса сейчас — сколько денег должно быть в кассе на сегодня */}
+      <Card
+        className={`mb-6 border-2 ${cashNow >= 0 ? "border-green-500/40 bg-green-500/5" : "border-red-500/40 bg-red-500/5"}`}
+      >
+        <CardContent className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+          <div className="min-w-0">
+            <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              Касса сейчас
+            </div>
+            <div
+              className={`mt-1 text-2xl font-bold tracking-tight tabular-nums sm:text-3xl ${
+                cashNow >= 0 ? "text-green-600" : "text-red-600"
+              }`}
+            >
+              {fmt(cashNow)}
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-3 text-right sm:gap-6">
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Поступило
+              </div>
+              <div className="mt-0.5 text-sm font-semibold tabular-nums">{fmt(cashInNow)}</div>
+            </div>
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Мастерам
+              </div>
+              <div className="mt-0.5 text-sm font-semibold tabular-nums">{fmt(payrollOutNow)}</div>
+            </div>
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Расходы
+              </div>
+              <div className="mt-0.5 text-sm font-semibold tabular-nums">{fmt(otherOutNow)}</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+
+
 
       <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
         {/* Прибыль (кассовая) — герой */}
