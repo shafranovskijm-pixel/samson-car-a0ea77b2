@@ -133,6 +133,35 @@ function TrainerPage() {
       </header>
 
       <div className="space-y-4 p-3 sm:p-4">
+        {/* Счёт тренера за всё время */}
+        <Card className="border-primary/40">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Счёт тренера — за всё время</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Причитается всего</span>
+              <span className="font-semibold">{money(ledger.accruedAll)}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Получено всего</span>
+              <span className="font-semibold">{money(ledger.receivedAll)}</span>
+            </div>
+            {ledger.pending > 0 && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Из них ждёт подтверждения</span>
+                <span className="font-semibold text-amber-600">{money(ledger.pending)}</span>
+              </div>
+            )}
+            <div className="flex items-center justify-between border-t pt-2">
+              <span className="font-medium">К выдаче</span>
+              <span className={`text-xl font-bold ${ledger.owed > 0 ? "text-emerald-600" : ""}`}>
+                {money(ledger.owed)}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+
         <div>
           <Label htmlFor="month">Месяц</Label>
           <Input
