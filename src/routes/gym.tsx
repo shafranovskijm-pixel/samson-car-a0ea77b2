@@ -409,6 +409,7 @@ function GymPage() {
             <TabsTrigger value="payouts" className="shrink-0">Выплаты</TabsTrigger>
             <TabsTrigger value="debts" className="shrink-0">Долги</TabsTrigger>
             <TabsTrigger value="expenses" className="shrink-0">Расходы</TabsTrigger>
+            <TabsTrigger value="monthly" className="shrink-0">По месяцам</TabsTrigger>
             <TabsTrigger value="people" className="shrink-0">Люди</TabsTrigger>
           </TabsList>
 
