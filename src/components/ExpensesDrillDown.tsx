@@ -467,9 +467,14 @@ function PayoutView(p: Props) {
                     {" · "}
                     {a.paid_at}
                     {a.note ? ` · ${a.note}` : ""}
+                    {Number(a.amount ?? 0) < 0 ? " · удержание" : ""}
                   </span>
                 </span>
-                <span className="shrink-0 tabular-nums font-medium">
+                <span
+                  className={`shrink-0 tabular-nums font-medium ${
+                    Number(a.amount ?? 0) < 0 ? "text-green-700" : ""
+                  }`}
+                >
                   {fmt(Number(a.amount ?? 0))}
                 </span>
               </div>

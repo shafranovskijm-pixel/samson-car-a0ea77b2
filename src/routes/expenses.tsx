@@ -1140,7 +1140,14 @@ function MechanicDetails({
                     <div className="truncate text-muted-foreground">{a.note}</div>
                   ) : null}
                 </div>
-                <div className="text-right font-semibold">{fmt(Number(a.amount))}</div>
+                <div
+                  className={`text-right font-semibold ${
+                    Number(a.amount) < 0 ? "text-green-700" : ""
+                  }`}
+                >
+                  {fmt(Number(a.amount))}
+                  {Number(a.amount) < 0 ? " (удержание)" : ""}
+                </div>
                 <Button
                   size="icon"
                   variant="ghost"

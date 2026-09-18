@@ -109,7 +109,9 @@ export function ExpensesMonthlyTable({
           const key = `${mechanicId}|${dateOnly}`;
           if (!usedAdvance.has(key)) {
             advance = advByMechDay.get(key) ?? 0;
-            if (advance > 0) usedAdvance.add(key);
+            // Удержания (отрицательные суммы) тоже помечаем использованными,
+            // иначе они повторятся в каждой следующей работе этого дня.
+            if (advance !== 0) usedAdvance.add(key);
           }
         }
 
@@ -126,14 +128,14 @@ export function ExpensesMonthlyTable({
 
     // Висячие авансы — дни, где у мастера не было работ.
     advByMechDay.forEach((amount, key) => {
-      if (usedAdvance.has(key) || amount <= 0) return;
+      if (usedAdvance.has(key) || amount === 0) return;
       const [mechanicId, dateOnly] = key.split("|");
       out.push({
         date: dateOnly,
         dateLabel: format(parseISO(dateOnly), "dd.MM"),
         car: "—",
         plate: "",
-        work: "Аванс",
+        work: amount < 0 ? "Удержание" : "Аванс",
         byMech: { [mechanicId]: { percent: 0, price: 0, payout: 0, advance: amount } },
       });
     });
