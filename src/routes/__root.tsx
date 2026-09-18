@@ -153,6 +153,7 @@ function RootComponent() {
       case "/settings":
       case "/expenses":
       case "/gym":
+      case "/trainer":
         router.invalidate();
         break;
       default:
@@ -162,7 +163,7 @@ function RootComponent() {
   }, [router]);
 
   const isLoginRoute = pathname === "/login";
-  const isGymRoute = pathname === "/gym";
+  const isGymRoute = pathname === "/gym" || pathname === "/trainer";
 
   return (
     <QueryClientProvider client={queryClient}>
