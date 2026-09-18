@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Clock, Dumbbell, LogOut, Plus, Trash2 } from "lucide-react";
+import { CheckCircle2, ChevronLeft, Clock, Dumbbell, LogOut, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,7 @@ import {
   listGymEntries,
   listGymPayouts,
   listGymTrainers,
+  listTrainerEntries,
   updateGymEntry,
   updateGymTrainer,
   type GymTrainer,
@@ -92,6 +93,7 @@ function GymPage() {
   const [trainerId, setTrainerId] = useState<string>("");
   const [pkg, setPkg] = useState("1");
   const [amount, setAmount] = useState("");
+  const [selectedTrainer, setSelectedTrainer] = useState<string | null>(null);
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["gym-entries"] });
@@ -214,6 +216,7 @@ function GymPage() {
         <Tabs defaultValue="table">
           <TabsList className="w-full overflow-x-auto">
             <TabsTrigger value="table" className="flex-1">Занятия</TabsTrigger>
+            <TabsTrigger value="trainers" className="flex-1">Тренеры</TabsTrigger>
             <TabsTrigger value="salary" className="flex-1">Зарплата</TabsTrigger>
             <TabsTrigger value="payouts" className="flex-1">Выплаты</TabsTrigger>
             <TabsTrigger value="people" className="flex-1">Люди</TabsTrigger>
@@ -373,6 +376,51 @@ function GymPage() {
                 </tbody>
               </table>
             </div>
+          </TabsContent>
+
+          <TabsContent value="trainers" className="space-y-3">
+            {selectedTrainer ? (
+              (() => {
+                const t = (trainers.data ?? []).find((x) => x.id === selectedTrainer);
+                if (!t) return null;
+                return (
+                  <TrainerDetail
+                    trainer={t}
+                    payouts={(payouts.data ?? []).filter((p) => p.trainer_id === t.id)}
+                    onBack={() => setSelectedTrainer(null)}
+                  />
+                );
+              })()
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Тренеров: {(trainers.data ?? []).length}. Нажмите на тренера, чтобы увидеть его начисления и выплаты.
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {(trainers.data ?? []).map((t) => {
+                    const list = (payouts.data ?? []).filter((p) => p.trainer_id === t.id);
+                    const paidOut = list.reduce((a, p) => a + Number(p.amount), 0);
+                    return (
+                      <Card
+                        key={t.id}
+                        className="cursor-pointer transition-colors hover:bg-muted/50"
+                        onClick={() => setSelectedTrainer(t.id)}
+                      >
+                        <CardContent className="flex items-center gap-3 p-3">
+                          <div className="min-w-0">
+                            <div className="truncate font-medium">{t.name}</div>
+                            <div className="text-xs text-muted-foreground">
+                              Процент: {t.percent}% · выплат: {list.length} · выдано {money(paidOut)}
+                            </div>
+                          </div>
+                          <ChevronLeft className="ml-auto h-4 w-4 rotate-180 text-muted-foreground" />
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </TabsContent>
 
           <TabsContent value="salary">
@@ -638,6 +686,118 @@ function TrainerRow({ trainer, onChanged }: { trainer: GymTrainer; onChanged: ()
           </Button>
         </div>
       )}
+    </div>
+  );
+}
+
+type TrainerPayout = {
+  id: string;
+  amount: number;
+  paid_at: string;
+  status: string;
+  confirmed_at: string | null;
+  note: string | null;
+};
+
+function TrainerDetail({
+  trainer,
+  payouts,
+  onBack,
+}: {
+  trainer: GymTrainer;
+  payouts: TrainerPayout[];
+  onBack: () => void;
+}) {
+  const entries = useQuery({
+    queryKey: ["gym-trainer-entries", trainer.id],
+    queryFn: () => listTrainerEntries(trainer.id),
+  });
+
+  const all = entries.data ?? [];
+  const paidRows = all.filter((r) => r.paid);
+  const accrued = paidRows.reduce(
+    (a, r) => a + (Number(r.amount) * Number(r.trainer_percent)) / 100,
+    0,
+  );
+  const paidOut = payouts.reduce((a, p) => a + Number(p.amount), 0);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Button variant="outline" size="sm" onClick={onBack}>
+          <ChevronLeft className="mr-1 h-4 w-4" /> Все тренеры
+        </Button>
+        <div className="font-medium">
+          {trainer.name} · {trainer.percent}%
+        </div>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Начислено за всё время</CardTitle></CardHeader>
+          <CardContent className="text-2xl font-semibold">{money(accrued)}</CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Получил всего</CardTitle></CardHeader>
+          <CardContent className="text-2xl font-semibold">{money(paidOut)}</CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">К выдаче</CardTitle></CardHeader>
+          <CardContent className="text-2xl font-semibold text-emerald-600">{money(accrued - paidOut)}</CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader className="pb-2"><CardTitle className="text-sm">Выплаты — когда и сколько получил</CardTitle></CardHeader>
+        <CardContent>
+          <ul className="divide-y rounded-md border">
+            {payouts.length === 0 && (
+              <li className="px-2 py-2 text-sm text-muted-foreground">Выплат ещё не было</li>
+            )}
+            {payouts.map((p) => (
+              <li key={p.id} className="flex flex-wrap items-center gap-2 px-2 py-1.5 text-sm">
+                <span className="whitespace-nowrap">{p.paid_at.split("-").reverse().join(".")}</span>
+                <span className="font-medium">{money(Number(p.amount))}</span>
+                {p.status === "confirmed" ? (
+                  <span className="inline-flex items-center gap-1 text-emerald-600">
+                    <CheckCircle2 className="h-4 w-4" />
+                    получено{p.confirmed_at ? ` ${new Date(p.confirmed_at).toLocaleDateString("ru-RU")}` : ""}
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-amber-600">
+                    <Clock className="h-4 w-4" /> ждёт подтверждения
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-2"><CardTitle className="text-sm">Начисления — все тренировки</CardTitle></CardHeader>
+        <CardContent>
+          <ul className="divide-y rounded-md border">
+            {all.length === 0 && (
+              <li className="px-2 py-2 text-sm text-muted-foreground">
+                {entries.isLoading ? "Загрузка…" : "Занятий нет"}
+              </li>
+            )}
+            {all.map((r) => (
+              <li key={r.id} className="flex flex-wrap items-center gap-2 px-2 py-1.5 text-sm">
+                <span className="whitespace-nowrap">{dmy(r.entry_date)}</span>
+                <span className="truncate">{r.client_name}</span>
+                <span className="text-muted-foreground">{r.package} зан.</span>
+                <span className="ml-auto">{money(Number(r.amount))}</span>
+                <span className="font-medium">
+                  тренеру {money((Number(r.amount) * Number(r.trainer_percent)) / 100)} ({Number(r.trainer_percent)}%)
+                </span>
+                {!r.paid && <span className="text-xs text-amber-600">не оплачено</span>}
+              </li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
     </div>
   );
 }
