@@ -388,6 +388,17 @@ function GymPage() {
           <Stat title="Долг клиентов" value={money(totals.debt)} accent={totals.debt ? "text-amber-600" : undefined} />
         </div>
 
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Касса зала сейчас (за всё время)</CardTitle></CardHeader>
+          <CardContent className="space-y-1">
+            <div className="text-2xl font-semibold text-emerald-600">{money(cash.left)}</div>
+            <div className="text-xs text-muted-foreground">
+              Поступило {money(cash.got)} − тренерам {money(cash.toTrainers)} − расходы {money(cash.spent)}
+            </div>
+          </CardContent>
+        </Card>
+
+
         <Tabs defaultValue="table">
           <TabsList className="flex w-full justify-start gap-1 overflow-x-auto print:hidden">
             <TabsTrigger value="table" className="shrink-0">Занятия</TabsTrigger>
