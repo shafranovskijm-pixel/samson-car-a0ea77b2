@@ -123,11 +123,15 @@ function RootComponent() {
     setAuthed(isLoggedIn());
   }, [pathname]);
 
-  // Администратор зала работает только в разделе зала
+  // Администратор зала и тренер работают только в своих разделах
   useEffect(() => {
     if (!isLoggedIn()) return;
-    if (getSection() === "gym" && pathname !== "/gym") {
+    const section = getSection();
+    if (section === "gym" && pathname !== "/gym") {
       router.navigate({ to: "/gym", replace: true });
+    }
+    if (section === "trainer" && pathname !== "/trainer") {
+      router.navigate({ to: "/trainer", replace: true });
     }
   }, [pathname, router]);
 
@@ -149,6 +153,7 @@ function RootComponent() {
       case "/settings":
       case "/expenses":
       case "/gym":
+      case "/trainer":
         router.invalidate();
         break;
       default:
@@ -158,7 +163,7 @@ function RootComponent() {
   }, [router]);
 
   const isLoginRoute = pathname === "/login";
-  const isGymRoute = pathname === "/gym";
+  const isGymRoute = pathname === "/gym" || pathname === "/trainer";
 
   return (
     <QueryClientProvider client={queryClient}>

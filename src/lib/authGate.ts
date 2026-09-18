@@ -7,7 +7,31 @@ const DEFAULT_PASS = "admin555";
 const DEFAULT_GYM_LOGIN = "fitness555";
 const DEFAULT_GYM_PASS = "fitness555";
 
-export type AppSection = "auto" | "gym";
+export type AppSection = "auto" | "gym" | "trainer";
+
+const TRAINER_KEY = "samson-trainer-v1";
+
+export type TrainerSession = { id: string; name: string };
+
+export function getTrainerSession(): TrainerSession | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(TRAINER_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed.id === "string" && typeof parsed.name === "string") return parsed;
+  } catch {}
+  return null;
+}
+
+/** Успешный вход тренера: сохраняем сессию и раздел. */
+export function loginAsTrainer(session: TrainerSession) {
+  try {
+    window.localStorage.setItem(KEY, "1");
+    window.localStorage.setItem(TRAINER_KEY, JSON.stringify(session));
+    window.localStorage.setItem(ROLE_KEY, "trainer");
+  } catch {}
+}
 
 type Creds = { login: string; password: string };
 
@@ -28,7 +52,8 @@ export function getGymCredentials(): Creds {
 export function getSection(): AppSection {
   if (typeof window === "undefined") return "auto";
   try {
-    return window.localStorage.getItem(ROLE_KEY) === "gym" ? "gym" : "auto";
+    const v = window.localStorage.getItem(ROLE_KEY);
+    return v === "gym" ? "gym" : v === "trainer" ? "trainer" : "auto";
   } catch {
     return "auto";
   }
@@ -89,6 +114,7 @@ export function logout() {
   try {
     window.localStorage.removeItem(KEY);
     window.localStorage.removeItem(ROLE_KEY);
+    window.localStorage.removeItem(TRAINER_KEY);
   } catch {}
 }
 

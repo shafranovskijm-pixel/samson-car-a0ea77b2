@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TrainerRouteImport } from './routes/trainer'
 import { Route as StatsRouteImport } from './routes/stats'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ScheduleRouteImport } from './routes/schedule'
@@ -21,6 +22,11 @@ import { Route as CalendarRouteImport } from './routes/calendar'
 import { Route as CalculatorRouteImport } from './routes/calculator'
 import { Route as IndexRouteImport } from './routes/index'
 
+const TrainerRoute = TrainerRouteImport.update({
+  id: '/trainer',
+  path: '/trainer',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StatsRoute = StatsRouteImport.update({
   id: '/stats',
   path: '/stats',
@@ -89,6 +95,7 @@ export interface FileRoutesByFullPath {
   '/schedule': typeof ScheduleRoute
   '/settings': typeof SettingsRoute
   '/stats': typeof StatsRoute
+  '/trainer': typeof TrainerRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -102,6 +109,7 @@ export interface FileRoutesByTo {
   '/schedule': typeof ScheduleRoute
   '/settings': typeof SettingsRoute
   '/stats': typeof StatsRoute
+  '/trainer': typeof TrainerRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -116,6 +124,7 @@ export interface FileRoutesById {
   '/schedule': typeof ScheduleRoute
   '/settings': typeof SettingsRoute
   '/stats': typeof StatsRoute
+  '/trainer': typeof TrainerRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -131,6 +140,7 @@ export interface FileRouteTypes {
     | '/schedule'
     | '/settings'
     | '/stats'
+    | '/trainer'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -144,6 +154,7 @@ export interface FileRouteTypes {
     | '/schedule'
     | '/settings'
     | '/stats'
+    | '/trainer'
   id:
     | '__root__'
     | '/'
@@ -157,6 +168,7 @@ export interface FileRouteTypes {
     | '/schedule'
     | '/settings'
     | '/stats'
+    | '/trainer'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -171,10 +183,18 @@ export interface RootRouteChildren {
   ScheduleRoute: typeof ScheduleRoute
   SettingsRoute: typeof SettingsRoute
   StatsRoute: typeof StatsRoute
+  TrainerRoute: typeof TrainerRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/trainer': {
+      id: '/trainer'
+      path: '/trainer'
+      fullPath: '/trainer'
+      preLoaderRoute: typeof TrainerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/stats': {
       id: '/stats'
       path: '/stats'
@@ -267,6 +287,7 @@ const rootRouteChildren: RootRouteChildren = {
   ScheduleRoute: ScheduleRoute,
   SettingsRoute: SettingsRoute,
   StatsRoute: StatsRoute,
+  TrainerRoute: TrainerRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

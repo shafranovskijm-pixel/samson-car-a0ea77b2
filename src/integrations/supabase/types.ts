@@ -694,12 +694,67 @@ export type Database = {
           },
         ]
       }
+      gym_payouts: {
+        Row: {
+          amount: number
+          confirmed_at: string | null
+          created_at: string
+          id: string
+          note: string | null
+          paid_at: string
+          period_from: string | null
+          period_to: string | null
+          sent_at: string
+          status: string
+          trainer_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          confirmed_at?: string | null
+          created_at?: string
+          id?: string
+          note?: string | null
+          paid_at?: string
+          period_from?: string | null
+          period_to?: string | null
+          sent_at?: string
+          status?: string
+          trainer_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          confirmed_at?: string | null
+          created_at?: string
+          id?: string
+          note?: string | null
+          paid_at?: string
+          period_from?: string | null
+          period_to?: string | null
+          sent_at?: string
+          status?: string
+          trainer_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gym_payouts_trainer_id_fkey"
+            columns: ["trainer_id"]
+            isOneToOne: false
+            referencedRelation: "gym_trainers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gym_trainers: {
         Row: {
           created_at: string
           deleted_at: string | null
           id: string
+          login: string | null
           name: string
+          password: string | null
           percent: number
           sort_order: number
           updated_at: string
@@ -708,7 +763,9 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           id?: string
+          login?: string | null
           name: string
+          password?: string | null
           percent?: number
           sort_order?: number
           updated_at?: string
@@ -717,7 +774,9 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           id?: string
+          login?: string | null
           name?: string
+          password?: string | null
           percent?: number
           sort_order?: number
           updated_at?: string
