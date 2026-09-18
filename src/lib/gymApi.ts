@@ -6,7 +6,26 @@ export type GymTrainer = {
   sort_order: number;
   percent: number;
   deleted_at: string | null;
+  login: string | null;
+  password: string | null;
 };
+
+export type GymPayout = {
+  id: string;
+  trainer_id: string;
+  amount: number;
+  paid_at: string;
+  period_from: string | null;
+  period_to: string | null;
+  status: string;
+  sent_at: string;
+  confirmed_at: string | null;
+  note: string | null;
+};
+
+const TRAINER_COLS = "id,name,sort_order,percent,deleted_at,login,password";
+const PAYOUT_COLS =
+  "id,trainer_id,amount,paid_at,period_from,period_to,status,sent_at,confirmed_at,note";
 
 export type GymClient = {
   id: string;
