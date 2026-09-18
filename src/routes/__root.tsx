@@ -150,6 +150,7 @@ function RootComponent() {
   }, [router]);
 
   const isLoginRoute = pathname === "/login";
+  const isGymRoute = pathname === "/gym";
 
   return (
     <QueryClientProvider client={queryClient}>
