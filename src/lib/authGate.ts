@@ -52,7 +52,8 @@ export function getGymCredentials(): Creds {
 export function getSection(): AppSection {
   if (typeof window === "undefined") return "auto";
   try {
-    return window.localStorage.getItem(ROLE_KEY) === "gym" ? "gym" : "auto";
+    const v = window.localStorage.getItem(ROLE_KEY);
+    return v === "gym" ? "gym" : v === "trainer" ? "trainer" : "auto";
   } catch {
     return "auto";
   }
