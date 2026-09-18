@@ -104,8 +104,9 @@ function GymPage() {
     mutationFn: async () => {
       const name = clientName.trim();
       if (!name) throw new Error("Укажите клиента");
+      if (!trainerId) throw new Error("Выберите тренера");
       const sum = Number(amount.replace(",", "."));
-      if (!Number.isFinite(sum) || sum < 0) throw new Error("Укажите сумму");
+      if (!Number.isFinite(sum) || sum <= 0) throw new Error("Укажите сумму");
       const trainer = trainers.data?.find((t) => t.id === trainerId);
       let client = clients.data?.find((c) => c.name.toLowerCase() === name.toLowerCase());
       if (!client) client = await createGymClient(name);
@@ -804,16 +805,37 @@ function TrainerDetail({
 
 function AddRow({ placeholder, onAdd }: { placeholder: string; onAdd: (name: string) => Promise<void> }) {
   const [name, setName] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function submit() {
+    const value = name.trim();
+    if (!value) {
+      toast.error("Впишите имя");
+      return;
+    }
+    setBusy(true);
+    try {
+      await onAdd(value);
+      setName("");
+      toast.success(`Добавлено: ${value}`);
+    } catch (e) {
+      toast.error((e as Error).message || "Не удалось добавить");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="flex gap-2">
-      <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={placeholder} />
-      <Button
-        onClick={async () => {
-          if (!name.trim()) return;
-          await onAdd(name.trim());
-          setName("");
+      <Input
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") submit();
         }}
-      >
+        placeholder={placeholder}
+      />
+      <Button onClick={submit} disabled={busy}>
         <Plus className="h-4 w-4" />
       </Button>
     </div>
