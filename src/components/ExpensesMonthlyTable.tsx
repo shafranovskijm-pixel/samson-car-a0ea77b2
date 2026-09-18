@@ -109,7 +109,9 @@ export function ExpensesMonthlyTable({
           const key = `${mechanicId}|${dateOnly}`;
           if (!usedAdvance.has(key)) {
             advance = advByMechDay.get(key) ?? 0;
-            if (advance > 0) usedAdvance.add(key);
+            // Удержания (отрицательные суммы) тоже помечаем использованными,
+            // иначе они повторятся в каждой следующей работе этого дня.
+            if (advance !== 0) usedAdvance.add(key);
           }
         }
 
