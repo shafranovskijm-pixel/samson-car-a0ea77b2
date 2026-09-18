@@ -91,7 +91,9 @@ export function ExpensesDrillDown(props: Props) {
             {metric ? TITLE[metric] : ""}
           </DialogTitle>
           <div className="text-xs text-muted-foreground">
-            За {props.periodLabel} · {props.rangeLabel}
+            {metric === "cash"
+              ? "Все движения денег с начала работы по сегодня"
+              : `За ${props.periodLabel} · ${props.rangeLabel}`}
           </div>
         </DialogHeader>
         <div className="p-4 sm:p-6">
