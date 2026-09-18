@@ -732,9 +732,15 @@ function GymPage() {
                   <span className="whitespace-nowrap">{dmy(r.entry_date)}</span>
                   <span className="font-medium">{r.client_name}</span>
                   <span className="text-muted-foreground">{trainerName(r.trainer_id)}</span>
-                  <span className="ml-auto font-semibold text-amber-600">{money(Number(r.amount))}</span>
+                  {paidSum(r) > 0 && (
+                    <span className="text-xs text-muted-foreground">
+                      внесено {money(paidSum(r))} из {money(Number(r.amount))}
+                    </span>
+                  )}
+                  <span className="ml-auto font-semibold text-amber-600">{money(restSum(r))}</span>
+                  <PartialPayInline entry={r} onChanged={invalidate} />
                   <Button size="sm" onClick={() => togglePaid.mutate({ id: r.id, paid: true })}>
-                    Оплачено
+                    Оплачено полностью
                   </Button>
                 </li>
               ))}
@@ -747,6 +753,62 @@ function GymPage() {
               onChanged={() => qc.invalidateQueries({ queryKey: ["gym-expenses"] })}
             />
           </TabsContent>
+
+          <TabsContent value="monthly" className="space-y-3">
+            <div className="flex items-center gap-2 print:hidden">
+              <Button variant="outline" size="sm" onClick={() => window.print()}>
+                <Printer className="mr-1 h-4 w-4" /> Печать сводки
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  downloadCsv("zal-po-mesyacam.csv", [
+                    ["Месяц", "Поступило", "Тренерам", "Расходы", "Прибыль"],
+                    ...monthly.map((m) => [
+                      monthLabel(m.m),
+                      Math.round(m.income),
+                      Math.round(m.payout),
+                      Math.round(m.spent),
+                      Math.round(m.income - m.payout - m.spent),
+                    ]),
+                  ])
+                }
+              >
+                <Download className="mr-1 h-4 w-4" /> Экспорт
+              </Button>
+            </div>
+            <div className="overflow-x-auto rounded-md border">
+              <table className="w-full min-w-[560px] text-sm">
+                <thead className="bg-muted/50">
+                  <tr className="text-left">
+                    <th className="p-2">Месяц</th>
+                    <th className="p-2 text-right">Поступило</th>
+                    <th className="p-2 text-right">Тренерам</th>
+                    <th className="p-2 text-right">Расходы</th>
+                    <th className="p-2 text-right">Прибыль</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {monthly.length === 0 && (
+                    <tr><td colSpan={5} className="p-4 text-center text-muted-foreground">Нет данных</td></tr>
+                  )}
+                  {monthly.map((m) => (
+                    <tr key={m.m} className="border-t">
+                      <td className="p-2">{monthLabel(m.m)}</td>
+                      <td className="p-2 text-right">{money(m.income)}</td>
+                      <td className="p-2 text-right">{money(m.payout)}</td>
+                      <td className="p-2 text-right">{money(m.spent)}</td>
+                      <td className="p-2 text-right font-medium text-emerald-600">
+                        {money(m.income - m.payout - m.spent)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </TabsContent>
+
 
           <TabsContent value="people" className="grid gap-3 sm:grid-cols-2">
             <Card>
