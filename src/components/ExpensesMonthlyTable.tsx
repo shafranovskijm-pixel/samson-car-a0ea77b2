@@ -135,7 +135,7 @@ export function ExpensesMonthlyTable({
         dateLabel: format(parseISO(dateOnly), "dd.MM"),
         car: "—",
         plate: "",
-        work: "Аванс",
+        work: amount < 0 ? "Удержание" : "Аванс",
         byMech: { [mechanicId]: { percent: 0, price: 0, payout: 0, advance: amount } },
       });
     });
