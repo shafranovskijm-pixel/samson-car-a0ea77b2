@@ -338,16 +338,16 @@ function GymPage() {
         </div>
 
         <Tabs defaultValue="table">
-          <TabsList className="w-full overflow-x-auto print:hidden">
-            <TabsTrigger value="table" className="flex-1">Занятия</TabsTrigger>
-            <TabsTrigger value="subs" className="flex-1">Абонементы</TabsTrigger>
-            <TabsTrigger value="clients" className="flex-1">Клиенты</TabsTrigger>
-            <TabsTrigger value="trainers" className="flex-1">Тренеры</TabsTrigger>
-            <TabsTrigger value="salary" className="flex-1">Зарплата</TabsTrigger>
-            <TabsTrigger value="payouts" className="flex-1">Выплаты</TabsTrigger>
-            <TabsTrigger value="debts" className="flex-1">Долги</TabsTrigger>
-            <TabsTrigger value="expenses" className="flex-1">Расходы</TabsTrigger>
-            <TabsTrigger value="people" className="flex-1">Люди</TabsTrigger>
+          <TabsList className="flex w-full justify-start gap-1 overflow-x-auto print:hidden">
+            <TabsTrigger value="table" className="shrink-0">Занятия</TabsTrigger>
+            <TabsTrigger value="subs" className="shrink-0">Абонементы</TabsTrigger>
+            <TabsTrigger value="clients" className="shrink-0">Клиенты</TabsTrigger>
+            <TabsTrigger value="trainers" className="shrink-0">Тренеры</TabsTrigger>
+            <TabsTrigger value="salary" className="shrink-0">Зарплата</TabsTrigger>
+            <TabsTrigger value="payouts" className="shrink-0">Выплаты</TabsTrigger>
+            <TabsTrigger value="debts" className="shrink-0">Долги</TabsTrigger>
+            <TabsTrigger value="expenses" className="shrink-0">Расходы</TabsTrigger>
+            <TabsTrigger value="people" className="shrink-0">Люди</TabsTrigger>
           </TabsList>
 
           <TabsContent value="table" className="space-y-3">
