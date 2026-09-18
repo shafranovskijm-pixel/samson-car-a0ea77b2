@@ -250,7 +250,10 @@ function GymPage() {
 
   const removeEntry = useMutation({ mutationFn: (id: string) => deleteGymEntry(id), onSuccess: invalidate });
   const togglePaid = useMutation({
-    mutationFn: ({ id, paid }: { id: string; paid: boolean }) => updateGymEntry(id, { paid }),
+    mutationFn: ({ id, paid }: { id: string; paid: boolean }) => {
+      const row = (entries.data ?? []).find((r) => r.id === id);
+      return updateGymEntry(id, { paid, paid_amount: paid ? Number(row?.amount ?? 0) : 0 });
+    },
     onSuccess: invalidate,
   });
   const visit = useMutation({
@@ -1298,7 +1301,7 @@ function TrainerDetail({
 
   const all = entries.data ?? [];
   const paidRows = all.filter((r) => r.paid);
-  const accrued = paidRows.reduce((a, r) => a + share(r), 0);
+  const accrued = paidRows.reduce((a, r) => a + sharePaid(r), 0);
   const received = payouts.filter((p) => p.status === "confirmed").reduce((a, p) => a + Number(p.amount), 0);
   const pending = payouts.filter((p) => p.status !== "confirmed").reduce((a, p) => a + Number(p.amount), 0);
 
