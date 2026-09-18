@@ -530,7 +530,7 @@ function PayoutCard({
             <li className="px-2 py-2 text-sm text-muted-foreground">Выплат за период нет</li>
           )}
           {payouts.map((p) => (
-            <li key={p.id} className="flex items-center gap-2 px-2 py-1.5 text-sm">
+            <li key={p.id} className="flex flex-wrap items-center gap-2 px-2 py-1.5 text-sm">
               <span className="whitespace-nowrap">{dmy(p.paid_at)}</span>
               <span className="font-medium">{money(Number(p.amount))}</span>
               {p.status === "confirmed" ? (
