@@ -231,6 +231,28 @@ export async function deleteGymEntry(id: string) {
   if (r.error) throw r.error;
 }
 
+/** Принять оплату (в том числе частями). Возвращает новую оплаченную сумму. */
+export async function addGymPayment(entry: GymEntry, sum: number): Promise<number> {
+  const paidAmount = Math.min(Number(entry.amount), Number(entry.paid_amount || 0) + sum);
+  const r = await supabase
+    .from("gym_entries")
+    .update({ paid_amount: paidAmount, paid: paidAmount >= Number(entry.amount) })
+    .eq("id", entry.id);
+  if (r.error) throw r.error;
+  return paidAmount;
+}
+
+/** Заморозка абонемента и срок действия. */
+export async function setGymEntryFrozen(id: string, frozen: boolean) {
+  const r = await supabase.from("gym_entries").update({ frozen }).eq("id", id);
+  if (r.error) throw r.error;
+}
+
+export async function setGymEntryValidUntil(id: string, validUntil: string | null) {
+  const r = await supabase.from("gym_entries").update({ valid_until: validUntil }).eq("id", id);
+  if (r.error) throw r.error;
+}
+
 /** Отметить посещение по абонементу (или отменить последнее). */
 export async function markGymVisit(id: string, used: number) {
   const r = await supabase.from("gym_entries").update({ sessions_used: used }).eq("id", id);
