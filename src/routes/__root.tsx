@@ -159,7 +159,7 @@ function RootComponent() {
           <div className="min-h-screen" />
         ) : !authed && !isLoginRoute ? (
           <RedirectToLogin />
-        ) : isLoginRoute ? (
+        ) : isLoginRoute || isGymRoute ? (
           <Outlet />
         ) : (
           <SidebarProvider>
