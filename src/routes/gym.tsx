@@ -124,6 +124,28 @@ function share(r: GymEntry) {
   return (Number(r.amount) * Number(r.trainer_percent)) / 100;
 }
 
+/** Сколько клиент уже заплатил (с учётом оплаты частями). */
+function paidSum(r: GymEntry) {
+  const p = Number(r.paid_amount ?? 0);
+  if (p > 0) return Math.min(p, Number(r.amount));
+  return r.paid ? Number(r.amount) : 0;
+}
+
+/** Остаток долга клиента. */
+function restSum(r: GymEntry) {
+  return Math.max(0, Number(r.amount) - paidSum(r));
+}
+
+/** Доля тренера от фактически полученных денег. */
+function sharePaid(r: GymEntry) {
+  return (paidSum(r) * Number(r.trainer_percent)) / 100;
+}
+
+function monthLabel(m: string) {
+  const names = ["январь","февраль","март","апрель","май","июнь","июль","август","сентябрь","октябрь","ноябрь","декабрь"];
+  return `${names[Number(m.slice(5, 7)) - 1]} ${m.slice(0, 4)}`;
+}
+
 function loadPrices(): Record<string, number> {
   if (typeof window === "undefined") return {};
   try {
