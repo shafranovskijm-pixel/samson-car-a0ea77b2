@@ -204,9 +204,14 @@ function TrainerPage() {
                   <div className="min-w-0">
                     <div className="text-lg font-semibold">{money(Number(p.amount))}</div>
                     <div className="text-xs text-muted-foreground">
-                      {p.paid_at.split("-").reverse().join(".")}
+                      Отправлено: {p.paid_at.split("-").reverse().join(".")}
                       {p.note ? ` — ${p.note}` : ""}
                     </div>
+                    {p.status === "confirmed" && p.confirmed_at && (
+                      <div className="text-xs text-emerald-600">
+                        Получено: {new Date(p.confirmed_at).toLocaleDateString("ru-RU")}
+                      </div>
+                    )}
                   </div>
                   <div className="ml-auto">
                     {p.status === "confirmed" ? (
