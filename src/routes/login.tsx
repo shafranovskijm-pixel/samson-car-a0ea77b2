@@ -86,11 +86,25 @@ function LoginPage() {
             <Dumbbell className="h-10 w-10" />
             <span className="font-medium">Тренажёрный зал</span>
           </button>
+          <button
+            type="button"
+            onClick={() => setSection("trainer")}
+            className="col-span-2 flex flex-col items-center gap-3 rounded-xl border border-white/10 bg-background/90 p-6 shadow-2xl backdrop-blur-md transition hover:scale-[1.02]"
+          >
+            <UserRound className="h-10 w-10" />
+            <span className="font-medium">Тренер</span>
+          </button>
         </div>
       ) : (
       <Card className="relative z-10 w-full max-w-sm border-white/10 bg-background/90 shadow-2xl backdrop-blur-md">
         <CardHeader>
-          <CardTitle>{section === "gym" ? "Samson Fit — вход" : "Samson Auto — вход"}</CardTitle>
+          <CardTitle>
+            {section === "gym"
+              ? "Samson Fit — вход"
+              : section === "trainer"
+                ? "Кабинет тренера — вход"
+                : "Samson Auto — вход"}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-3">
