@@ -970,11 +970,40 @@ function EditEntryDialog({
   );
 }
 
+function LedgerSection({
+  title,
+  subtitle,
+  totalLabel,
+  totalValue,
+  actions,
+  children,
+}: {
+  title: string;
+  subtitle: string;
+  totalLabel: string;
+  totalValue: string;
+  actions?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="overflow-hidden rounded-sm border bg-card shadow-sm">
+      <div className="flex flex-wrap items-end justify-between gap-3 border-b bg-muted/40 p-3 sm:p-4">
+        <div><h1 className="font-display text-3xl text-foreground">{title}</h1><p className="text-xs font-medium uppercase text-muted-foreground">{subtitle}</p></div>
+        <div className="ml-auto text-right"><div className="text-[10px] uppercase text-muted-foreground">{totalLabel}</div><div className="font-mono text-xl font-semibold tabular-nums">{totalValue}</div></div>
+        {actions && <div className="flex gap-2 print:hidden">{actions}</div>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
 function ExpensesTab({
   rows,
+  cash,
   onChanged,
 }: {
   rows: { id: string; expense_date: string; title: string; amount: number; note: string | null }[];
+  cash: { got: number; toTrainers: number; spent: number; left: number };
   onChanged: () => void;
 }) {
   const [date, setDate] = useState(today);
@@ -1002,15 +1031,19 @@ function ExpensesTab({
   }
 
   return (
-    <Card>
-      <CardHeader className="pb-2"><CardTitle className="text-sm">Расходы зала за период: {money(total)}</CardTitle></CardHeader>
-      <CardContent className="space-y-3">
-        <div className="grid gap-2 sm:grid-cols-4">
+    <LedgerSection title="Касса зала" subtitle="Движение денег за всё время" totalLabel="В кассе сейчас" totalValue={money(cash.left)}>
+      <div className="grid grid-cols-3 border-b bg-muted/20 text-center text-xs">
+        <div className="border-r p-3"><span className="block uppercase text-muted-foreground">Поступило</span><strong className="font-mono text-base tabular-nums">{money(cash.got)}</strong></div>
+        <div className="border-r p-3"><span className="block uppercase text-muted-foreground">Тренерам</span><strong className="font-mono text-base tabular-nums">{money(cash.toTrainers)}</strong></div>
+        <div className="p-3"><span className="block uppercase text-muted-foreground">Расходы</span><strong className="font-mono text-base tabular-nums">{money(cash.spent)}</strong></div>
+      </div>
+      <div className="space-y-3 p-3">
+        <div className="grid gap-2 sm:grid-cols-[160px_1fr_160px_auto] sm:items-end">
           <div>
             <Label>Дата</Label>
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </div>
-          <div className="sm:col-span-2">
+          <div>
             <Label>На что</Label>
             <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Аренда, вода, инвентарь" />
           </div>
@@ -1018,30 +1051,14 @@ function ExpensesTab({
             <Label>Сумма</Label>
             <Input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" />
           </div>
+          <Button onClick={add} disabled={busy}><Plus className="mr-1 h-4 w-4" /> Добавить</Button>
         </div>
-        <Button onClick={add} disabled={busy}><Plus className="mr-1 h-4 w-4" /> Добавить расход</Button>
-        <ul className="divide-y rounded-md border">
-          {rows.length === 0 && <li className="px-2 py-2 text-sm text-muted-foreground">Расходов за период нет</li>}
-          {rows.map((r) => (
-            <li key={r.id} className="flex items-center gap-2 px-2 py-1.5 text-sm">
-              <span className="whitespace-nowrap">{dmy(r.expense_date)}</span>
-              <span className="truncate">{r.title}</span>
-              <span className="ml-auto font-medium">{money(Number(r.amount))}</span>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={async () => {
-                  await deleteGymExpense(r.id);
-                  onChanged();
-                }}
-              >
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
-            </li>
-          ))}
-        </ul>
-      </CardContent>
-    </Card>
+      </div>
+      <div className="overflow-x-auto"><table className="w-full min-w-[520px] border-collapse text-sm"><thead className="bg-muted/50 text-xs uppercase text-muted-foreground"><tr><th className="border p-2 text-left">Дата</th><th className="border p-2 text-left">Назначение</th><th className="border p-2 text-right">Сумма</th><th className="w-12 border print:hidden" /></tr></thead><tbody>
+        {rows.length === 0 && <tr><td colSpan={4} className="h-24 border p-4 text-center text-muted-foreground">Расходов за период нет</td></tr>}
+        {rows.map((r) => <tr key={r.id} className="hover:bg-accent/30"><td className="border p-2 whitespace-nowrap">{dmy(r.expense_date)}</td><td className="border p-2">{r.title}</td><td className="border p-2 text-right font-semibold tabular-nums">{money(Number(r.amount))}</td><td className="border p-1 print:hidden"><Button variant="ghost" size="icon" onClick={async () => { await deleteGymExpense(r.id); onChanged(); }}><Trash2 className="h-4 w-4 text-destructive" /></Button></td></tr>)}
+      </tbody><tfoot><tr className="bg-foreground text-background"><td colSpan={2} className="border border-background/20 p-2 font-semibold">Расходы за период</td><td className="border border-background/20 p-2 text-right font-mono font-semibold tabular-nums">{money(total)}</td><td className="border border-background/20" /></tr></tfoot></table></div>
+    </LedgerSection>
   );
 }
 
@@ -1427,11 +1444,11 @@ function PeopleCard({
   onDelete: (id: string) => Promise<void>;
 }) {
   return (
-    <Card>
-      <CardHeader className="pb-2"><CardTitle className="text-sm">{title}</CardTitle></CardHeader>
-      <CardContent className="space-y-2">
+    <div className="space-y-2 p-3">
+        <div className="flex items-baseline justify-between"><h2 className="font-display text-xl">{title}</h2><span className="text-xs text-muted-foreground">{items.length}</span></div>
         <AddRow placeholder="Имя" onAdd={onAdd} />
-        <ul className="divide-y rounded-md border">
+        <ul className="divide-y border-y">
+          {items.length === 0 && <li className="py-4 text-center text-sm text-muted-foreground">Пока никого нет</li>}
           {items.map((i) => (
             <li key={i.id} className="flex items-center justify-between px-2 py-1.5 text-sm">
               <span>{i.label}</span>
@@ -1441,8 +1458,7 @@ function PeopleCard({
             </li>
           ))}
         </ul>
-      </CardContent>
-    </Card>
+    </div>
   );
 }
 
