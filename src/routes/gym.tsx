@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   ChevronLeft,
   Clock,
+  CreditCard,
   Download,
   Dumbbell,
   LogOut,
@@ -384,6 +385,8 @@ function GymPage() {
               onMonthChange={(value) => { setKind("month"); setAnchor(`${value}-01`); }}
               onAdd={() => setShowAdd((value) => !value)}
               onEdit={setEditing}
+              onPay={(entry) => togglePaid.mutate({ id: entry.id, paid: true })}
+              payingId={togglePaid.isPending ? togglePaid.variables?.id ?? null : null}
               onExport={exportEntries}
             />
 
@@ -730,6 +733,8 @@ function LedgerTable({
   onMonthChange,
   onAdd,
   onEdit,
+  onPay,
+  payingId,
   onExport,
 }: {
   rows: GymEntry[];
@@ -740,6 +745,8 @@ function LedgerTable({
   onMonthChange: (value: string) => void;
   onAdd: () => void;
   onEdit: (entry: GymEntry) => void;
+  onPay: (entry: GymEntry) => void;
+  payingId: string | null;
   onExport: () => void;
 }) {
   const packageCount = (value: string) => rows.filter((r) => r.package === value).length;
@@ -827,7 +834,22 @@ function LedgerTable({
                 ))}
                 <td className="sticky right-24 z-10 border bg-card p-2 text-right font-bold tabular-nums group-hover:bg-accent">
                   {money(Number(entry.amount))}
-                  {restSum(entry) > 0 && <span className="block text-[9px] font-normal text-destructive">долг {money(restSum(entry))}</span>}
+                  {restSum(entry) > 0 ? (
+                    <div className="mt-1 flex flex-col items-end gap-1 print:hidden">
+                      <span className="text-[9px] font-normal text-destructive">долг {money(restSum(entry))}</span>
+                      <Button
+                        size="sm"
+                        className="h-6 px-2 text-[10px]"
+                        disabled={payingId === entry.id}
+                        onClick={() => onPay(entry)}
+                      >
+                        <CreditCard className="mr-1 h-3 w-3" />
+                        Оплатить
+                      </Button>
+                    </div>
+                  ) : (
+                    <span className="block text-[9px] font-normal text-emerald-600">оплачено</span>
+                  )}
                 </td>
                 <td className="sticky right-0 z-10 border bg-muted/70 p-2 text-right font-bold tabular-nums text-primary">
                   {money(sharePaid(entry))}
