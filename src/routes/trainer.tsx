@@ -87,7 +87,7 @@ function TrainerPage() {
       0,
     );
     const paidOut = (payouts.data ?? [])
-      .filter((p) => p.paid_at >= from && p.paid_at <= to)
+      .filter((p) => p.status === "confirmed" && p.paid_at >= from && p.paid_at <= to)
       .reduce((a, p) => a + Number(p.amount), 0);
     return { count: paidRows.length, sum, accrued, paidOut, rest: accrued - paidOut };
   }, [rows, payouts.data, from, to]);
@@ -98,7 +98,9 @@ function TrainerPage() {
       .filter((r) => r.paid)
       .reduce((a, r) => a + (Number(r.amount) * Number(r.trainer_percent)) / 100, 0);
     const allPayouts = payouts.data ?? [];
-    const receivedAll = allPayouts.reduce((a, p) => a + Number(p.amount), 0);
+    const receivedAll = allPayouts
+      .filter((p) => p.status === "confirmed")
+      .reduce((a, p) => a + Number(p.amount), 0);
     const pending = allPayouts
       .filter((p) => p.status !== "confirmed")
       .reduce((a, p) => a + Number(p.amount), 0);
