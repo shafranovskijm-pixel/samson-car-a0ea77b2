@@ -57,7 +57,7 @@ export async function listGymTrainers(): Promise<GymTrainer[]> {
   return throwIf(
     await supabase
       .from("gym_trainers")
-      .select("id,name,sort_order,percent,deleted_at")
+      .select(TRAINER_COLS)
       .is("deleted_at", null)
       .order("sort_order", { ascending: true }),
   ) as GymTrainer[];
@@ -68,9 +68,70 @@ export async function createGymTrainer(name: string, percent = 80): Promise<GymT
     await supabase
       .from("gym_trainers")
       .insert({ name, percent, sort_order: 900 })
-      .select("id,name,sort_order,percent,deleted_at")
+      .select(TRAINER_COLS)
       .single(),
   ) as GymTrainer;
+}
+
+/** Вход тренера по личному логину/паролю. */
+export async function findTrainerByCredentials(
+  login: string,
+  password: string,
+): Promise<GymTrainer | null> {
+  const r = await supabase
+    .from("gym_trainers")
+    .select(TRAINER_COLS)
+    .is("deleted_at", null)
+    .ilike("login", login.trim())
+    .limit(1);
+  if (r.error) throw r.error;
+  const t = (r.data ?? [])[0] as GymTrainer | undefined;
+  if (!t || !t.password || t.password !== password) return null;
+  return t;
+}
+
+export async function getGymTrainer(id: string): Promise<GymTrainer | null> {
+  const r = await supabase.from("gym_trainers").select(TRAINER_COLS).eq("id", id).maybeSingle();
+  if (r.error) throw r.error;
+  return (r.data as GymTrainer) ?? null;
+}
+
+export async function listGymPayouts(trainerId?: string): Promise<GymPayout[]> {
+  let q = supabase.from("gym_payouts").select(PAYOUT_COLS).order("paid_at", { ascending: false });
+  if (trainerId) q = q.eq("trainer_id", trainerId);
+  const r = await q;
+  if (r.error) throw r.error;
+  return (r.data ?? []) as GymPayout[];
+}
+
+export async function createGymPayout(input: {
+  trainer_id: string;
+  amount: number;
+  paid_at: string;
+  period_from?: string | null;
+  period_to?: string | null;
+  note?: string | null;
+}): Promise<GymPayout> {
+  return throwIf(
+    await supabase
+      .from("gym_payouts")
+      .insert({ ...input, status: "sent" })
+      .select(PAYOUT_COLS)
+      .single(),
+  ) as GymPayout;
+}
+
+export async function confirmGymPayout(id: string) {
+  const r = await supabase
+    .from("gym_payouts")
+    .update({ status: "confirmed", confirmed_at: new Date().toISOString() })
+    .eq("id", id);
+  if (r.error) throw r.error;
+}
+
+export async function deleteGymPayout(id: string) {
+  const r = await supabase.from("gym_payouts").delete().eq("id", id);
+  if (r.error) throw r.error;
 }
 
 export async function updateGymTrainer(id: string, patch: Partial<GymTrainer>) {
