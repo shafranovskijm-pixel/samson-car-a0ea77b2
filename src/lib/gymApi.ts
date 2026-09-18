@@ -62,7 +62,7 @@ export type GymExpense = {
 };
 
 const ENTRY_COLS =
-  "id,entry_date,trainer_id,client_id,client_name,package,amount,trainer_percent,paid,note,sessions_total,sessions_used";
+  "id,entry_date,trainer_id,client_id,client_name,package,amount,trainer_percent,paid,note,sessions_total,sessions_used,paid_amount,valid_until,frozen";
 const EXPENSE_COLS = "id,expense_date,title,amount,note";
 
 const throwIf = <T,>(x: { data: T | null; error: unknown }): T => {
