@@ -92,6 +92,19 @@ function TrainerPage() {
     return { count: paidRows.length, sum, accrued, paidOut, rest: accrued - paidOut };
   }, [rows, payouts.data, from, to]);
 
+  // Счёт за всё время
+  const ledger = useMemo(() => {
+    const accruedAll = (allEntries.data ?? [])
+      .filter((r) => r.paid)
+      .reduce((a, r) => a + (Number(r.amount) * Number(r.trainer_percent)) / 100, 0);
+    const allPayouts = payouts.data ?? [];
+    const receivedAll = allPayouts.reduce((a, p) => a + Number(p.amount), 0);
+    const pending = allPayouts
+      .filter((p) => p.status !== "confirmed")
+      .reduce((a, p) => a + Number(p.amount), 0);
+    return { accruedAll, receivedAll, owed: accruedAll - receivedAll, pending };
+  }, [allEntries.data, payouts.data]);
+
   if (!session) {
     return (
       <div className="flex min-h-screen items-center justify-center p-4 text-center text-sm text-muted-foreground">
