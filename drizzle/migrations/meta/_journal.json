@@ -15,6 +15,13 @@
       "when": 1789735190977,
       "tag": "0001_gym_trainer_login_and_payouts",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789736329436,
+      "tag": "0002_gym_subscriptions_and_expenses",
+      "breakpoints": true
     }
   ]
 }
