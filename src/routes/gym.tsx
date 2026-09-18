@@ -734,6 +734,144 @@ function GymPage() {
   );
 }
 
+function LedgerTable({
+  rows,
+  trainers,
+  month,
+  totals,
+  cash,
+  onMonthChange,
+  onAdd,
+  onEdit,
+  onExport,
+}: {
+  rows: GymEntry[];
+  trainers: GymTrainer[];
+  month: string;
+  totals: { income: number; payout: number; debt: number; spent: number; profit: number };
+  cash: { got: number; toTrainers: number; spent: number; left: number };
+  onMonthChange: (value: string) => void;
+  onAdd: () => void;
+  onEdit: (entry: GymEntry) => void;
+  onExport: () => void;
+}) {
+  const packageCount = (value: string) => rows.filter((r) => r.package === value).length;
+
+  return (
+    <section className="overflow-hidden rounded-sm border bg-card shadow-sm">
+      <div className="flex flex-col gap-3 border-b bg-muted/40 p-3 sm:flex-row sm:items-end sm:justify-between sm:p-4">
+        <div>
+          <h1 className="font-display text-3xl capitalize text-foreground">{monthLabel(month)}</h1>
+          <p className="text-xs font-medium uppercase text-muted-foreground">Реестр посещений и оплат</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 print:hidden">
+          <Input
+            type="month"
+            value={month}
+            onChange={(event) => onMonthChange(event.target.value)}
+            className="w-[150px] bg-background"
+            aria-label="Выбрать месяц"
+          />
+          <Button variant="outline" size="icon" title="Экспорт" onClick={onExport}>
+            <Download className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" size="icon" title="Печать" onClick={() => window.print()}>
+            <Printer className="h-4 w-4" />
+          </Button>
+          <Button onClick={onAdd}>
+            <Plus className="mr-1 h-4 w-4" /> Добавить
+          </Button>
+        </div>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-max border-collapse text-[11px] leading-tight">
+          <thead>
+            <tr className="bg-muted/50">
+              <th className="sticky left-0 z-20 w-16 border bg-muted p-2 text-center font-bold uppercase text-muted-foreground">Число</th>
+              {trainers.map((trainer) => (
+                <th
+                  key={trainer.id}
+                  className="h-28 w-12 min-w-12 border p-1 align-middle font-medium text-muted-foreground"
+                >
+                  <span className="inline-block [writing-mode:vertical-rl] rotate-180 whitespace-nowrap">{trainer.name}</span>
+                </th>
+              ))}
+              {PACKAGES.map((pack) => (
+                <th key={pack.value} className="h-28 w-9 min-w-9 border bg-accent/40 p-1 align-middle font-semibold text-muted-foreground">
+                  <span className="inline-block [writing-mode:vertical-rl] rotate-180 whitespace-nowrap">{pack.label}</span>
+                </th>
+              ))}
+              <th className="sticky right-24 z-20 min-w-24 border bg-muted p-2 text-right font-bold uppercase">Сумма</th>
+              <th className="sticky right-0 z-20 min-w-24 border bg-muted p-2 text-right font-bold uppercase">
+                Тренеру<span className="mt-1 block text-[9px] font-normal text-muted-foreground">по проценту</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody className="font-mono">
+            {rows.length === 0 && (
+              <tr>
+                <td colSpan={trainers.length + 6} className="h-28 border p-4 text-center text-muted-foreground">
+                  В этом месяце записей нет
+                </td>
+              </tr>
+            )}
+            {rows.map((entry) => (
+              <tr key={entry.id} className="group h-10 hover:bg-accent/30">
+                <td className="sticky left-0 z-10 border bg-card p-2 text-center text-muted-foreground group-hover:bg-accent">{dmy(entry.entry_date)}</td>
+                {trainers.map((trainer) => (
+                  <td key={trainer.id} className="max-w-24 border p-1.5 text-center">
+                    {entry.trainer_id === trainer.id && (
+                      <button
+                        type="button"
+                        title={`${entry.client_name}: ${money(Number(entry.amount))}`}
+                        onClick={() => onEdit(entry)}
+                        className="max-w-20 truncate font-medium text-primary underline-offset-2 hover:underline"
+                      >
+                        {entry.client_name}
+                      </button>
+                    )}
+                  </td>
+                ))}
+                {PACKAGES.map((pack) => (
+                  <td key={pack.value} className="border bg-accent/20 p-1 text-center font-bold">
+                    {entry.package === pack.value ? "+" : ""}
+                  </td>
+                ))}
+                <td className="sticky right-24 z-10 border bg-card p-2 text-right font-bold tabular-nums group-hover:bg-accent">
+                  {money(Number(entry.amount))}
+                  {restSum(entry) > 0 && <span className="block text-[9px] font-normal text-destructive">долг {money(restSum(entry))}</span>}
+                </td>
+                <td className="sticky right-0 z-10 border bg-muted/70 p-2 text-right font-bold tabular-nums text-primary">
+                  {money(sharePaid(entry))}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr className="bg-foreground font-semibold text-background">
+              <td className="sticky left-0 z-20 border border-background/20 bg-foreground p-2 text-center">Итого</td>
+              <td colSpan={trainers.length} className="border border-background/20 p-2 text-right text-[10px] font-normal">
+                Касса сейчас {money(cash.left)} · долг клиентов {money(totals.debt)}
+              </td>
+              {PACKAGES.map((pack) => (
+                <td key={pack.value} className="border border-background/20 p-2 text-center tabular-nums">{packageCount(pack.value)}</td>
+              ))}
+              <td className="sticky right-24 z-20 border border-background/20 bg-foreground p-2 text-right tabular-nums">{money(totals.income)}</td>
+              <td className="sticky right-0 z-20 border border-background/20 bg-foreground p-2 text-right tabular-nums">{money(totals.payout)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <div className="flex flex-wrap justify-between gap-2 border-t bg-muted/30 px-3 py-2 text-[10px] uppercase text-muted-foreground">
+        <span>Нажмите имя клиента, чтобы изменить запись</span>
+        <span>Поступило {money(totals.income)} · зал {money(totals.profit)} · расходы {money(totals.spent)}</span>
+      </div>
+    </section>
+  );
+}
+
 function Stat({ title, value, accent }: { title: string; value: string; accent?: string }) {
   return (
     <Card>
