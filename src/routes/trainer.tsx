@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getTrainerSession, logout } from "@/lib/authGate";
-import { confirmGymPayout, listGymEntries, listGymPayouts } from "@/lib/gymApi";
+import { confirmGymPayout, listGymEntries, listGymPayouts, listTrainerEntries } from "@/lib/gymApi";
 
 export const Route = createFileRoute("/trainer")({
   component: TrainerPage,
@@ -58,6 +58,12 @@ function TrainerPage() {
     queryFn: () => listGymPayouts(session!.id),
     enabled: !!session,
   });
+  // Счёт тренера: все занятия и выплаты за всё время, независимо от выбранного месяца
+  const allEntries = useQuery({
+    queryKey: ["gym-trainer-entries", session?.id],
+    queryFn: () => listTrainerEntries(session!.id),
+    enabled: !!session,
+  });
 
   const confirm = useMutation({
     mutationFn: (id: string) => confirmGymPayout(id),
@@ -85,6 +91,19 @@ function TrainerPage() {
       .reduce((a, p) => a + Number(p.amount), 0);
     return { count: paidRows.length, sum, accrued, paidOut, rest: accrued - paidOut };
   }, [rows, payouts.data, from, to]);
+
+  // Счёт за всё время
+  const ledger = useMemo(() => {
+    const accruedAll = (allEntries.data ?? [])
+      .filter((r) => r.paid)
+      .reduce((a, r) => a + (Number(r.amount) * Number(r.trainer_percent)) / 100, 0);
+    const allPayouts = payouts.data ?? [];
+    const receivedAll = allPayouts.reduce((a, p) => a + Number(p.amount), 0);
+    const pending = allPayouts
+      .filter((p) => p.status !== "confirmed")
+      .reduce((a, p) => a + Number(p.amount), 0);
+    return { accruedAll, receivedAll, owed: accruedAll - receivedAll, pending };
+  }, [allEntries.data, payouts.data]);
 
   if (!session) {
     return (
@@ -114,6 +133,35 @@ function TrainerPage() {
       </header>
 
       <div className="space-y-4 p-3 sm:p-4">
+        {/* Счёт тренера за всё время */}
+        <Card className="border-primary/40">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Счёт тренера — за всё время</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Причитается всего</span>
+              <span className="font-semibold">{money(ledger.accruedAll)}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Получено всего</span>
+              <span className="font-semibold">{money(ledger.receivedAll)}</span>
+            </div>
+            {ledger.pending > 0 && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Из них ждёт подтверждения</span>
+                <span className="font-semibold text-amber-600">{money(ledger.pending)}</span>
+              </div>
+            )}
+            <div className="flex items-center justify-between border-t pt-2">
+              <span className="font-medium">К выдаче</span>
+              <span className={`text-xl font-bold ${ledger.owed > 0 ? "text-emerald-600" : ""}`}>
+                {money(ledger.owed)}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+
         <div>
           <Label htmlFor="month">Месяц</Label>
           <Input
@@ -156,9 +204,14 @@ function TrainerPage() {
                   <div className="min-w-0">
                     <div className="text-lg font-semibold">{money(Number(p.amount))}</div>
                     <div className="text-xs text-muted-foreground">
-                      {p.paid_at.split("-").reverse().join(".")}
+                      Отправлено: {p.paid_at.split("-").reverse().join(".")}
                       {p.note ? ` — ${p.note}` : ""}
                     </div>
+                    {p.status === "confirmed" && p.confirmed_at && (
+                      <div className="text-xs text-emerald-600">
+                        Получено: {new Date(p.confirmed_at).toLocaleDateString("ru-RU")}
+                      </div>
+                    )}
                   </div>
                   <div className="ml-auto">
                     {p.status === "confirmed" ? (
