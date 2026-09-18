@@ -199,6 +199,7 @@ function GymPage() {
   const [selectedTrainer, setSelectedTrainer] = useState<string | null>(null);
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const [editing, setEditing] = useState<GymEntry | null>(null);
+  const [showAdd, setShowAdd] = useState(false);
 
   useEffect(() => {
     const price = loadPrices()[pkg];
@@ -358,53 +359,7 @@ function GymPage() {
         </div>
       </header>
 
-      <div className="space-y-4 p-3 sm:p-4">
-        <div className="flex flex-wrap items-end gap-2 print:hidden">
-          <div className="flex gap-1 rounded-md border p-1">
-            {([
-              ["day", "День"],
-              ["week", "Неделя"],
-              ["month", "Месяц"],
-              ["all", "Всё время"],
-            ] as [PeriodKind, string][]).map(([k, label]) => (
-              <Button key={k} size="sm" variant={kind === k ? "default" : "ghost"} onClick={() => setKind(k)}>
-                {label}
-              </Button>
-            ))}
-          </div>
-          {kind !== "all" && (
-            <Input type="date" value={anchor} onChange={(e) => setAnchor(e.target.value)} className="w-[160px]" />
-          )}
-          <div className="text-sm text-muted-foreground">{periodLabel(kind, from, to)}</div>
-          <div className="ml-auto flex gap-2">
-            <Button variant="outline" size="sm" onClick={exportEntries}>
-              <Download className="mr-1 h-4 w-4" /> Экспорт
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => window.print()}>
-              <Printer className="mr-1 h-4 w-4" /> Печать
-            </Button>
-          </div>
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          <Stat title="Доход" value={money(totals.income)} />
-          <Stat title="Тренерам" value={money(totals.payout)} />
-          <Stat title="Расходы зала" value={money(totals.spent)} />
-          <Stat title="Прибыль зала" value={money(totals.profit)} accent="text-emerald-600" />
-          <Stat title="Долг клиентов" value={money(totals.debt)} accent={totals.debt ? "text-amber-600" : undefined} />
-        </div>
-
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm">Касса зала сейчас (за всё время)</CardTitle></CardHeader>
-          <CardContent className="space-y-1">
-            <div className="text-2xl font-semibold text-emerald-600">{money(cash.left)}</div>
-            <div className="text-xs text-muted-foreground">
-              Поступило {money(cash.got)} − тренерам {money(cash.toTrainers)} − расходы {money(cash.spent)}
-            </div>
-          </CardContent>
-        </Card>
-
-
+      <div className="space-y-3 bg-muted/40 p-2 sm:p-4">
         <Tabs defaultValue="table">
           <TabsList className="flex w-full justify-start gap-1 overflow-x-auto print:hidden">
             <TabsTrigger value="table" className="shrink-0">Занятия</TabsTrigger>
@@ -420,11 +375,21 @@ function GymPage() {
           </TabsList>
 
           <TabsContent value="table" className="space-y-3">
-            <Card className="print:hidden">
+            <LedgerTable
+              rows={rows}
+              trainers={trainers.data ?? []}
+              month={anchor.slice(0, 7)}
+              totals={totals}
+              cash={cash}
+              onMonthChange={(value) => { setKind("month"); setAnchor(`${value}-01`); }}
+              onAdd={() => setShowAdd((value) => !value)}
+              onEdit={setEditing}
+              onExport={exportEntries}
+            />
+
+            {showAdd && <Card className="print:hidden rounded-sm">
               <CardContent className="space-y-3 p-3">
-                <Button className="w-full" size="lg" onClick={() => addEntry.mutate()} disabled={addEntry.isPending}>
-                  <Plus className="mr-1 h-4 w-4" /> Добавить занятие
-                </Button>
+                <div className="font-display text-xl">Новая запись</div>
                 <div className="grid gap-2 sm:grid-cols-5">
                   <div>
                     <Label>Дата</Label>
@@ -488,97 +453,11 @@ function GymPage() {
                 >
                   {paidNow ? "Оплачено сразу" : "В долг"}
                 </Button>
+                <Button onClick={() => addEntry.mutate()} disabled={addEntry.isPending}>
+                  <Plus className="mr-1 h-4 w-4" /> Записать в ведомость
+                </Button>
               </CardContent>
-            </Card>
-
-            <div className="space-y-2 sm:hidden">
-              {rows.length === 0 && <p className="p-4 text-center text-sm text-muted-foreground">Нет записей за период</p>}
-              {rows.map((r) => (
-                <Card key={r.id}>
-                  <CardContent className="space-y-2 p-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">{dmy(r.entry_date)}</span>
-                      <span className="truncate text-sm">{r.client_name}</span>
-                      <span className="ml-auto font-semibold">{money(Number(r.amount))}</span>
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {trainerName(r.trainer_id)} · {r.package} зан. · тренеру {money(share(r))}
-                      {Number(r.sessions_total) > 1 && ` · осталось ${Number(r.sessions_total) - Number(r.sessions_used)}`}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant={r.paid ? "secondary" : "outline"}
-                        size="sm"
-                        className="flex-1"
-                        onClick={() => togglePaid.mutate({ id: r.id, paid: !r.paid })}
-                      >
-                        {r.paid ? "Оплачено" : "Не оплачено"}
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => setEditing(r)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => removeEntry.mutate(r.id)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            <div className="hidden overflow-x-auto rounded-md border sm:block">
-              <table className="w-full min-w-[820px] text-sm">
-                <thead className="bg-muted/50">
-                  <tr className="text-left">
-                    <th className="p-2">Число</th>
-                    <th className="p-2">Клиент</th>
-                    <th className="p-2">Тренер</th>
-                    <th className="p-2">Пакет</th>
-                    <th className="p-2 text-right">Сумма</th>
-                    <th className="p-2 text-right">Тренеру</th>
-                    <th className="p-2">Оплата</th>
-                    <th className="p-2 print:hidden" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.length === 0 && (
-                    <tr><td colSpan={8} className="p-4 text-center text-muted-foreground">Нет записей за период</td></tr>
-                  )}
-                  {rows.map((r) => (
-                    <tr key={r.id} className="border-t">
-                      <td className="p-2 whitespace-nowrap">{dmy(r.entry_date)}</td>
-                      <td className="p-2">{r.client_name}</td>
-                      <td className="p-2">{trainerName(r.trainer_id)}</td>
-                      <td className="p-2">
-                        {r.package}
-                        {Number(r.sessions_total) > 1 && (
-                          <span className="text-xs text-muted-foreground"> · {r.sessions_used}/{r.sessions_total}</span>
-                        )}
-                      </td>
-                      <td className="p-2 text-right">{money(Number(r.amount))}</td>
-                      <td className="p-2 text-right">{money(share(r))}</td>
-                      <td className="p-2">
-                        <Button
-                          variant={r.paid ? "secondary" : "outline"}
-                          size="sm"
-                          onClick={() => togglePaid.mutate({ id: r.id, paid: !r.paid })}
-                        >
-                          {r.paid ? "Оплачено" : "Не оплачено"}
-                        </Button>
-                      </td>
-                      <td className="p-2 text-right print:hidden">
-                        <Button variant="ghost" size="icon" onClick={() => setEditing(r)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => removeEntry.mutate(r.id)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            </Card>}
           </TabsContent>
 
           <TabsContent value="subs" className="space-y-3">
