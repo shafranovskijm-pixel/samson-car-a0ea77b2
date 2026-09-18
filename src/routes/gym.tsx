@@ -577,51 +577,23 @@ function GymPage() {
 
           <TabsContent value="subs" className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Абонементы 8 и 12 занятий. Отмечайте посещение — остаток уменьшается.
+              Абонементы 8 и 12 занятий: посещения, оплата частями, срок действия и заморозка.
             </p>
+            <RemindersCard entries={subscriptions} />
             {subscriptions.length === 0 && <p className="text-sm text-muted-foreground">Абонементов нет</p>}
             <div className="grid gap-3 sm:grid-cols-2">
-              {subscriptions.map((r) => {
-                const left = Number(r.sessions_total) - Number(r.sessions_used);
-                return (
-                  <Card key={r.id}>
-                    <CardContent className="space-y-2 p-3">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{r.client_name}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {dmyFull(r.entry_date)} · {trainerName(r.trainer_id)}
-                        </span>
-                        <span className="ml-auto font-semibold">{money(Number(r.amount))}</span>
-                      </div>
-                      <div className={left === 0 ? "text-sm font-medium text-destructive" : "text-sm"}>
-                        {left === 0 ? "Абонемент закончился — пора продлевать" : `Осталось ${left} из ${r.sessions_total}`}
-                      </div>
-                      {left <= 2 && left > 0 && (
-                        <div className="text-xs text-amber-600">Скоро закончится</div>
-                      )}
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          disabled={left === 0}
-                          onClick={() => visit.mutate({ id: r.id, used: Number(r.sessions_used) + 1 })}
-                        >
-                          Отметить посещение
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={Number(r.sessions_used) === 0}
-                          onClick={() => visit.mutate({ id: r.id, used: Number(r.sessions_used) - 1 })}
-                        >
-                          Отменить
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+              {subscriptions.map((r) => (
+                <SubscriptionCard
+                  key={r.id}
+                  entry={r}
+                  trainerName={trainerName(r.trainer_id)}
+                  onVisit={(used) => visit.mutate({ id: r.id, used })}
+                  onChanged={invalidate}
+                />
+              ))}
             </div>
           </TabsContent>
+
 
           <TabsContent value="clients" className="space-y-3">
             {selectedClient ? (
