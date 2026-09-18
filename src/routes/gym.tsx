@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { logout } from "@/lib/authGate";
+import { getSection, logout } from "@/lib/authGate";
 import {
   createGymClient,
   createGymEntry,
@@ -156,9 +156,11 @@ function GymPage() {
         <Dumbbell className="h-4 w-4" />
         <div className="text-sm font-medium">Тренажёрный зал</div>
         <div className="ml-auto flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => navigate({ to: "/" })}>
-            В автосервис
-          </Button>
+          {getSection() !== "gym" && (
+            <Button variant="outline" size="sm" onClick={() => navigate({ to: "/" })}>
+              В автосервис
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon"

@@ -19,7 +19,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { ConfirmProvider } from "@/components/ConfirmDialog";
 import { UssuriyskClock } from "@/components/UssuriyskClock";
 import { Button } from "@/components/ui/button";
-import { isLoggedIn, logout } from "@/lib/authGate";
+import { getSection, isLoggedIn, logout } from "@/lib/authGate";
 import { OnlineStatus } from "@/components/OnlineStatus";
 
 
@@ -122,6 +122,14 @@ function RootComponent() {
   useEffect(() => {
     setAuthed(isLoggedIn());
   }, [pathname]);
+
+  // Администратор зала работает только в разделе зала
+  useEffect(() => {
+    if (!isLoggedIn()) return;
+    if (getSection() === "gym" && pathname !== "/gym") {
+      router.navigate({ to: "/gym", replace: true });
+    }
+  }, [pathname, router]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;

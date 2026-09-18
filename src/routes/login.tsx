@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { isLoggedIn, login } from "@/lib/authGate";
+import { getSection, isLoggedIn, loginTo } from "@/lib/authGate";
 import { useLoginHero } from "@/hooks/useLoginHero";
 
 export const Route = createFileRoute("/login")({
@@ -21,12 +21,12 @@ function LoginPage() {
   const hero = useLoginHero();
 
   useEffect(() => {
-    if (isLoggedIn()) navigate({ to: "/" });
+    if (isLoggedIn()) navigate({ to: getSection() === "gym" ? "/gym" : "/" });
   }, [navigate]);
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (login(u, p)) {
+    if (loginTo(section ?? "auto", u, p)) {
       navigate({ to: section === "gym" ? "/gym" : "/" });
     } else {
       setErr("Неверный логин или пароль");
