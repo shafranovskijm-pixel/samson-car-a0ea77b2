@@ -16,6 +16,7 @@ function LoginPage() {
   const [u, setU] = useState("");
   const [p, setP] = useState("");
   const [err, setErr] = useState<string | null>(null);
+  const [section, setSection] = useState<"auto" | "gym" | null>(null);
   const hero = useLoginHero();
 
   useEffect(() => {
@@ -25,7 +26,7 @@ function LoginPage() {
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (login(u, p)) {
-      navigate({ to: "/" });
+      navigate({ to: section === "gym" ? "/gym" : "/" });
     } else {
       setErr("Неверный логин или пароль");
     }
