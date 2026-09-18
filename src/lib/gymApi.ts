@@ -48,6 +48,9 @@ export type GymEntry = {
   note: string | null;
   sessions_total: number;
   sessions_used: number;
+  paid_amount: number;
+  valid_until: string | null;
+  frozen: boolean;
 };
 
 export type GymExpense = {
@@ -59,7 +62,7 @@ export type GymExpense = {
 };
 
 const ENTRY_COLS =
-  "id,entry_date,trainer_id,client_id,client_name,package,amount,trainer_percent,paid,note,sessions_total,sessions_used";
+  "id,entry_date,trainer_id,client_id,client_name,package,amount,trainer_percent,paid,note,sessions_total,sessions_used,paid_amount,valid_until,frozen";
 const EXPENSE_COLS = "id,expense_date,title,amount,note";
 
 const throwIf = <T,>(x: { data: T | null; error: unknown }): T => {
@@ -225,6 +228,28 @@ export async function updateGymEntry(id: string, patch: Partial<GymEntry>) {
 
 export async function deleteGymEntry(id: string) {
   const r = await supabase.from("gym_entries").delete().eq("id", id);
+  if (r.error) throw r.error;
+}
+
+/** Принять оплату (в том числе частями). Возвращает новую оплаченную сумму. */
+export async function addGymPayment(entry: GymEntry, sum: number): Promise<number> {
+  const paidAmount = Math.min(Number(entry.amount), Number(entry.paid_amount || 0) + sum);
+  const r = await supabase
+    .from("gym_entries")
+    .update({ paid_amount: paidAmount, paid: paidAmount >= Number(entry.amount) })
+    .eq("id", entry.id);
+  if (r.error) throw r.error;
+  return paidAmount;
+}
+
+/** Заморозка абонемента и срок действия. */
+export async function setGymEntryFrozen(id: string, frozen: boolean) {
+  const r = await supabase.from("gym_entries").update({ frozen }).eq("id", id);
+  if (r.error) throw r.error;
+}
+
+export async function setGymEntryValidUntil(id: string, validUntil: string | null) {
+  const r = await supabase.from("gym_entries").update({ valid_until: validUntil }).eq("id", id);
   if (r.error) throw r.error;
 }
 

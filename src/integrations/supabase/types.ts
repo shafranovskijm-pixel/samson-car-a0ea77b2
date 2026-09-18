@@ -641,15 +641,18 @@ export type Database = {
           client_name: string
           created_at: string
           entry_date: string
+          frozen: boolean
           id: string
           note: string | null
           package: string
           paid: boolean
+          paid_amount: number
           sessions_total: number
           sessions_used: number
           trainer_id: string | null
           trainer_percent: number
           updated_at: string
+          valid_until: string | null
         }
         Insert: {
           amount?: number
@@ -657,15 +660,18 @@ export type Database = {
           client_name?: string
           created_at?: string
           entry_date?: string
+          frozen?: boolean
           id?: string
           note?: string | null
           package?: string
           paid?: boolean
+          paid_amount?: number
           sessions_total?: number
           sessions_used?: number
           trainer_id?: string | null
           trainer_percent?: number
           updated_at?: string
+          valid_until?: string | null
         }
         Update: {
           amount?: number
@@ -673,15 +679,18 @@ export type Database = {
           client_name?: string
           created_at?: string
           entry_date?: string
+          frozen?: boolean
           id?: string
           note?: string | null
           package?: string
           paid?: boolean
+          paid_amount?: number
           sessions_total?: number
           sessions_used?: number
           trainer_id?: string | null
           trainer_percent?: number
           updated_at?: string
+          valid_until?: string | null
         }
         Relationships: [
           {

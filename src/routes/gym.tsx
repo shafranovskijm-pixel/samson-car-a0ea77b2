@@ -49,6 +49,9 @@ import {
   listGymTrainers,
   listTrainerEntries,
   markGymVisit,
+  addGymPayment,
+  setGymEntryFrozen,
+  setGymEntryValidUntil,
   updateGymEntry,
   updateGymTrainer,
   type GymEntry,
@@ -124,6 +127,28 @@ function share(r: GymEntry) {
   return (Number(r.amount) * Number(r.trainer_percent)) / 100;
 }
 
+/** Сколько клиент уже заплатил (с учётом оплаты частями). */
+function paidSum(r: GymEntry) {
+  const p = Number(r.paid_amount ?? 0);
+  if (p > 0) return Math.min(p, Number(r.amount));
+  return r.paid ? Number(r.amount) : 0;
+}
+
+/** Остаток долга клиента. */
+function restSum(r: GymEntry) {
+  return Math.max(0, Number(r.amount) - paidSum(r));
+}
+
+/** Доля тренера от фактически полученных денег. */
+function sharePaid(r: GymEntry) {
+  return (paidSum(r) * Number(r.trainer_percent)) / 100;
+}
+
+function monthLabel(m: string) {
+  const names = ["январь","февраль","март","апрель","май","июнь","июль","август","сентябрь","октябрь","ноябрь","декабрь"];
+  return `${names[Number(m.slice(5, 7)) - 1]} ${m.slice(0, 4)}`;
+}
+
 function loadPrices(): Record<string, number> {
   if (typeof window === "undefined") return {};
   try {
@@ -162,6 +187,7 @@ function GymPage() {
   const allEntries = useQuery({ queryKey: ["gym-entries-all"], queryFn: listAllGymEntries });
   const payouts = useQuery({ queryKey: ["gym-payouts"], queryFn: () => listGymPayouts() });
   const expenses = useQuery({ queryKey: ["gym-expenses", from, to], queryFn: () => listGymExpenses(from, to) });
+  const allExpenses = useQuery({ queryKey: ["gym-expenses-all"], queryFn: () => listGymExpenses() });
 
   const [date, setDate] = useState(today);
   const [clientName, setClientName] = useState("");
@@ -169,6 +195,7 @@ function GymPage() {
   const [pkg, setPkg] = useState("1");
   const [amount, setAmount] = useState("");
   const [paidNow, setPaidNow] = useState(true);
+  const [validUntil, setValidUntil] = useState("");
   const [selectedTrainer, setSelectedTrainer] = useState<string | null>(null);
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const [editing, setEditing] = useState<GymEntry | null>(null);
@@ -207,6 +234,9 @@ function GymPage() {
         note: null,
         sessions_total: Number(pkg) || 1,
         sessions_used: 0,
+        paid_amount: paidNow ? sum : 0,
+        valid_until: validUntil || null,
+        frozen: false,
       });
       savePrice(pkg, sum);
     },
@@ -220,7 +250,10 @@ function GymPage() {
 
   const removeEntry = useMutation({ mutationFn: (id: string) => deleteGymEntry(id), onSuccess: invalidate });
   const togglePaid = useMutation({
-    mutationFn: ({ id, paid }: { id: string; paid: boolean }) => updateGymEntry(id, { paid }),
+    mutationFn: ({ id, paid }: { id: string; paid: boolean }) => {
+      const row = (entries.data ?? []).find((r) => r.id === id);
+      return updateGymEntry(id, { paid, paid_amount: paid ? Number(row?.amount ?? 0) : 0 });
+    },
     onSuccess: invalidate,
   });
   const visit = useMutation({
@@ -233,22 +266,29 @@ function GymPage() {
   const trainerName = (id: string | null) => trainers.data?.find((t) => t.id === id)?.name ?? "—";
 
   const totals = useMemo(() => {
-    const paidRows = rows.filter((r) => r.paid);
-    const income = paidRows.reduce((a, r) => a + Number(r.amount), 0);
-    const payout = paidRows.reduce((a, r) => a + share(r), 0);
-    const debt = rows.filter((r) => !r.paid).reduce((a, r) => a + Number(r.amount), 0);
+    const income = rows.reduce((a, r) => a + paidSum(r), 0);
+    const payout = rows.reduce((a, r) => a + sharePaid(r), 0);
+    const debt = rows.reduce((a, r) => a + restSum(r), 0);
     const spent = expRows.reduce((a, e) => a + Number(e.amount), 0);
     return { income, payout, debt, spent, profit: income - payout - spent };
   }, [rows, expRows]);
 
+  /** Касса зала за всё время: поступило деньгами − выдано тренерам − расходы. */
+  const cash = useMemo(() => {
+    const got = (allEntries.data ?? []).reduce((a, r) => a + paidSum(r), 0);
+    const toTrainers = (payouts.data ?? []).reduce((a, p) => a + Number(p.amount), 0);
+    const spent = (allExpenses.data ?? []).reduce((a, e) => a + Number(e.amount), 0);
+    return { got, toTrainers, spent, left: got - toTrainers - spent };
+  }, [allEntries.data, payouts.data, allExpenses.data]);
+
   const perTrainer = useMemo(() => {
     const map = new Map<string, { id: string; name: string; sum: number; payout: number; count: number }>();
     for (const r of rows) {
-      if (!r.paid) continue;
+      if (paidSum(r) <= 0) continue;
       const key = r.trainer_id ?? "none";
       const cur = map.get(key) ?? { id: key, name: trainerName(r.trainer_id), sum: 0, payout: 0, count: 0 };
-      cur.sum += Number(r.amount);
-      cur.payout += share(r);
+      cur.sum += paidSum(r);
+      cur.payout += sharePaid(r);
       cur.count += 1;
       map.set(key, cur);
     }
@@ -256,8 +296,25 @@ function GymPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, trainers.data]);
 
-  const unpaid = rows.filter((r) => !r.paid);
+  const unpaid = rows.filter((r) => restSum(r) > 0);
   const subscriptions = (allEntries.data ?? []).filter((r) => Number(r.sessions_total) > 1);
+
+  /** Сводка по месяцам за всё время. */
+  const monthly = useMemo(() => {
+    const map = new Map<string, { m: string; income: number; payout: number; spent: number }>();
+    const get = (m: string) => {
+      const cur = map.get(m) ?? { m, income: 0, payout: 0, spent: 0 };
+      map.set(m, cur);
+      return cur;
+    };
+    for (const r of allEntries.data ?? []) {
+      const cur = get(r.entry_date.slice(0, 7));
+      cur.income += paidSum(r);
+      cur.payout += sharePaid(r);
+    }
+    for (const e of allExpenses.data ?? []) get(e.expense_date.slice(0, 7)).spent += Number(e.amount);
+    return [...map.values()].sort((a, b) => b.m.localeCompare(a.m));
+  }, [allEntries.data, allExpenses.data]);
 
   function exportEntries() {
     downloadCsv(`zal-${from}_${to}.csv`, [
@@ -337,6 +394,17 @@ function GymPage() {
           <Stat title="Долг клиентов" value={money(totals.debt)} accent={totals.debt ? "text-amber-600" : undefined} />
         </div>
 
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Касса зала сейчас (за всё время)</CardTitle></CardHeader>
+          <CardContent className="space-y-1">
+            <div className="text-2xl font-semibold text-emerald-600">{money(cash.left)}</div>
+            <div className="text-xs text-muted-foreground">
+              Поступило {money(cash.got)} − тренерам {money(cash.toTrainers)} − расходы {money(cash.spent)}
+            </div>
+          </CardContent>
+        </Card>
+
+
         <Tabs defaultValue="table">
           <TabsList className="flex w-full justify-start gap-1 overflow-x-auto print:hidden">
             <TabsTrigger value="table" className="shrink-0">Занятия</TabsTrigger>
@@ -347,6 +415,7 @@ function GymPage() {
             <TabsTrigger value="payouts" className="shrink-0">Выплаты</TabsTrigger>
             <TabsTrigger value="debts" className="shrink-0">Долги</TabsTrigger>
             <TabsTrigger value="expenses" className="shrink-0">Расходы</TabsTrigger>
+            <TabsTrigger value="monthly" className="shrink-0">По месяцам</TabsTrigger>
             <TabsTrigger value="people" className="shrink-0">Люди</TabsTrigger>
           </TabsList>
 
@@ -405,6 +474,12 @@ function GymPage() {
                     <Label>Сумма</Label>
                     <Input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="1000" />
                   </div>
+                  {Number(pkg) > 1 && (
+                    <div>
+                      <Label>Действует до</Label>
+                      <Input type="date" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} />
+                    </div>
+                  )}
                 </div>
                 <Button
                   variant={paidNow ? "secondary" : "outline"}
@@ -508,51 +583,23 @@ function GymPage() {
 
           <TabsContent value="subs" className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Абонементы 8 и 12 занятий. Отмечайте посещение — остаток уменьшается.
+              Абонементы 8 и 12 занятий: посещения, оплата частями, срок действия и заморозка.
             </p>
+            <RemindersCard entries={subscriptions} />
             {subscriptions.length === 0 && <p className="text-sm text-muted-foreground">Абонементов нет</p>}
             <div className="grid gap-3 sm:grid-cols-2">
-              {subscriptions.map((r) => {
-                const left = Number(r.sessions_total) - Number(r.sessions_used);
-                return (
-                  <Card key={r.id}>
-                    <CardContent className="space-y-2 p-3">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{r.client_name}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {dmyFull(r.entry_date)} · {trainerName(r.trainer_id)}
-                        </span>
-                        <span className="ml-auto font-semibold">{money(Number(r.amount))}</span>
-                      </div>
-                      <div className={left === 0 ? "text-sm font-medium text-destructive" : "text-sm"}>
-                        {left === 0 ? "Абонемент закончился — пора продлевать" : `Осталось ${left} из ${r.sessions_total}`}
-                      </div>
-                      {left <= 2 && left > 0 && (
-                        <div className="text-xs text-amber-600">Скоро закончится</div>
-                      )}
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          disabled={left === 0}
-                          onClick={() => visit.mutate({ id: r.id, used: Number(r.sessions_used) + 1 })}
-                        >
-                          Отметить посещение
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={Number(r.sessions_used) === 0}
-                          onClick={() => visit.mutate({ id: r.id, used: Number(r.sessions_used) - 1 })}
-                        >
-                          Отменить
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+              {subscriptions.map((r) => (
+                <SubscriptionCard
+                  key={r.id}
+                  entry={r}
+                  trainerName={trainerName(r.trainer_id)}
+                  onVisit={(used) => visit.mutate({ id: r.id, used })}
+                  onChanged={invalidate}
+                />
+              ))}
             </div>
           </TabsContent>
+
 
           <TabsContent value="clients" className="space-y-3">
             {selectedClient ? (
@@ -691,9 +738,15 @@ function GymPage() {
                   <span className="whitespace-nowrap">{dmy(r.entry_date)}</span>
                   <span className="font-medium">{r.client_name}</span>
                   <span className="text-muted-foreground">{trainerName(r.trainer_id)}</span>
-                  <span className="ml-auto font-semibold text-amber-600">{money(Number(r.amount))}</span>
+                  {paidSum(r) > 0 && (
+                    <span className="text-xs text-muted-foreground">
+                      внесено {money(paidSum(r))} из {money(Number(r.amount))}
+                    </span>
+                  )}
+                  <span className="ml-auto font-semibold text-amber-600">{money(restSum(r))}</span>
+                  <PartialPayInline entry={r} onChanged={invalidate} />
                   <Button size="sm" onClick={() => togglePaid.mutate({ id: r.id, paid: true })}>
-                    Оплачено
+                    Оплачено полностью
                   </Button>
                 </li>
               ))}
@@ -706,6 +759,62 @@ function GymPage() {
               onChanged={() => qc.invalidateQueries({ queryKey: ["gym-expenses"] })}
             />
           </TabsContent>
+
+          <TabsContent value="monthly" className="space-y-3">
+            <div className="flex items-center gap-2 print:hidden">
+              <Button variant="outline" size="sm" onClick={() => window.print()}>
+                <Printer className="mr-1 h-4 w-4" /> Печать сводки
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  downloadCsv("zal-po-mesyacam.csv", [
+                    ["Месяц", "Поступило", "Тренерам", "Расходы", "Прибыль"],
+                    ...monthly.map((m) => [
+                      monthLabel(m.m),
+                      Math.round(m.income),
+                      Math.round(m.payout),
+                      Math.round(m.spent),
+                      Math.round(m.income - m.payout - m.spent),
+                    ]),
+                  ])
+                }
+              >
+                <Download className="mr-1 h-4 w-4" /> Экспорт
+              </Button>
+            </div>
+            <div className="overflow-x-auto rounded-md border">
+              <table className="w-full min-w-[560px] text-sm">
+                <thead className="bg-muted/50">
+                  <tr className="text-left">
+                    <th className="p-2">Месяц</th>
+                    <th className="p-2 text-right">Поступило</th>
+                    <th className="p-2 text-right">Тренерам</th>
+                    <th className="p-2 text-right">Расходы</th>
+                    <th className="p-2 text-right">Прибыль</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {monthly.length === 0 && (
+                    <tr><td colSpan={5} className="p-4 text-center text-muted-foreground">Нет данных</td></tr>
+                  )}
+                  {monthly.map((m) => (
+                    <tr key={m.m} className="border-t">
+                      <td className="p-2">{monthLabel(m.m)}</td>
+                      <td className="p-2 text-right">{money(m.income)}</td>
+                      <td className="p-2 text-right">{money(m.payout)}</td>
+                      <td className="p-2 text-right">{money(m.spent)}</td>
+                      <td className="p-2 text-right font-medium text-emerald-600">
+                        {money(m.income - m.payout - m.spent)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </TabsContent>
+
 
           <TabsContent value="people" className="grid gap-3 sm:grid-cols-2">
             <Card>
@@ -1192,7 +1301,7 @@ function TrainerDetail({
 
   const all = entries.data ?? [];
   const paidRows = all.filter((r) => r.paid);
-  const accrued = paidRows.reduce((a, r) => a + share(r), 0);
+  const accrued = paidRows.reduce((a, r) => a + sharePaid(r), 0);
   const received = payouts.filter((p) => p.status === "confirmed").reduce((a, p) => a + Number(p.amount), 0);
   const pending = payouts.filter((p) => p.status !== "confirmed").reduce((a, p) => a + Number(p.amount), 0);
 
@@ -1332,5 +1441,172 @@ function PeopleCard({
         </ul>
       </CardContent>
     </Card>
+  );
+}
+
+/** Напоминания: у кого абонемент заканчивается или истекает срок. */
+function RemindersCard({ entries }: { entries: GymEntry[] }) {
+  const t = today();
+  const soon = entries.filter((r) => {
+    if (r.frozen) return false;
+    const left = Number(r.sessions_total) - Number(r.sessions_used);
+    const expSoon = r.valid_until ? daysBetween(t, r.valid_until) <= 7 : false;
+    return (left > 0 && left <= 2) || left === 0 || expSoon;
+  });
+  if (soon.length === 0) return null;
+
+  return (
+    <Card className="border-amber-500/50">
+      <CardHeader className="pb-2"><CardTitle className="text-sm">Напоминания клиентам</CardTitle></CardHeader>
+      <CardContent>
+        <ul className="divide-y rounded-md border">
+          {soon.map((r) => {
+            const left = Number(r.sessions_total) - Number(r.sessions_used);
+            const days = r.valid_until ? daysBetween(t, r.valid_until) : null;
+            return (
+              <li key={r.id} className="flex flex-wrap items-center gap-2 px-2 py-1.5 text-sm">
+                <span className="font-medium">{r.client_name}</span>
+                <span className="text-muted-foreground">
+                  {left === 0 ? "абонемент закончился" : `осталось ${left} зан.`}
+                  {days !== null && (days < 0 ? " · срок истёк" : ` · срок через ${days} дн.`)}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      </CardContent>
+    </Card>
+  );
+}
+
+function daysBetween(from: string, to: string) {
+  const a = new Date(`${from}T00:00:00Z`).getTime();
+  const b = new Date(`${to}T00:00:00Z`).getTime();
+  return Math.round((b - a) / 86400000);
+}
+
+function SubscriptionCard({
+  entry: r,
+  trainerName,
+  onVisit,
+  onChanged,
+}: {
+  entry: GymEntry;
+  trainerName: string;
+  onVisit: (used: number) => void;
+  onChanged: () => void;
+}) {
+  const left = Number(r.sessions_total) - Number(r.sessions_used);
+  const rest = restSum(r);
+  const [until, setUntil] = useState(r.valid_until ?? "");
+  const days = r.valid_until ? daysBetween(today(), r.valid_until) : null;
+
+  return (
+    <Card className={r.frozen ? "opacity-70" : undefined}>
+      <CardContent className="space-y-2 p-3">
+        <div className="flex items-center gap-2">
+          <span className="font-medium">{r.client_name}</span>
+          <span className="text-xs text-muted-foreground">{dmyFull(r.entry_date)} · {trainerName}</span>
+          <span className="ml-auto font-semibold">{money(Number(r.amount))}</span>
+        </div>
+        <div className={left === 0 ? "text-sm font-medium text-destructive" : "text-sm"}>
+          {left === 0 ? "Абонемент закончился — пора продлевать" : `Осталось ${left} из ${r.sessions_total}`}
+          {r.frozen && <span className="ml-2 text-xs text-sky-600">заморожен</span>}
+        </div>
+        {left <= 2 && left > 0 && !r.frozen && <div className="text-xs text-amber-600">Скоро закончится</div>}
+        {days !== null && (
+          <div className={days < 0 ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>
+            {days < 0 ? `Срок истёк ${dmyFull(r.valid_until!)}` : `Действует до ${dmyFull(r.valid_until!)} (${days} дн.)`}
+          </div>
+        )}
+        {rest > 0 ? (
+          <div className="text-xs text-amber-600">
+            Оплачено {money(paidSum(r))} из {money(Number(r.amount))} · долг {money(rest)}
+          </div>
+        ) : (
+          <div className="text-xs text-emerald-600">Оплачен полностью</div>
+        )}
+        {rest > 0 && <PartialPayInline entry={r} onChanged={onChanged} />}
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" disabled={left === 0 || r.frozen} onClick={() => onVisit(Number(r.sessions_used) + 1)}>
+            Отметить посещение
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={Number(r.sessions_used) === 0}
+            onClick={() => onVisit(Number(r.sessions_used) - 1)}
+          >
+            Отменить
+          </Button>
+          <Button
+            size="sm"
+            variant={r.frozen ? "secondary" : "outline"}
+            onClick={async () => {
+              await setGymEntryFrozen(r.id, !r.frozen);
+              onChanged();
+              toast.success(r.frozen ? "Абонемент разморожен" : "Абонемент заморожен");
+            }}
+          >
+            {r.frozen ? "Разморозить" : "Заморозить"}
+          </Button>
+        </div>
+        <div className="flex items-end gap-2">
+          <div className="w-[160px]">
+            <Label className="text-xs">Действует до</Label>
+            <Input type="date" value={until} onChange={(e) => setUntil(e.target.value)} />
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={async () => {
+              await setGymEntryValidUntil(r.id, until || null);
+              onChanged();
+              toast.success("Срок сохранён");
+            }}
+          >
+            Сохранить срок
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/** Приём части оплаты по занятию или абонементу. */
+function PartialPayInline({ entry, onChanged }: { entry: GymEntry; onChanged: () => void }) {
+  const [sum, setSum] = useState("");
+  const [busy, setBusy] = useState(false);
+  const rest = restSum(entry);
+
+  async function pay() {
+    const value = Number(sum.replace(",", "."));
+    if (!Number.isFinite(value) || value <= 0) return toast.error("Укажите сумму");
+    if (value > rest) return toast.error(`Больше остатка ${money(rest)} принять нельзя`);
+    setBusy(true);
+    try {
+      await addGymPayment(entry, value);
+      setSum("");
+      onChanged();
+      toast.success(`Принято ${money(value)}`);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <Input
+        className="h-9 w-[110px]"
+        inputMode="decimal"
+        value={sum}
+        onChange={(e) => setSum(e.target.value)}
+        placeholder="часть"
+        onKeyDown={(e) => { if (e.key === "Enter") pay(); }}
+      />
+      <Button size="sm" variant="outline" onClick={pay} disabled={busy}>Внести</Button>
+    </div>
   );
 }
