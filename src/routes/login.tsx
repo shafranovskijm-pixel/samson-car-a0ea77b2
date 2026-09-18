@@ -79,9 +79,13 @@ function LoginPage() {
             </div>
             {err && <p className="text-sm text-destructive">{err}</p>}
             <Button type="submit" className="w-full">Войти</Button>
+            <Button type="button" variant="ghost" className="w-full" onClick={() => setSection(null)}>
+              Назад
+            </Button>
           </form>
         </CardContent>
       </Card>
+      )}
     </div>
   );
 }
