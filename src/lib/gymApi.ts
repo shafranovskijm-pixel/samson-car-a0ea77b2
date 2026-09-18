@@ -187,10 +187,17 @@ export async function listGymEntries(fromDate: string, toDate: string): Promise<
   return throwIf(
     await supabase
       .from("gym_entries")
-      .select("id,entry_date,trainer_id,client_id,client_name,package,amount,trainer_percent,paid,note")
+      .select(ENTRY_COLS)
       .gte("entry_date", fromDate)
       .lte("entry_date", toDate)
       .order("entry_date", { ascending: true }),
+  ) as GymEntry[];
+}
+
+/** Все занятия за всё время (карточки клиентов, абонементы). */
+export async function listAllGymEntries(): Promise<GymEntry[]> {
+  return throwIf(
+    await supabase.from("gym_entries").select(ENTRY_COLS).order("entry_date", { ascending: false }),
   ) as GymEntry[];
 }
 
@@ -199,7 +206,7 @@ export async function listTrainerEntries(trainerId: string): Promise<GymEntry[]>
   return throwIf(
     await supabase
       .from("gym_entries")
-      .select("id,entry_date,trainer_id,client_id,client_name,package,amount,trainer_percent,paid,note")
+      .select(ENTRY_COLS)
       .eq("trainer_id", trainerId)
       .order("entry_date", { ascending: false }),
   ) as GymEntry[];
@@ -207,11 +214,7 @@ export async function listTrainerEntries(trainerId: string): Promise<GymEntry[]>
 
 export async function createGymEntry(input: Omit<GymEntry, "id">): Promise<GymEntry> {
   return throwIf(
-    await supabase
-      .from("gym_entries")
-      .insert(input)
-      .select("id,entry_date,trainer_id,client_id,client_name,package,amount,trainer_percent,paid,note")
-      .single(),
+    await supabase.from("gym_entries").insert(input).select(ENTRY_COLS).single(),
   ) as GymEntry;
 }
 
@@ -222,5 +225,31 @@ export async function updateGymEntry(id: string, patch: Partial<GymEntry>) {
 
 export async function deleteGymEntry(id: string) {
   const r = await supabase.from("gym_entries").delete().eq("id", id);
+  if (r.error) throw r.error;
+}
+
+/** Отметить посещение по абонементу (или отменить последнее). */
+export async function markGymVisit(id: string, used: number) {
+  const r = await supabase.from("gym_entries").update({ sessions_used: used }).eq("id", id);
+  if (r.error) throw r.error;
+}
+
+export async function listGymExpenses(fromDate?: string, toDate?: string): Promise<GymExpense[]> {
+  let q = supabase.from("gym_expenses").select(EXPENSE_COLS).order("expense_date", { ascending: false });
+  if (fromDate) q = q.gte("expense_date", fromDate);
+  if (toDate) q = q.lte("expense_date", toDate);
+  const r = await q;
+  if (r.error) throw r.error;
+  return (r.data ?? []) as GymExpense[];
+}
+
+export async function createGymExpense(input: Omit<GymExpense, "id">): Promise<GymExpense> {
+  return throwIf(
+    await supabase.from("gym_expenses").insert(input).select(EXPENSE_COLS).single(),
+  ) as GymExpense;
+}
+
+export async function deleteGymExpense(id: string) {
+  const r = await supabase.from("gym_expenses").delete().eq("id", id);
   if (r.error) throw r.error;
 }
