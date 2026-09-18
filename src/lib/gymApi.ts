@@ -48,6 +48,9 @@ export type GymEntry = {
   note: string | null;
   sessions_total: number;
   sessions_used: number;
+  paid_amount: number;
+  valid_until: string | null;
+  frozen: boolean;
 };
 
 export type GymExpense = {
