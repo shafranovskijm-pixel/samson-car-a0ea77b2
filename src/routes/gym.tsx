@@ -169,6 +169,7 @@ function GymPage() {
   const [pkg, setPkg] = useState("1");
   const [amount, setAmount] = useState("");
   const [paidNow, setPaidNow] = useState(true);
+  const [validUntil, setValidUntil] = useState("");
   const [selectedTrainer, setSelectedTrainer] = useState<string | null>(null);
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const [editing, setEditing] = useState<GymEntry | null>(null);
