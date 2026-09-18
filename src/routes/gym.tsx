@@ -468,6 +468,12 @@ function GymPage() {
                     <Label>Сумма</Label>
                     <Input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="1000" />
                   </div>
+                  {Number(pkg) > 1 && (
+                    <div>
+                      <Label>Действует до</Label>
+                      <Input type="date" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} />
+                    </div>
+                  )}
                 </div>
                 <Button
                   variant={paidNow ? "secondary" : "outline"}
