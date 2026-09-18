@@ -180,6 +180,17 @@ export async function listGymEntries(fromDate: string, toDate: string): Promise<
   ) as GymEntry[];
 }
 
+/** Все занятия тренера за всё время (для счёта тренера). */
+export async function listTrainerEntries(trainerId: string): Promise<GymEntry[]> {
+  return throwIf(
+    await supabase
+      .from("gym_entries")
+      .select("id,entry_date,trainer_id,client_id,client_name,package,amount,trainer_percent,paid,note")
+      .eq("trainer_id", trainerId)
+      .order("entry_date", { ascending: false }),
+  ) as GymEntry[];
+}
+
 export async function createGymEntry(input: Omit<GymEntry, "id">): Promise<GymEntry> {
   return throwIf(
     await supabase
