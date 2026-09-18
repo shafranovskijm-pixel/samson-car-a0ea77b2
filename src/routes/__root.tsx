@@ -140,6 +140,7 @@ function RootComponent() {
       case "/stats":
       case "/settings":
       case "/expenses":
+      case "/gym":
         router.invalidate();
         break;
       default:
