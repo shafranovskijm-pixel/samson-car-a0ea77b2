@@ -123,6 +123,14 @@ function RootComponent() {
     setAuthed(isLoggedIn());
   }, [pathname]);
 
+  // Администратор зала работает только в разделе зала
+  useEffect(() => {
+    if (!isLoggedIn()) return;
+    if (getSection() === "gym" && pathname !== "/gym") {
+      router.navigate({ to: "/gym", replace: true });
+    }
+  }, [pathname, router]);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const marker = "#redirect=";
