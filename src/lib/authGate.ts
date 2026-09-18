@@ -86,7 +86,10 @@ export function login(username: string, password: string): boolean {
 }
 
 export function logout() {
-  try { window.localStorage.removeItem(KEY); } catch {}
+  try {
+    window.localStorage.removeItem(KEY);
+    window.localStorage.removeItem(ROLE_KEY);
+  } catch {}
 }
 
 export function changeCredentials(
