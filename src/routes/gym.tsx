@@ -590,7 +590,9 @@ function GymPage() {
               const list = (payouts.data ?? []).filter(
                 (p) => p.trainer_id === t.id && p.paid_at >= from && p.paid_at <= to,
               );
-              const paidOut = list.reduce((a, p) => a + Number(p.amount), 0);
+              const paidOut = list
+                .filter((p) => p.status === "confirmed")
+                .reduce((a, p) => a + Number(p.amount), 0);
               return (
                 <PayoutCard
                   key={t.id}
@@ -1130,7 +1132,11 @@ function PayoutCard({
   periodTo: string;
   onChanged: () => void;
 }) {
-  const rest = accrued - paidOut;
+  const pending = payouts
+    .filter((p) => p.status !== "confirmed")
+    .reduce((total, p) => total + Number(p.amount), 0);
+  const rest = Math.max(0, accrued - paidOut);
+  const available = Math.max(0, rest - pending);
   const [sum, setSum] = useState("");
   const [day, setDay] = useState(today);
   const [busy, setBusy] = useState(false);
@@ -1139,6 +1145,10 @@ function PayoutCard({
     const value = Number(sum.replace(",", "."));
     if (!Number.isFinite(value) || value <= 0) {
       toast.error("Укажите сумму выплаты");
+      return;
+    }
+    if (value > available) {
+      toast.error(`Можно отправить не больше ${money(available)}`);
       return;
     }
     setBusy(true);
@@ -1166,9 +1176,14 @@ function PayoutCard({
       <CardContent className="space-y-3">
         <div className="grid grid-cols-3 gap-2 text-sm">
           <div><div className="text-muted-foreground">Начислено</div><div className="font-semibold">{money(accrued)}</div></div>
-          <div><div className="text-muted-foreground">Выплачено</div><div className="font-semibold">{money(paidOut)}</div></div>
+          <div><div className="text-muted-foreground">Получено</div><div className="font-semibold">{money(paidOut)}</div></div>
           <div><div className="text-muted-foreground">Остаток</div><div className="font-semibold text-emerald-600">{money(rest)}</div></div>
         </div>
+        {pending > 0 && (
+          <div className="text-xs text-amber-600">
+            Ждёт подтверждения {money(pending)} · можно отправить ещё {money(available)}
+          </div>
+        )}
         <div className="flex flex-wrap items-end gap-2">
           <div className="w-[150px]">
             <Label>Дата</Label>
@@ -1319,8 +1334,7 @@ function TrainerDetail({
   });
 
   const all = entries.data ?? [];
-  const paidRows = all.filter((r) => r.paid);
-  const accrued = paidRows.reduce((a, r) => a + sharePaid(r), 0);
+  const accrued = all.reduce((a, r) => a + sharePaid(r), 0);
   const received = payouts.filter((p) => p.status === "confirmed").reduce((a, p) => a + Number(p.amount), 0);
   const pending = payouts.filter((p) => p.status !== "confirmed").reduce((a, p) => a + Number(p.amount), 0);
 
@@ -1514,7 +1528,7 @@ function SubscriptionCard({
   onVisit: (used: number) => void;
   onChanged: () => void;
 }) {
-  const left = Number(r.sessions_total) - Number(r.sessions_used);
+  const left = Math.max(0, Number(r.sessions_total) - Number(r.sessions_used));
   const rest = restSum(r);
   const [until, setUntil] = useState(r.valid_until ?? "");
   const days = r.valid_until ? daysBetween(today(), r.valid_until) : null;

@@ -255,7 +255,15 @@ export async function setGymEntryValidUntil(id: string, validUntil: string | nul
 
 /** Отметить посещение по абонементу (или отменить последнее). */
 export async function markGymVisit(id: string, used: number) {
-  const r = await supabase.from("gym_entries").update({ sessions_used: used }).eq("id", id);
+  const current = await supabase
+    .from("gym_entries")
+    .select("sessions_total")
+    .eq("id", id)
+    .single();
+  if (current.error) throw current.error;
+  const total = Math.max(1, Number(current.data.sessions_total));
+  const safeUsed = Math.max(0, Math.min(total, Math.trunc(used)));
+  const r = await supabase.from("gym_entries").update({ sessions_used: safeUsed }).eq("id", id);
   if (r.error) throw r.error;
 }
 
