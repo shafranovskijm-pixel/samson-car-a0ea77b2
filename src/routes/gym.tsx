@@ -93,6 +93,7 @@ function GymPage() {
   const [trainerId, setTrainerId] = useState<string>("");
   const [pkg, setPkg] = useState("1");
   const [amount, setAmount] = useState("");
+  const [selectedTrainer, setSelectedTrainer] = useState<string | null>(null);
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["gym-entries"] });
@@ -215,6 +216,7 @@ function GymPage() {
         <Tabs defaultValue="table">
           <TabsList className="w-full overflow-x-auto">
             <TabsTrigger value="table" className="flex-1">Занятия</TabsTrigger>
+            <TabsTrigger value="trainers" className="flex-1">Тренеры</TabsTrigger>
             <TabsTrigger value="salary" className="flex-1">Зарплата</TabsTrigger>
             <TabsTrigger value="payouts" className="flex-1">Выплаты</TabsTrigger>
             <TabsTrigger value="people" className="flex-1">Люди</TabsTrigger>
