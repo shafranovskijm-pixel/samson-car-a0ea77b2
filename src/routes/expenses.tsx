@@ -302,6 +302,18 @@ function ExpensesPage() {
   const mechanicsDebtTotal = accruedToDate - paidToDate;
   const openingDebt = mechanicsDebtTotal - mechanicsDebt;
 
+  // Касса сейчас: все платежи клиентов минус выплаты мастерам (авансы, удержания, ЗП)
+  // и прочие расходы — с начала работы по сегодняшний день.
+  const cashInNow = paymentsNow.reduce((s, p) => s + Number(p.amount ?? 0), 0);
+  const payrollOutNow =
+    advancesNow.reduce((s, a) => s + Number(a.amount ?? 0), 0) +
+    expensesNow.filter((e) => e.is_payroll).reduce((s, e) => s + Number(e.amount ?? 0), 0);
+  const otherOutNow = expensesNow
+    .filter((e) => !e.is_payroll)
+    .reduce((s, e) => s + Number(e.amount ?? 0), 0);
+  const cashNow = cashInNow - payrollOutNow - otherOutNow;
+
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
       <header className="mb-6 flex flex-col gap-3 sm:mb-8">
