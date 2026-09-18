@@ -21,12 +21,12 @@ function LoginPage() {
   const hero = useLoginHero();
 
   useEffect(() => {
-    if (isLoggedIn()) navigate({ to: "/" });
+    if (isLoggedIn()) navigate({ to: getSection() === "gym" ? "/gym" : "/" });
   }, [navigate]);
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (login(u, p)) {
+    if (loginTo(section ?? "auto", u, p)) {
       navigate({ to: section === "gym" ? "/gym" : "/" });
     } else {
       setErr("Неверный логин или пароль");
