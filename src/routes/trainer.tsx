@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getTrainerSession, logout } from "@/lib/authGate";
-import { confirmGymPayout, listGymEntries, listGymPayouts } from "@/lib/gymApi";
+import { confirmGymPayout, listGymEntries, listGymPayouts, listTrainerEntries } from "@/lib/gymApi";
 
 export const Route = createFileRoute("/trainer")({
   component: TrainerPage,
@@ -56,6 +56,12 @@ function TrainerPage() {
   const payouts = useQuery({
     queryKey: ["gym-payouts", session?.id],
     queryFn: () => listGymPayouts(session!.id),
+    enabled: !!session,
+  });
+  // Счёт тренера: все занятия и выплаты за всё время, независимо от выбранного месяца
+  const allEntries = useQuery({
+    queryKey: ["gym-trainer-entries", session?.id],
+    queryFn: () => listTrainerEntries(session!.id),
     enabled: !!session,
   });
 
