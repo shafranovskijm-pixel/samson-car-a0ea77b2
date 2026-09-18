@@ -12,6 +12,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getTrainerSession, logout } from "@/lib/authGate";
 import { confirmGymPayout, listGymEntries, listGymPayouts, listTrainerEntries } from "@/lib/gymApi";
 
+/** Сколько клиент фактически заплатил по занятию. */
+function gotSum(r: { amount: number; paid: boolean; paid_amount?: number }) {
+  const p = Number(r.paid_amount ?? 0);
+  if (p > 0) return Math.min(p, Number(r.amount));
+  return r.paid ? Number(r.amount) : 0;
+}
+
 export const Route = createFileRoute("/trainer")({
   component: TrainerPage,
   head: () => ({
@@ -80,10 +87,10 @@ function TrainerPage() {
   );
 
   const totals = useMemo(() => {
-    const paidRows = rows.filter((r) => r.paid);
-    const sum = paidRows.reduce((a, r) => a + Number(r.amount), 0);
+    const paidRows = rows.filter((r) => gotSum(r) > 0);
+    const sum = paidRows.reduce((a, r) => a + gotSum(r), 0);
     const accrued = paidRows.reduce(
-      (a, r) => a + (Number(r.amount) * Number(r.trainer_percent)) / 100,
+      (a, r) => a + (gotSum(r) * Number(r.trainer_percent)) / 100,
       0,
     );
     const paidOut = (payouts.data ?? [])
@@ -95,8 +102,7 @@ function TrainerPage() {
   // Счёт за всё время
   const ledger = useMemo(() => {
     const accruedAll = (allEntries.data ?? [])
-      .filter((r) => r.paid)
-      .reduce((a, r) => a + (Number(r.amount) * Number(r.trainer_percent)) / 100, 0);
+      .reduce((a, r) => a + (gotSum(r) * Number(r.trainer_percent)) / 100, 0);
     const allPayouts = payouts.data ?? [];
     const receivedAll = allPayouts
       .filter((p) => p.status === "confirmed")
@@ -244,7 +250,11 @@ function TrainerPage() {
                   <span className="ml-auto font-semibold">
                     {money((Number(r.amount) * Number(r.trainer_percent)) / 100)}
                   </span>
-                  {!r.paid && <span className="text-xs text-amber-600">не оплачено</span>}
+                  {gotSum(r) < Number(r.amount) && (
+                    <span className="text-xs text-amber-600">
+                      {gotSum(r) > 0 ? `оплачено частично ${Math.round(gotSum(r))} ₽` : "не оплачено"}
+                    </span>
+                  )}
                 </CardContent>
               </Card>
             ))}
