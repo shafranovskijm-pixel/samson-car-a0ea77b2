@@ -238,22 +238,29 @@ function GymPage() {
   const trainerName = (id: string | null) => trainers.data?.find((t) => t.id === id)?.name ?? "—";
 
   const totals = useMemo(() => {
-    const paidRows = rows.filter((r) => r.paid);
-    const income = paidRows.reduce((a, r) => a + Number(r.amount), 0);
-    const payout = paidRows.reduce((a, r) => a + share(r), 0);
-    const debt = rows.filter((r) => !r.paid).reduce((a, r) => a + Number(r.amount), 0);
+    const income = rows.reduce((a, r) => a + paidSum(r), 0);
+    const payout = rows.reduce((a, r) => a + sharePaid(r), 0);
+    const debt = rows.reduce((a, r) => a + restSum(r), 0);
     const spent = expRows.reduce((a, e) => a + Number(e.amount), 0);
     return { income, payout, debt, spent, profit: income - payout - spent };
   }, [rows, expRows]);
 
+  /** Касса зала за всё время: поступило деньгами − выдано тренерам − расходы. */
+  const cash = useMemo(() => {
+    const got = (allEntries.data ?? []).reduce((a, r) => a + paidSum(r), 0);
+    const toTrainers = (payouts.data ?? []).reduce((a, p) => a + Number(p.amount), 0);
+    const spent = (allExpenses.data ?? []).reduce((a, e) => a + Number(e.amount), 0);
+    return { got, toTrainers, spent, left: got - toTrainers - spent };
+  }, [allEntries.data, payouts.data, allExpenses.data]);
+
   const perTrainer = useMemo(() => {
     const map = new Map<string, { id: string; name: string; sum: number; payout: number; count: number }>();
     for (const r of rows) {
-      if (!r.paid) continue;
+      if (paidSum(r) <= 0) continue;
       const key = r.trainer_id ?? "none";
       const cur = map.get(key) ?? { id: key, name: trainerName(r.trainer_id), sum: 0, payout: 0, count: 0 };
-      cur.sum += Number(r.amount);
-      cur.payout += share(r);
+      cur.sum += paidSum(r);
+      cur.payout += sharePaid(r);
       cur.count += 1;
       map.set(key, cur);
     }
@@ -261,8 +268,25 @@ function GymPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, trainers.data]);
 
-  const unpaid = rows.filter((r) => !r.paid);
+  const unpaid = rows.filter((r) => restSum(r) > 0);
   const subscriptions = (allEntries.data ?? []).filter((r) => Number(r.sessions_total) > 1);
+
+  /** Сводка по месяцам за всё время. */
+  const monthly = useMemo(() => {
+    const map = new Map<string, { m: string; income: number; payout: number; spent: number }>();
+    const get = (m: string) => {
+      const cur = map.get(m) ?? { m, income: 0, payout: 0, spent: 0 };
+      map.set(m, cur);
+      return cur;
+    };
+    for (const r of allEntries.data ?? []) {
+      const cur = get(r.entry_date.slice(0, 7));
+      cur.income += paidSum(r);
+      cur.payout += sharePaid(r);
+    }
+    for (const e of allExpenses.data ?? []) get(e.expense_date.slice(0, 7)).spent += Number(e.amount);
+    return [...map.values()].sort((a, b) => b.m.localeCompare(a.m));
+  }, [allEntries.data, allExpenses.data]);
 
   function exportEntries() {
     downloadCsv(`zal-${from}_${to}.csv`, [
