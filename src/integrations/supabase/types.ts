@@ -604,6 +604,126 @@ export type Database = {
         }
         Relationships: []
       }
+      gym_clients: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          id: string
+          name: string
+          note: string | null
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          name: string
+          note?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          name?: string
+          note?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      gym_entries: {
+        Row: {
+          amount: number
+          client_id: string | null
+          client_name: string
+          created_at: string
+          entry_date: string
+          id: string
+          note: string | null
+          package: string
+          paid: boolean
+          trainer_id: string | null
+          trainer_percent: number
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          client_id?: string | null
+          client_name?: string
+          created_at?: string
+          entry_date?: string
+          id?: string
+          note?: string | null
+          package?: string
+          paid?: boolean
+          trainer_id?: string | null
+          trainer_percent?: number
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          client_id?: string | null
+          client_name?: string
+          created_at?: string
+          entry_date?: string
+          id?: string
+          note?: string | null
+          package?: string
+          paid?: boolean
+          trainer_id?: string | null
+          trainer_percent?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gym_entries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "gym_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gym_entries_trainer_id_fkey"
+            columns: ["trainer_id"]
+            isOneToOne: false
+            referencedRelation: "gym_trainers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gym_trainers: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          id: string
+          name: string
+          percent: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          name: string
+          percent?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          name?: string
+          percent?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       mechanic_advances: {
         Row: {
           amount: number
