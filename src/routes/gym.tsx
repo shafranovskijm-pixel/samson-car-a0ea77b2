@@ -1,7 +1,18 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, ChevronLeft, Clock, Dumbbell, LogOut, Plus, Trash2 } from "lucide-react";
+import {
+  CheckCircle2,
+  ChevronLeft,
+  Clock,
+  Download,
+  Dumbbell,
+  LogOut,
+  Pencil,
+  Plus,
+  Printer,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -9,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -21,19 +33,25 @@ import {
   confirmGymPayout,
   createGymClient,
   createGymEntry,
+  createGymExpense,
   createGymPayout,
   createGymTrainer,
   deleteGymClient,
   deleteGymEntry,
+  deleteGymExpense,
   deleteGymPayout,
   deleteGymTrainer,
+  listAllGymEntries,
   listGymClients,
   listGymEntries,
+  listGymExpenses,
   listGymPayouts,
   listGymTrainers,
   listTrainerEntries,
+  markGymVisit,
   updateGymEntry,
   updateGymTrainer,
+  type GymEntry,
   type GymTrainer,
 } from "@/lib/gymApi";
 
@@ -42,9 +60,9 @@ export const Route = createFileRoute("/gym")({
   head: () => ({
     meta: [
       { title: "Samson Fit — тренажёрный зал" },
-      { name: "description", content: "Учёт занятий, клиентов и зарплаты тренеров тренажёрного зала." },
+      { name: "description", content: "Учёт занятий, абонементов, клиентов, расходов и зарплаты тренеров." },
       { property: "og:title", content: "Samson Fit — тренажёрный зал" },
-      { property: "og:description", content: "Учёт занятий, клиентов и зарплаты тренеров тренажёрного зала." },
+      { property: "og:description", content: "Учёт занятий, абонементов, клиентов, расходов и зарплаты тренеров." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -57,47 +75,114 @@ const PACKAGES = [
   { value: "12", label: "12 занятий" },
 ];
 
+const PRICE_KEY = "gym-package-prices";
+
 function money(n: number) {
   return `${Math.round(n).toLocaleString("ru-RU")} ₽`;
 }
 
-function currentMonth() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
-
-function monthRange(month: string) {
-  const [y, m] = month.split("-").map(Number);
-  const from = `${month}-01`;
-  const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
-  return { from, to: `${month}-${String(last).padStart(2, "0")}` };
+function today() {
+  return new Date().toISOString().slice(0, 10);
 }
 
 function dmy(d: string) {
   return `${d.slice(8, 10)}.${d.slice(5, 7)}`;
 }
 
+function dmyFull(d: string) {
+  return `${d.slice(8, 10)}.${d.slice(5, 7)}.${d.slice(0, 4)}`;
+}
+
+type PeriodKind = "day" | "week" | "month" | "all";
+
+function periodRange(kind: PeriodKind, anchor: string) {
+  if (kind === "all") return { from: "1900-01-01", to: "2999-12-31" };
+  if (kind === "day") return { from: anchor, to: anchor };
+  const d = new Date(`${anchor}T00:00:00Z`);
+  if (kind === "week") {
+    const dow = (d.getUTCDay() + 6) % 7;
+    const start = new Date(d);
+    start.setUTCDate(d.getUTCDate() - dow);
+    const end = new Date(start);
+    end.setUTCDate(start.getUTCDate() + 6);
+    return { from: start.toISOString().slice(0, 10), to: end.toISOString().slice(0, 10) };
+  }
+  const y = d.getUTCFullYear();
+  const m = d.getUTCMonth();
+  const last = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+  const mm = String(m + 1).padStart(2, "0");
+  return { from: `${y}-${mm}-01`, to: `${y}-${mm}-${String(last).padStart(2, "0")}` };
+}
+
+function periodLabel(kind: PeriodKind, from: string, to: string) {
+  if (kind === "all") return "Всё время";
+  if (kind === "day") return dmyFull(from);
+  return `${dmyFull(from)} — ${dmyFull(to)}`;
+}
+
+function share(r: GymEntry) {
+  return (Number(r.amount) * Number(r.trainer_percent)) / 100;
+}
+
+function loadPrices(): Record<string, number> {
+  if (typeof window === "undefined") return {};
+  try {
+    return JSON.parse(localStorage.getItem(PRICE_KEY) ?? "{}");
+  } catch {
+    return {};
+  }
+}
+
+function savePrice(pkg: string, value: number) {
+  const all = loadPrices();
+  all[pkg] = value;
+  localStorage.setItem(PRICE_KEY, JSON.stringify(all));
+}
+
+function downloadCsv(name: string, rows: (string | number)[][]) {
+  const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
 function GymPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const [month, setMonth] = useState(currentMonth());
-  const { from, to } = monthRange(month);
+  const [kind, setKind] = useState<PeriodKind>("month");
+  const [anchor, setAnchor] = useState(today);
+  const { from, to } = periodRange(kind, anchor);
 
   const trainers = useQuery({ queryKey: ["gym-trainers"], queryFn: listGymTrainers });
   const clients = useQuery({ queryKey: ["gym-clients"], queryFn: listGymClients });
   const entries = useQuery({ queryKey: ["gym-entries", from, to], queryFn: () => listGymEntries(from, to) });
+  const allEntries = useQuery({ queryKey: ["gym-entries-all"], queryFn: listAllGymEntries });
   const payouts = useQuery({ queryKey: ["gym-payouts"], queryFn: () => listGymPayouts() });
+  const expenses = useQuery({ queryKey: ["gym-expenses", from, to], queryFn: () => listGymExpenses(from, to) });
 
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(today);
   const [clientName, setClientName] = useState("");
   const [trainerId, setTrainerId] = useState<string>("");
   const [pkg, setPkg] = useState("1");
   const [amount, setAmount] = useState("");
+  const [paidNow, setPaidNow] = useState(true);
   const [selectedTrainer, setSelectedTrainer] = useState<string | null>(null);
+  const [selectedClient, setSelectedClient] = useState<string | null>(null);
+  const [editing, setEditing] = useState<GymEntry | null>(null);
+
+  useEffect(() => {
+    const price = loadPrices()[pkg];
+    if (price) setAmount(String(price));
+  }, [pkg]);
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["gym-entries"] });
+    qc.invalidateQueries({ queryKey: ["gym-entries-all"] });
     qc.invalidateQueries({ queryKey: ["gym-clients"] });
+    qc.invalidateQueries({ queryKey: ["gym-trainer-entries"] });
   };
 
   const addEntry = useMutation({
@@ -112,44 +197,49 @@ function GymPage() {
       if (!client) client = await createGymClient(name);
       await createGymEntry({
         entry_date: date,
-        trainer_id: trainerId || null,
+        trainer_id: trainerId,
         client_id: client.id,
         client_name: name,
         package: pkg,
         amount: sum,
         trainer_percent: trainer?.percent ?? 80,
-        paid: true,
+        paid: paidNow,
         note: null,
+        sessions_total: Number(pkg) || 1,
+        sessions_used: 0,
       });
+      savePrice(pkg, sum);
     },
     onSuccess: () => {
       setClientName("");
-      setAmount("");
       invalidate();
       toast.success("Запись добавлена");
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const removeEntry = useMutation({
-    mutationFn: (id: string) => deleteGymEntry(id),
-    onSuccess: invalidate,
-  });
-
+  const removeEntry = useMutation({ mutationFn: (id: string) => deleteGymEntry(id), onSuccess: invalidate });
   const togglePaid = useMutation({
     mutationFn: ({ id, paid }: { id: string; paid: boolean }) => updateGymEntry(id, { paid }),
     onSuccess: invalidate,
   });
+  const visit = useMutation({
+    mutationFn: ({ id, used }: { id: string; used: number }) => markGymVisit(id, used),
+    onSuccess: invalidate,
+  });
 
   const rows = entries.data ?? [];
+  const expRows = expenses.data ?? [];
   const trainerName = (id: string | null) => trainers.data?.find((t) => t.id === id)?.name ?? "—";
 
   const totals = useMemo(() => {
     const paidRows = rows.filter((r) => r.paid);
-    const sum = paidRows.reduce((a, r) => a + Number(r.amount), 0);
-    const payout = paidRows.reduce((a, r) => a + (Number(r.amount) * Number(r.trainer_percent)) / 100, 0);
-    return { sum, payout, profit: sum - payout };
-  }, [rows]);
+    const income = paidRows.reduce((a, r) => a + Number(r.amount), 0);
+    const payout = paidRows.reduce((a, r) => a + share(r), 0);
+    const debt = rows.filter((r) => !r.paid).reduce((a, r) => a + Number(r.amount), 0);
+    const spent = expRows.reduce((a, e) => a + Number(e.amount), 0);
+    return { income, payout, debt, spent, profit: income - payout - spent };
+  }, [rows, expRows]);
 
   const perTrainer = useMemo(() => {
     const map = new Map<string, { id: string; name: string; sum: number; payout: number; count: number }>();
@@ -158,7 +248,7 @@ function GymPage() {
       const key = r.trainer_id ?? "none";
       const cur = map.get(key) ?? { id: key, name: trainerName(r.trainer_id), sum: 0, payout: 0, count: 0 };
       cur.sum += Number(r.amount);
-      cur.payout += (Number(r.amount) * Number(r.trainer_percent)) / 100;
+      cur.payout += share(r);
       cur.count += 1;
       map.set(key, cur);
     }
@@ -166,9 +256,29 @@ function GymPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, trainers.data]);
 
+  const unpaid = rows.filter((r) => !r.paid);
+  const subscriptions = (allEntries.data ?? []).filter((r) => Number(r.sessions_total) > 1);
+
+  function exportEntries() {
+    downloadCsv(`zal-${from}_${to}.csv`, [
+      ["Дата", "Клиент", "Тренер", "Пакет", "Посещено", "Сумма", "Тренеру", "Оплата"],
+      ...rows.map((r) => [
+        dmyFull(r.entry_date),
+        r.client_name,
+        trainerName(r.trainer_id),
+        r.package,
+        `${r.sessions_used}/${r.sessions_total}`,
+        Number(r.amount),
+        Math.round(share(r)),
+        r.paid ? "оплачено" : "долг",
+      ]),
+      ["Итого", "", "", "", "", totals.income, Math.round(totals.payout), ""],
+    ]);
+  }
+
   return (
     <div className="min-h-screen bg-background">
-      <header className="flex h-12 items-center gap-2 border-b px-3">
+      <header className="flex h-12 items-center gap-2 border-b px-3 print:hidden">
         <Dumbbell className="h-4 w-4" />
         <div className="text-sm font-medium">Тренажёрный зал</div>
         <div className="ml-auto flex items-center gap-2">
@@ -192,46 +302,58 @@ function GymPage() {
       </header>
 
       <div className="space-y-4 p-3 sm:p-4">
-        <div className="flex flex-wrap items-end gap-2">
-          <div>
-            <Label htmlFor="month">Месяц</Label>
-            <Input id="month" type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="w-[170px]" />
+        <div className="flex flex-wrap items-end gap-2 print:hidden">
+          <div className="flex gap-1 rounded-md border p-1">
+            {([
+              ["day", "День"],
+              ["week", "Неделя"],
+              ["month", "Месяц"],
+              ["all", "Всё время"],
+            ] as [PeriodKind, string][]).map(([k, label]) => (
+              <Button key={k} size="sm" variant={kind === k ? "default" : "ghost"} onClick={() => setKind(k)}>
+                {label}
+              </Button>
+            ))}
+          </div>
+          {kind !== "all" && (
+            <Input type="date" value={anchor} onChange={(e) => setAnchor(e.target.value)} className="w-[160px]" />
+          )}
+          <div className="text-sm text-muted-foreground">{periodLabel(kind, from, to)}</div>
+          <div className="ml-auto flex gap-2">
+            <Button variant="outline" size="sm" onClick={exportEntries}>
+              <Download className="mr-1 h-4 w-4" /> Экспорт
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => window.print()}>
+              <Printer className="mr-1 h-4 w-4" /> Печать
+            </Button>
           </div>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-3">
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm">Сумма за месяц</CardTitle></CardHeader>
-            <CardContent className="text-2xl font-semibold">{money(totals.sum)}</CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm">Тренерам (80%)</CardTitle></CardHeader>
-            <CardContent className="text-2xl font-semibold">{money(totals.payout)}</CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm">Залу остаётся</CardTitle></CardHeader>
-            <CardContent className="text-2xl font-semibold text-emerald-600">{money(totals.profit)}</CardContent>
-          </Card>
+        <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <Stat title="Доход" value={money(totals.income)} />
+          <Stat title="Тренерам" value={money(totals.payout)} />
+          <Stat title="Расходы зала" value={money(totals.spent)} />
+          <Stat title="Прибыль зала" value={money(totals.profit)} accent="text-emerald-600" />
+          <Stat title="Долг клиентов" value={money(totals.debt)} accent={totals.debt ? "text-amber-600" : undefined} />
         </div>
 
         <Tabs defaultValue="table">
-          <TabsList className="w-full overflow-x-auto">
+          <TabsList className="w-full overflow-x-auto print:hidden">
             <TabsTrigger value="table" className="flex-1">Занятия</TabsTrigger>
+            <TabsTrigger value="subs" className="flex-1">Абонементы</TabsTrigger>
+            <TabsTrigger value="clients" className="flex-1">Клиенты</TabsTrigger>
             <TabsTrigger value="trainers" className="flex-1">Тренеры</TabsTrigger>
             <TabsTrigger value="salary" className="flex-1">Зарплата</TabsTrigger>
             <TabsTrigger value="payouts" className="flex-1">Выплаты</TabsTrigger>
+            <TabsTrigger value="debts" className="flex-1">Долги</TabsTrigger>
+            <TabsTrigger value="expenses" className="flex-1">Расходы</TabsTrigger>
             <TabsTrigger value="people" className="flex-1">Люди</TabsTrigger>
           </TabsList>
 
           <TabsContent value="table" className="space-y-3">
-            <Card>
+            <Card className="print:hidden">
               <CardContent className="space-y-3 p-3">
-                <Button
-                  className="w-full"
-                  size="lg"
-                  onClick={() => addEntry.mutate()}
-                  disabled={addEntry.isPending}
-                >
+                <Button className="w-full" size="lg" onClick={() => addEntry.mutate()} disabled={addEntry.isPending}>
                   <Plus className="mr-1 h-4 w-4" /> Добавить занятие
                 </Button>
                 <div className="grid gap-2 sm:grid-cols-5">
@@ -241,11 +363,7 @@ function GymPage() {
                   </div>
                   <div>
                     <Label>Клиент</Label>
-                    <Input
-                      value={clientName}
-                      onChange={(e) => setClientName(e.target.value)}
-                      placeholder="Фамилия"
-                    />
+                    <Input value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Фамилия" />
                     {clientName.trim().length > 0 && (
                       <div className="mt-1 flex flex-wrap gap-1">
                         {(clients.data ?? [])
@@ -256,13 +374,7 @@ function GymPage() {
                           )
                           .slice(0, 5)
                           .map((c) => (
-                            <Button
-                              key={c.id}
-                              type="button"
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => setClientName(c.name)}
-                            >
+                            <Button key={c.id} type="button" variant="secondary" size="sm" onClick={() => setClientName(c.name)}>
                               {c.name}
                             </Button>
                           ))}
@@ -294,14 +406,18 @@ function GymPage() {
                     <Input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="1000" />
                   </div>
                 </div>
+                <Button
+                  variant={paidNow ? "secondary" : "outline"}
+                  size="sm"
+                  onClick={() => setPaidNow((v) => !v)}
+                >
+                  {paidNow ? "Оплачено сразу" : "В долг"}
+                </Button>
               </CardContent>
             </Card>
 
-            {/* Мобильные карточки */}
             <div className="space-y-2 sm:hidden">
-              {rows.length === 0 && (
-                <p className="p-4 text-center text-sm text-muted-foreground">Нет записей за этот месяц</p>
-              )}
+              {rows.length === 0 && <p className="p-4 text-center text-sm text-muted-foreground">Нет записей за период</p>}
               {rows.map((r) => (
                 <Card key={r.id}>
                   <CardContent className="space-y-2 p-3">
@@ -311,8 +427,8 @@ function GymPage() {
                       <span className="ml-auto font-semibold">{money(Number(r.amount))}</span>
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      {trainerName(r.trainer_id)} · {r.package} зан. · тренеру{" "}
-                      {money((Number(r.amount) * Number(r.trainer_percent)) / 100)}
+                      {trainerName(r.trainer_id)} · {r.package} зан. · тренеру {money(share(r))}
+                      {Number(r.sessions_total) > 1 && ` · осталось ${Number(r.sessions_total) - Number(r.sessions_used)}`}
                     </div>
                     <div className="flex items-center gap-2">
                       <Button
@@ -322,6 +438,9 @@ function GymPage() {
                         onClick={() => togglePaid.mutate({ id: r.id, paid: !r.paid })}
                       >
                         {r.paid ? "Оплачено" : "Не оплачено"}
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => setEditing(r)}>
+                        <Pencil className="h-4 w-4" />
                       </Button>
                       <Button variant="ghost" size="icon" onClick={() => removeEntry.mutate(r.id)}>
                         <Trash2 className="h-4 w-4 text-destructive" />
@@ -333,31 +452,36 @@ function GymPage() {
             </div>
 
             <div className="hidden overflow-x-auto rounded-md border sm:block">
-              <table className="w-full min-w-[720px] text-sm">
+              <table className="w-full min-w-[820px] text-sm">
                 <thead className="bg-muted/50">
                   <tr className="text-left">
                     <th className="p-2">Число</th>
                     <th className="p-2">Клиент</th>
                     <th className="p-2">Тренер</th>
-                    <th className="p-2">Занятий</th>
+                    <th className="p-2">Пакет</th>
                     <th className="p-2 text-right">Сумма</th>
                     <th className="p-2 text-right">Тренеру</th>
                     <th className="p-2">Оплата</th>
-                    <th className="p-2" />
+                    <th className="p-2 print:hidden" />
                   </tr>
                 </thead>
                 <tbody>
                   {rows.length === 0 && (
-                    <tr><td colSpan={8} className="p-4 text-center text-muted-foreground">Нет записей за этот месяц</td></tr>
+                    <tr><td colSpan={8} className="p-4 text-center text-muted-foreground">Нет записей за период</td></tr>
                   )}
                   {rows.map((r) => (
                     <tr key={r.id} className="border-t">
                       <td className="p-2 whitespace-nowrap">{dmy(r.entry_date)}</td>
                       <td className="p-2">{r.client_name}</td>
                       <td className="p-2">{trainerName(r.trainer_id)}</td>
-                      <td className="p-2">{r.package}</td>
+                      <td className="p-2">
+                        {r.package}
+                        {Number(r.sessions_total) > 1 && (
+                          <span className="text-xs text-muted-foreground"> · {r.sessions_used}/{r.sessions_total}</span>
+                        )}
+                      </td>
                       <td className="p-2 text-right">{money(Number(r.amount))}</td>
-                      <td className="p-2 text-right">{money((Number(r.amount) * Number(r.trainer_percent)) / 100)}</td>
+                      <td className="p-2 text-right">{money(share(r))}</td>
                       <td className="p-2">
                         <Button
                           variant={r.paid ? "secondary" : "outline"}
@@ -367,7 +491,10 @@ function GymPage() {
                           {r.paid ? "Оплачено" : "Не оплачено"}
                         </Button>
                       </td>
-                      <td className="p-2 pl-6 text-right">
+                      <td className="p-2 text-right print:hidden">
+                        <Button variant="ghost" size="icon" onClick={() => setEditing(r)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
                         <Button variant="ghost" size="icon" onClick={() => removeEntry.mutate(r.id)}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
@@ -377,6 +504,89 @@ function GymPage() {
                 </tbody>
               </table>
             </div>
+          </TabsContent>
+
+          <TabsContent value="subs" className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Абонементы 8 и 12 занятий. Отмечайте посещение — остаток уменьшается.
+            </p>
+            {subscriptions.length === 0 && <p className="text-sm text-muted-foreground">Абонементов нет</p>}
+            <div className="grid gap-3 sm:grid-cols-2">
+              {subscriptions.map((r) => {
+                const left = Number(r.sessions_total) - Number(r.sessions_used);
+                return (
+                  <Card key={r.id}>
+                    <CardContent className="space-y-2 p-3">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{r.client_name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {dmyFull(r.entry_date)} · {trainerName(r.trainer_id)}
+                        </span>
+                        <span className="ml-auto font-semibold">{money(Number(r.amount))}</span>
+                      </div>
+                      <div className={left === 0 ? "text-sm font-medium text-destructive" : "text-sm"}>
+                        {left === 0 ? "Абонемент закончился — пора продлевать" : `Осталось ${left} из ${r.sessions_total}`}
+                      </div>
+                      {left <= 2 && left > 0 && (
+                        <div className="text-xs text-amber-600">Скоро закончится</div>
+                      )}
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          disabled={left === 0}
+                          onClick={() => visit.mutate({ id: r.id, used: Number(r.sessions_used) + 1 })}
+                        >
+                          Отметить посещение
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={Number(r.sessions_used) === 0}
+                          onClick={() => visit.mutate({ id: r.id, used: Number(r.sessions_used) - 1 })}
+                        >
+                          Отменить
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="clients" className="space-y-3">
+            {selectedClient ? (
+              <ClientDetail
+                name={selectedClient}
+                entries={(allEntries.data ?? []).filter((r) => r.client_name === selectedClient)}
+                trainerName={trainerName}
+                onBack={() => setSelectedClient(null)}
+              />
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Клиентов: {(clients.data ?? []).length}. Нажмите на клиента, чтобы увидеть историю.
+                </p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {(clients.data ?? []).map((c) => {
+                    const list = (allEntries.data ?? []).filter((r) => r.client_name === c.name);
+                    const paid = list.filter((r) => r.paid).reduce((a, r) => a + Number(r.amount), 0);
+                    const debt = list.filter((r) => !r.paid).reduce((a, r) => a + Number(r.amount), 0);
+                    return (
+                      <Card key={c.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedClient(c.name)}>
+                        <CardContent className="p-3">
+                          <div className="font-medium">{c.name}</div>
+                          <div className="text-xs text-muted-foreground">
+                            Занятий: {list.length} · оплачено {money(paid)}
+                            {debt > 0 && <span className="text-amber-600"> · долг {money(debt)}</span>}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </TabsContent>
 
           <TabsContent value="trainers" className="space-y-3">
@@ -395,23 +605,19 @@ function GymPage() {
             ) : (
               <>
                 <p className="text-sm text-muted-foreground">
-                  Тренеров: {(trainers.data ?? []).length}. Нажмите на тренера, чтобы увидеть его начисления и выплаты.
+                  Тренеров: {(trainers.data ?? []).length}. Нажмите на тренера, чтобы увидеть начисления и выплаты.
                 </p>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {(trainers.data ?? []).map((t) => {
                     const list = (payouts.data ?? []).filter((p) => p.trainer_id === t.id);
-                    const paidOut = list.reduce((a, p) => a + Number(p.amount), 0);
+                    const paidOut = list.filter((p) => p.status === "confirmed").reduce((a, p) => a + Number(p.amount), 0);
                     return (
-                      <Card
-                        key={t.id}
-                        className="cursor-pointer transition-colors hover:bg-muted/50"
-                        onClick={() => setSelectedTrainer(t.id)}
-                      >
+                      <Card key={t.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedTrainer(t.id)}>
                         <CardContent className="flex items-center gap-3 p-3">
                           <div className="min-w-0">
                             <div className="truncate font-medium">{t.name}</div>
                             <div className="text-xs text-muted-foreground">
-                              Процент: {t.percent}% · выплат: {list.length} · выдано {money(paidOut)}
+                              Процент: {t.percent}% · выплат: {list.length} · получено {money(paidOut)}
                             </div>
                           </div>
                           <ChevronLeft className="ml-auto h-4 w-4 rotate-180 text-muted-foreground" />
@@ -440,7 +646,7 @@ function GymPage() {
                     <tr><td colSpan={4} className="p-4 text-center text-muted-foreground">Нет данных</td></tr>
                   )}
                   {perTrainer.map((t) => (
-                    <tr key={t.name} className="border-t">
+                    <tr key={t.id} className="border-t">
                       <td className="p-2">{t.name}</td>
                       <td className="p-2 text-right">{t.count}</td>
                       <td className="p-2 text-right">{money(t.sum)}</td>
@@ -474,6 +680,33 @@ function GymPage() {
             })}
           </TabsContent>
 
+          <TabsContent value="debts" className="space-y-3">
+            <div className="text-sm">
+              Неоплаченных занятий: {unpaid.length} на {money(totals.debt)}
+            </div>
+            <ul className="divide-y rounded-md border">
+              {unpaid.length === 0 && <li className="px-2 py-2 text-sm text-muted-foreground">Долгов нет</li>}
+              {unpaid.map((r) => (
+                <li key={r.id} className="flex flex-wrap items-center gap-2 px-2 py-2 text-sm">
+                  <span className="whitespace-nowrap">{dmy(r.entry_date)}</span>
+                  <span className="font-medium">{r.client_name}</span>
+                  <span className="text-muted-foreground">{trainerName(r.trainer_id)}</span>
+                  <span className="ml-auto font-semibold text-amber-600">{money(Number(r.amount))}</span>
+                  <Button size="sm" onClick={() => togglePaid.mutate({ id: r.id, paid: true })}>
+                    Оплачено
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </TabsContent>
+
+          <TabsContent value="expenses" className="space-y-3">
+            <ExpensesTab
+              rows={expRows}
+              onChanged={() => qc.invalidateQueries({ queryKey: ["gym-expenses"] })}
+            />
+          </TabsContent>
+
           <TabsContent value="people" className="grid gap-3 sm:grid-cols-2">
             <Card>
               <CardHeader className="pb-2"><CardTitle className="text-sm">Тренеры</CardTitle></CardHeader>
@@ -486,11 +719,7 @@ function GymPage() {
                   }}
                 />
                 {(trainers.data ?? []).map((t) => (
-                  <TrainerRow
-                    key={t.id}
-                    trainer={t}
-                    onChanged={() => qc.invalidateQueries({ queryKey: ["gym-trainers"] })}
-                  />
+                  <TrainerRow key={t.id} trainer={t} onChanged={() => qc.invalidateQueries({ queryKey: ["gym-trainers"] })} />
                 ))}
               </CardContent>
             </Card>
@@ -503,6 +732,255 @@ function GymPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <EditEntryDialog
+        entry={editing}
+        trainers={trainers.data ?? []}
+        onClose={() => setEditing(null)}
+        onSaved={() => {
+          setEditing(null);
+          invalidate();
+        }}
+      />
+    </div>
+  );
+}
+
+function Stat({ title, value, accent }: { title: string; value: string; accent?: string }) {
+  return (
+    <Card>
+      <CardHeader className="pb-2"><CardTitle className="text-sm">{title}</CardTitle></CardHeader>
+      <CardContent className={`text-2xl font-semibold ${accent ?? ""}`}>{value}</CardContent>
+    </Card>
+  );
+}
+
+function EditEntryDialog({
+  entry,
+  trainers,
+  onClose,
+  onSaved,
+}: {
+  entry: GymEntry | null;
+  trainers: GymTrainer[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [date, setDate] = useState("");
+  const [client, setClient] = useState("");
+  const [trainerId, setTrainerId] = useState("");
+  const [pkg, setPkg] = useState("1");
+  const [amount, setAmount] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!entry) return;
+    setDate(entry.entry_date);
+    setClient(entry.client_name);
+    setTrainerId(entry.trainer_id ?? "");
+    setPkg(entry.package);
+    setAmount(String(Number(entry.amount)));
+  }, [entry]);
+
+  async function save() {
+    if (!entry) return;
+    const sum = Number(amount.replace(",", "."));
+    if (!Number.isFinite(sum) || sum <= 0) {
+      toast.error("Укажите сумму");
+      return;
+    }
+    if (!trainerId) {
+      toast.error("Выберите тренера");
+      return;
+    }
+    setBusy(true);
+    try {
+      const percent = trainers.find((t) => t.id === trainerId)?.percent ?? entry.trainer_percent;
+      const total = Number(pkg) || 1;
+      await updateGymEntry(entry.id, {
+        entry_date: date,
+        client_name: client.trim() || entry.client_name,
+        trainer_id: trainerId,
+        package: pkg,
+        amount: sum,
+        trainer_percent: percent,
+        sessions_total: total,
+        sessions_used: Math.min(Number(entry.sessions_used), total),
+      });
+      savePrice(pkg, sum);
+      toast.success("Сохранено");
+      onSaved();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={!!entry} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader><DialogTitle>Изменить занятие</DialogTitle></DialogHeader>
+        <div className="space-y-2">
+          <div>
+            <Label>Дата</Label>
+            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          </div>
+          <div>
+            <Label>Клиент</Label>
+            <Input value={client} onChange={(e) => setClient(e.target.value)} />
+          </div>
+          <div>
+            <Label>Тренер</Label>
+            <Select value={trainerId} onValueChange={setTrainerId}>
+              <SelectTrigger><SelectValue placeholder="Выбрать" /></SelectTrigger>
+              <SelectContent>
+                {trainers.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Пакет</Label>
+            <Select value={pkg} onValueChange={setPkg}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {PACKAGES.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Сумма</Label>
+            <Input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
+          </div>
+          <Button className="w-full" onClick={save} disabled={busy}>Сохранить</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ExpensesTab({
+  rows,
+  onChanged,
+}: {
+  rows: { id: string; expense_date: string; title: string; amount: number; note: string | null }[];
+  onChanged: () => void;
+}) {
+  const [date, setDate] = useState(today);
+  const [title, setTitle] = useState("");
+  const [amount, setAmount] = useState("");
+  const [busy, setBusy] = useState(false);
+  const total = rows.reduce((a, r) => a + Number(r.amount), 0);
+
+  async function add() {
+    const sum = Number(amount.replace(",", "."));
+    if (!title.trim()) return toast.error("Укажите, на что потрачено");
+    if (!Number.isFinite(sum) || sum <= 0) return toast.error("Укажите сумму");
+    setBusy(true);
+    try {
+      await createGymExpense({ expense_date: date, title: title.trim(), amount: sum, note: null });
+      setTitle("");
+      setAmount("");
+      onChanged();
+      toast.success("Расход добавлен");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-2"><CardTitle className="text-sm">Расходы зала за период: {money(total)}</CardTitle></CardHeader>
+      <CardContent className="space-y-3">
+        <div className="grid gap-2 sm:grid-cols-4">
+          <div>
+            <Label>Дата</Label>
+            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          </div>
+          <div className="sm:col-span-2">
+            <Label>На что</Label>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Аренда, вода, инвентарь" />
+          </div>
+          <div>
+            <Label>Сумма</Label>
+            <Input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" />
+          </div>
+        </div>
+        <Button onClick={add} disabled={busy}><Plus className="mr-1 h-4 w-4" /> Добавить расход</Button>
+        <ul className="divide-y rounded-md border">
+          {rows.length === 0 && <li className="px-2 py-2 text-sm text-muted-foreground">Расходов за период нет</li>}
+          {rows.map((r) => (
+            <li key={r.id} className="flex items-center gap-2 px-2 py-1.5 text-sm">
+              <span className="whitespace-nowrap">{dmy(r.expense_date)}</span>
+              <span className="truncate">{r.title}</span>
+              <span className="ml-auto font-medium">{money(Number(r.amount))}</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={async () => {
+                  await deleteGymExpense(r.id);
+                  onChanged();
+                }}
+              >
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </Button>
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ClientDetail({
+  name,
+  entries,
+  trainerName,
+  onBack,
+}: {
+  name: string;
+  entries: GymEntry[];
+  trainerName: (id: string | null) => string;
+  onBack: () => void;
+}) {
+  const paid = entries.filter((r) => r.paid).reduce((a, r) => a + Number(r.amount), 0);
+  const debt = entries.filter((r) => !r.paid).reduce((a, r) => a + Number(r.amount), 0);
+  const left = entries.reduce((a, r) => a + Math.max(0, Number(r.sessions_total) - Number(r.sessions_used)), 0);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Button variant="outline" size="sm" onClick={onBack}>
+          <ChevronLeft className="mr-1 h-4 w-4" /> Все клиенты
+        </Button>
+        <div className="font-medium">{name}</div>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Stat title="Оплачено всего" value={money(paid)} />
+        <Stat title="Долг" value={money(debt)} accent={debt ? "text-amber-600" : undefined} />
+        <Stat title="Осталось занятий" value={String(left)} />
+      </div>
+      <Card>
+        <CardHeader className="pb-2"><CardTitle className="text-sm">История занятий</CardTitle></CardHeader>
+        <CardContent>
+          <ul className="divide-y rounded-md border">
+            {entries.length === 0 && <li className="px-2 py-2 text-sm text-muted-foreground">Занятий нет</li>}
+            {entries.map((r) => (
+              <li key={r.id} className="flex flex-wrap items-center gap-2 px-2 py-1.5 text-sm">
+                <span className="whitespace-nowrap">{dmyFull(r.entry_date)}</span>
+                <span>{trainerName(r.trainer_id)}</span>
+                <span className="text-muted-foreground">
+                  {r.package} зан.{Number(r.sessions_total) > 1 ? ` · посещено ${r.sessions_used}/${r.sessions_total}` : ""}
+                </span>
+                <span className="ml-auto font-medium">{money(Number(r.amount))}</span>
+                {!r.paid && <span className="text-xs text-amber-600">долг</span>}
+              </li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -526,7 +1004,7 @@ function PayoutCard({
 }) {
   const rest = accrued - paidOut;
   const [sum, setSum] = useState("");
-  const [day, setDay] = useState(() => new Date().toISOString().slice(0, 10));
+  const [day, setDay] = useState(today);
   const [busy, setBusy] = useState(false);
 
   async function pay() {
@@ -575,9 +1053,7 @@ function PayoutCard({
           <Button onClick={pay} disabled={busy}>Выплатить</Button>
         </div>
         <ul className="divide-y rounded-md border">
-          {payouts.length === 0 && (
-            <li className="px-2 py-2 text-sm text-muted-foreground">Выплат за период нет</li>
-          )}
+          {payouts.length === 0 && <li className="px-2 py-2 text-sm text-muted-foreground">Выплат за период нет</li>}
           {payouts.map((p) => (
             <li key={p.id} className="flex flex-wrap items-center gap-2 px-2 py-1.5 text-sm">
               <span className="whitespace-nowrap">{dmy(p.paid_at)}</span>
@@ -716,11 +1192,9 @@ function TrainerDetail({
 
   const all = entries.data ?? [];
   const paidRows = all.filter((r) => r.paid);
-  const accrued = paidRows.reduce(
-    (a, r) => a + (Number(r.amount) * Number(r.trainer_percent)) / 100,
-    0,
-  );
-  const paidOut = payouts.reduce((a, p) => a + Number(p.amount), 0);
+  const accrued = paidRows.reduce((a, r) => a + share(r), 0);
+  const received = payouts.filter((p) => p.status === "confirmed").reduce((a, p) => a + Number(p.amount), 0);
+  const pending = payouts.filter((p) => p.status !== "confirmed").reduce((a, p) => a + Number(p.amount), 0);
 
   return (
     <div className="space-y-3">
@@ -728,36 +1202,24 @@ function TrainerDetail({
         <Button variant="outline" size="sm" onClick={onBack}>
           <ChevronLeft className="mr-1 h-4 w-4" /> Все тренеры
         </Button>
-        <div className="font-medium">
-          {trainer.name} · {trainer.percent}%
-        </div>
+        <div className="font-medium">{trainer.name} · {trainer.percent}%</div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm">Начислено за всё время</CardTitle></CardHeader>
-          <CardContent className="text-2xl font-semibold">{money(accrued)}</CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm">Получил всего</CardTitle></CardHeader>
-          <CardContent className="text-2xl font-semibold">{money(paidOut)}</CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm">К выдаче</CardTitle></CardHeader>
-          <CardContent className="text-2xl font-semibold text-emerald-600">{money(accrued - paidOut)}</CardContent>
-        </Card>
+      <div className="grid gap-3 sm:grid-cols-4">
+        <Stat title="Начислено за всё время" value={money(accrued)} />
+        <Stat title="Получил всего" value={money(received)} />
+        <Stat title="Ждёт подтверждения" value={money(pending)} accent={pending ? "text-amber-600" : undefined} />
+        <Stat title="К выдаче" value={money(accrued - received - pending)} accent="text-emerald-600" />
       </div>
 
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-sm">Выплаты — когда и сколько получил</CardTitle></CardHeader>
         <CardContent>
           <ul className="divide-y rounded-md border">
-            {payouts.length === 0 && (
-              <li className="px-2 py-2 text-sm text-muted-foreground">Выплат ещё не было</li>
-            )}
+            {payouts.length === 0 && <li className="px-2 py-2 text-sm text-muted-foreground">Выплат ещё не было</li>}
             {payouts.map((p) => (
               <li key={p.id} className="flex flex-wrap items-center gap-2 px-2 py-1.5 text-sm">
-                <span className="whitespace-nowrap">{p.paid_at.split("-").reverse().join(".")}</span>
+                <span className="whitespace-nowrap">{dmyFull(p.paid_at)}</span>
                 <span className="font-medium">{money(Number(p.amount))}</span>
                 {p.status === "confirmed" ? (
                   <span className="inline-flex items-center gap-1 text-emerald-600">
@@ -791,7 +1253,7 @@ function TrainerDetail({
                 <span className="text-muted-foreground">{r.package} зан.</span>
                 <span className="ml-auto">{money(Number(r.amount))}</span>
                 <span className="font-medium">
-                  тренеру {money((Number(r.amount) * Number(r.trainer_percent)) / 100)} ({Number(r.trainer_percent)}%)
+                  тренеру {money(share(r))} ({Number(r.trainer_percent)}%)
                 </span>
                 {!r.paid && <span className="text-xs text-amber-600">не оплачено</span>}
               </li>
