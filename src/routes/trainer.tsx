@@ -110,7 +110,7 @@ function TrainerPage() {
     const pending = allPayouts
       .filter((p) => p.status !== "confirmed")
       .reduce((a, p) => a + Number(p.amount), 0);
-    return { accruedAll, receivedAll, owed: accruedAll - receivedAll, pending };
+    return { accruedAll, receivedAll, owed: Math.max(0, accruedAll - receivedAll), pending };
   }, [allEntries.data, payouts.data]);
 
   if (!session) {
@@ -248,7 +248,7 @@ function TrainerPage() {
                   <span className="truncate">{r.client_name}</span>
                   <span className="text-muted-foreground">{r.package} зан.</span>
                   <span className="ml-auto font-semibold">
-                    {money((Number(r.amount) * Number(r.trainer_percent)) / 100)}
+                    {money((gotSum(r) * Number(r.trainer_percent)) / 100)}
                   </span>
                   {gotSum(r) < Number(r.amount) && (
                     <span className="text-xs text-amber-600">
