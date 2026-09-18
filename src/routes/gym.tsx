@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { logout } from "@/lib/authGate";
+import { getSection, logout } from "@/lib/authGate";
 import {
   createGymClient,
   createGymEntry,
