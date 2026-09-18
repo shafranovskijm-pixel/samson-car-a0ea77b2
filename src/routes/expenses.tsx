@@ -337,7 +337,11 @@ function ExpensesPage() {
 
       {/* Касса сейчас — сколько денег должно быть в кассе на сегодня */}
       <Card
-        className={`mb-6 border-2 ${cashNow >= 0 ? "border-green-500/40 bg-green-500/5" : "border-red-500/40 bg-red-500/5"}`}
+        role="button"
+        tabIndex={0}
+        onClick={() => setDrill("cash")}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setDrill("cash"); } }}
+        className={`mb-6 cursor-pointer border-2 transition-all hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.99] ${cashNow >= 0 ? "border-green-500/40 bg-green-500/5" : "border-red-500/40 bg-red-500/5"}`}
       >
         <CardContent className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
           <div className="min-w-0">
@@ -635,6 +639,9 @@ function ExpensesPage() {
         mechanicsDebtTotal={mechanicsDebtTotal}
         accruedToDate={accruedToDate}
         paidToDate={paidToDate}
+        cashPayments={paymentsNow}
+        cashAdvances={advancesNow}
+        cashExpenses={expensesNow}
       />
     </div>
   );

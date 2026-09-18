@@ -23,7 +23,7 @@ import {
   type PayoutService,
 } from "@/lib/payouts";
 
-export type DrillMetric = "profit" | "income" | "payout" | "expense" | "debt";
+export type DrillMetric = "profit" | "income" | "payout" | "expense" | "debt" | "cash";
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(
@@ -66,6 +66,10 @@ type Props = {
   paidToDate?: number;
   /** Все начисления мастерам до конца периода (для прогресса). */
   accruedToDate?: number;
+  /** Касса «сейчас»: все платежи, авансы и расходы с начала работы по сегодня. */
+  cashPayments?: AppointmentPayment[];
+  cashAdvances?: MechanicAdvance[];
+  cashExpenses?: Expense[];
 };
 
 const TITLE: Record<DrillMetric, string> = {
@@ -74,6 +78,7 @@ const TITLE: Record<DrillMetric, string> = {
   payout: "Зарплаты мастеров",
   expense: "Прочие расходы",
   debt: "Долг / переплата мастерам",
+  cash: "Касса сейчас",
 };
 
 export function ExpensesDrillDown(props: Props) {
@@ -86,7 +91,9 @@ export function ExpensesDrillDown(props: Props) {
             {metric ? TITLE[metric] : ""}
           </DialogTitle>
           <div className="text-xs text-muted-foreground">
-            За {props.periodLabel} · {props.rangeLabel}
+            {metric === "cash"
+              ? "Все движения денег с начала работы по сегодня"
+              : `За ${props.periodLabel} · ${props.rangeLabel}`}
           </div>
         </DialogHeader>
         <div className="p-4 sm:p-6">
@@ -95,6 +102,7 @@ export function ExpensesDrillDown(props: Props) {
           {metric === "payout" && <PayoutView {...props} />}
           {metric === "expense" && <ExpenseView {...props} />}
           {metric === "debt" && <DebtView {...props} />}
+          {metric === "cash" && <CashView {...props} />}
         </div>
       </DialogContent>
     </Dialog>
@@ -725,6 +733,183 @@ function ExpenseView(p: Props) {
           Добавить или удалить расход
         </Button>
       </div>
+    </div>
+  );
+}
+
+/** Касса «сейчас»: прозрачный расчёт — поступления минус выплаты мастерам и расходы. */
+function CashView(p: Props) {
+  const payments = useMemo(
+    () =>
+      [...(p.cashPayments ?? [])].sort((a, b) =>
+        (b.paid_at ?? "").localeCompare(a.paid_at ?? ""),
+      ),
+    [p.cashPayments],
+  );
+  const advances = useMemo(
+    () =>
+      [...(p.cashAdvances ?? [])].sort((a, b) =>
+        (b.paid_at ?? "").localeCompare(a.paid_at ?? ""),
+      ),
+    [p.cashAdvances],
+  );
+  const payrollExp = useMemo(
+    () =>
+      (p.cashExpenses ?? [])
+        .filter((e) => e.is_payroll)
+        .sort((a, b) => b.spent_at.localeCompare(a.spent_at)),
+    [p.cashExpenses],
+  );
+  const otherExp = useMemo(
+    () =>
+      (p.cashExpenses ?? [])
+        .filter((e) => !e.is_payroll)
+        .sort((a, b) => b.spent_at.localeCompare(a.spent_at)),
+    [p.cashExpenses],
+  );
+
+  const mechName = useMemo(() => {
+    const m = new Map<string, string>();
+    p.mechanics.forEach((x) => m.set(x.id, x.full_name));
+    return m;
+  }, [p.mechanics]);
+
+  const cashIn = payments.reduce((s, x) => s + Number(x.amount ?? 0), 0);
+  const advancesTotal = advances.reduce((s, x) => s + Number(x.amount ?? 0), 0);
+  const payrollTotal = payrollExp.reduce((s, x) => s + Number(x.amount ?? 0), 0);
+  const otherTotal = otherExp.reduce((s, x) => s + Number(x.amount ?? 0), 0);
+  const cash = cashIn - advancesTotal - payrollTotal - otherTotal;
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+          Должно быть в кассе
+        </div>
+        <div
+          className={`mt-1 text-3xl font-bold tabular-nums ${cash >= 0 ? "text-green-600" : "text-red-600"}`}
+        >
+          {fmt(cash)}
+        </div>
+        <div className="mt-1 text-xs text-muted-foreground">
+          {fmt(cashIn)} поступило − {fmt(advancesTotal + payrollTotal)} мастерам −{" "}
+          {fmt(otherTotal)} прочие расходы
+        </div>
+      </div>
+
+      <details className="rounded-lg border" open={payments.length <= 10}>
+        <summary className="cursor-pointer select-none p-3 text-sm font-semibold">
+          Поступления от клиентов · {fmt(cashIn)} · {payments.length} платеж(а/ей)
+        </summary>
+        <div className="space-y-1.5 border-t p-3">
+          {payments.length === 0 ? (
+            <div className="py-4 text-center text-xs text-muted-foreground">
+              Платежей пока не было.
+            </div>
+          ) : (
+            payments.map((pay) => (
+              <div
+                key={pay.id}
+                className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 rounded border p-2.5 text-xs"
+              >
+                <div className="min-w-0 truncate text-muted-foreground">
+                  {fmtDate(pay.paid_at)}
+                </div>
+                <div className="text-right font-semibold text-green-700 tabular-nums">
+                  + {fmt(Number(pay.amount))}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </details>
+
+      <details className="rounded-lg border">
+        <summary className="cursor-pointer select-none p-3 text-sm font-semibold">
+          Выплачено мастерам · {fmt(advancesTotal + payrollTotal)}
+        </summary>
+        <div className="space-y-1.5 border-t p-3">
+          {advances.length === 0 && payrollExp.length === 0 ? (
+            <div className="py-4 text-center text-xs text-muted-foreground">
+              Выплат мастерам пока не было.
+            </div>
+          ) : (
+            <>
+              {advances.map((a) => (
+                <div
+                  key={a.id}
+                  className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 rounded border p-2.5 text-xs"
+                >
+                  <div className="min-w-0">
+                    <div className="truncate font-medium">
+                      {mechName.get(a.mechanic_id) ?? "Мастер"}
+                    </div>
+                    <div className="truncate text-muted-foreground">
+                      {fmtDate(a.paid_at)}
+                      {Number(a.amount ?? 0) < 0 ? " · удержание" : " · аванс"}
+                    </div>
+                  </div>
+                  <div
+                    className={`text-right font-semibold tabular-nums ${
+                      Number(a.amount ?? 0) < 0 ? "text-green-700" : "text-amber-700"
+                    }`}
+                  >
+                    {Number(a.amount ?? 0) < 0 ? "+ " : "− "}
+                    {fmt(Math.abs(Number(a.amount ?? 0)))}
+                  </div>
+                </div>
+              ))}
+              {payrollExp.map((e) => (
+                <div
+                  key={e.id}
+                  className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 rounded border p-2.5 text-xs"
+                >
+                  <div className="min-w-0">
+                    <div className="truncate font-medium">{e.title}</div>
+                    <div className="truncate text-muted-foreground">
+                      {fmtDate(e.spent_at)} · выплата ЗП
+                    </div>
+                  </div>
+                  <div className="text-right font-semibold text-amber-700 tabular-nums">
+                    − {fmt(Number(e.amount))}
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+      </details>
+
+      <details className="rounded-lg border">
+        <summary className="cursor-pointer select-none p-3 text-sm font-semibold">
+          Прочие расходы · {fmt(otherTotal)} · {otherExp.length} запис(ь/и/ей)
+        </summary>
+        <div className="space-y-1.5 border-t p-3">
+          {otherExp.length === 0 ? (
+            <div className="py-4 text-center text-xs text-muted-foreground">
+              Расходов пока не было.
+            </div>
+          ) : (
+            otherExp.map((e) => (
+              <div
+                key={e.id}
+                className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 rounded border p-2.5 text-xs"
+              >
+                <div className="min-w-0">
+                  <div className="truncate font-medium">{e.title}</div>
+                  <div className="truncate text-muted-foreground">
+                    {fmtDate(e.spent_at)}
+                    {e.note ? ` · ${e.note}` : ""}
+                  </div>
+                </div>
+                <div className="text-right font-semibold text-amber-700 tabular-nums">
+                  − {fmt(Number(e.amount))}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </details>
     </div>
   );
 }
