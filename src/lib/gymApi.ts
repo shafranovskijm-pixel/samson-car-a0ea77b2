@@ -46,7 +46,21 @@ export type GymEntry = {
   trainer_percent: number;
   paid: boolean;
   note: string | null;
+  sessions_total: number;
+  sessions_used: number;
 };
+
+export type GymExpense = {
+  id: string;
+  expense_date: string;
+  title: string;
+  amount: number;
+  note: string | null;
+};
+
+const ENTRY_COLS =
+  "id,entry_date,trainer_id,client_id,client_name,package,amount,trainer_percent,paid,note,sessions_total,sessions_used";
+const EXPENSE_COLS = "id,expense_date,title,amount,note";
 
 const throwIf = <T,>(x: { data: T | null; error: unknown }): T => {
   if (x.error) throw x.error;
