@@ -128,7 +128,7 @@ export function ExpensesMonthlyTable({
 
     // Висячие авансы — дни, где у мастера не было работ.
     advByMechDay.forEach((amount, key) => {
-      if (usedAdvance.has(key) || amount <= 0) return;
+      if (usedAdvance.has(key) || amount === 0) return;
       const [mechanicId, dateOnly] = key.split("|");
       out.push({
         date: dateOnly,
