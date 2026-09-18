@@ -1,9 +1,55 @@
 const KEY = "samson-auth-v1";
 const CREDS_KEY = "samson-creds-v1";
+const ROLE_KEY = "samson-role-v1";
+const GYM_CREDS_KEY = "samson-gym-creds-v1";
 const DEFAULT_LOGIN = "admin555";
 const DEFAULT_PASS = "admin555";
+const DEFAULT_GYM_LOGIN = "fitness555";
+const DEFAULT_GYM_PASS = "fitness555";
+
+export type AppSection = "auto" | "gym";
 
 type Creds = { login: string; password: string };
+
+export function getGymCredentials(): Creds {
+  if (typeof window === "undefined") return { login: DEFAULT_GYM_LOGIN, password: DEFAULT_GYM_PASS };
+  try {
+    const raw = window.localStorage.getItem(GYM_CREDS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed.login === "string" && typeof parsed.password === "string") {
+        return parsed;
+      }
+    }
+  } catch {}
+  return { login: DEFAULT_GYM_LOGIN, password: DEFAULT_GYM_PASS };
+}
+
+export function getSection(): AppSection {
+  if (typeof window === "undefined") return "auto";
+  try {
+    return window.localStorage.getItem(ROLE_KEY) === "gym" ? "gym" : "auto";
+  } catch {
+    return "auto";
+  }
+}
+
+function setSection(section: AppSection) {
+  try { window.localStorage.setItem(ROLE_KEY, section); } catch {}
+}
+
+/** Вход в выбранный раздел: у зала свой логин/пароль. */
+export function loginTo(section: AppSection, username: string, password: string): boolean {
+  const u = username.trim().toLowerCase();
+  const p = password.trim();
+  const creds = section === "gym" ? getGymCredentials() : getCredentials();
+  if (u === creds.login.trim().toLowerCase() && p === creds.password) {
+    try { window.localStorage.setItem(KEY, "1"); } catch {}
+    setSection(section);
+    return true;
+  }
+  return false;
+}
 
 export function getCredentials(): Creds {
   if (typeof window === "undefined") return { login: DEFAULT_LOGIN, password: DEFAULT_PASS };
