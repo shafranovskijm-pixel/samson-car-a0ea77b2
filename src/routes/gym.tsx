@@ -378,6 +378,51 @@ function GymPage() {
             </div>
           </TabsContent>
 
+          <TabsContent value="trainers" className="space-y-3">
+            {selectedTrainer ? (
+              (() => {
+                const t = (trainers.data ?? []).find((x) => x.id === selectedTrainer);
+                if (!t) return null;
+                return (
+                  <TrainerDetail
+                    trainer={t}
+                    payouts={(payouts.data ?? []).filter((p) => p.trainer_id === t.id)}
+                    onBack={() => setSelectedTrainer(null)}
+                  />
+                );
+              })()
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Тренеров: {(trainers.data ?? []).length}. Нажмите на тренера, чтобы увидеть его начисления и выплаты.
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {(trainers.data ?? []).map((t) => {
+                    const list = (payouts.data ?? []).filter((p) => p.trainer_id === t.id);
+                    const paidOut = list.reduce((a, p) => a + Number(p.amount), 0);
+                    return (
+                      <Card
+                        key={t.id}
+                        className="cursor-pointer transition-colors hover:bg-muted/50"
+                        onClick={() => setSelectedTrainer(t.id)}
+                      >
+                        <CardContent className="flex items-center gap-3 p-3">
+                          <div className="min-w-0">
+                            <div className="truncate font-medium">{t.name}</div>
+                            <div className="text-xs text-muted-foreground">
+                              Процент: {t.percent}% · выплат: {list.length} · выдано {money(paidOut)}
+                            </div>
+                          </div>
+                          <ChevronLeft className="ml-auto h-4 w-4 rotate-180 text-muted-foreground" />
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </TabsContent>
+
           <TabsContent value="salary">
             <div className="overflow-x-auto rounded-md border">
               <table className="w-full min-w-[520px] text-sm">
