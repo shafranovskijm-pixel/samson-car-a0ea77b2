@@ -148,6 +148,21 @@ function ExpensesPage() {
     queryFn: () => listExpenses(undefined, toIso),
   });
 
+  // Касса «сейчас»: не зависит от выбранного периода — всё с начала работы до сегодня.
+  const todayIso = isoDate(new Date());
+  const { data: paymentsNow = [] } = useQuery({
+    queryKey: ["payments-range", "to-now", todayIso],
+    queryFn: () => listPaymentsRange("1970-01-01", todayIso),
+  });
+  const { data: advancesNow = [] } = useQuery({
+    queryKey: ["mechanic_advances", "to-now", todayIso],
+    queryFn: () => listMechanicAdvances({ to: todayIso }),
+  });
+  const { data: expensesNow = [] } = useQuery({
+    queryKey: ["expenses", "to-now", todayIso],
+    queryFn: () => listExpenses(undefined, todayIso),
+  });
+
   // Только выполненные записи участвуют в «начислении» ЗП и обязательств.
   const doneAppts = useMemo(() => appts.filter((a) => a.status === "done"), [appts]);
   // Запланированные/в работе — потенциальные поступления (если не отменятся).
