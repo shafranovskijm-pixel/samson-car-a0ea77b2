@@ -23,7 +23,7 @@ import {
   type PayoutService,
 } from "@/lib/payouts";
 
-export type DrillMetric = "profit" | "income" | "payout" | "expense" | "debt";
+export type DrillMetric = "profit" | "income" | "payout" | "expense" | "debt" | "cash";
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(
@@ -66,6 +66,10 @@ type Props = {
   paidToDate?: number;
   /** Все начисления мастерам до конца периода (для прогресса). */
   accruedToDate?: number;
+  /** Касса «сейчас»: все платежи, авансы и расходы с начала работы по сегодня. */
+  cashPayments?: AppointmentPayment[];
+  cashAdvances?: MechanicAdvance[];
+  cashExpenses?: Expense[];
 };
 
 const TITLE: Record<DrillMetric, string> = {
@@ -74,6 +78,7 @@ const TITLE: Record<DrillMetric, string> = {
   payout: "Зарплаты мастеров",
   expense: "Прочие расходы",
   debt: "Долг / переплата мастерам",
+  cash: "Касса сейчас",
 };
 
 export function ExpensesDrillDown(props: Props) {
@@ -95,6 +100,7 @@ export function ExpensesDrillDown(props: Props) {
           {metric === "payout" && <PayoutView {...props} />}
           {metric === "expense" && <ExpenseView {...props} />}
           {metric === "debt" && <DebtView {...props} />}
+          {metric === "cash" && <CashView {...props} />}
         </div>
       </DialogContent>
     </Dialog>
