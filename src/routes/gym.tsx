@@ -162,6 +162,7 @@ function GymPage() {
   const allEntries = useQuery({ queryKey: ["gym-entries-all"], queryFn: listAllGymEntries });
   const payouts = useQuery({ queryKey: ["gym-payouts"], queryFn: () => listGymPayouts() });
   const expenses = useQuery({ queryKey: ["gym-expenses", from, to], queryFn: () => listGymExpenses(from, to) });
+  const allExpenses = useQuery({ queryKey: ["gym-expenses-all"], queryFn: () => listGymExpenses() });
 
   const [date, setDate] = useState(today);
   const [clientName, setClientName] = useState("");
