@@ -645,6 +645,8 @@ export type Database = {
           note: string | null
           package: string
           paid: boolean
+          sessions_total: number
+          sessions_used: number
           trainer_id: string | null
           trainer_percent: number
           updated_at: string
@@ -659,6 +661,8 @@ export type Database = {
           note?: string | null
           package?: string
           paid?: boolean
+          sessions_total?: number
+          sessions_used?: number
           trainer_id?: string | null
           trainer_percent?: number
           updated_at?: string
@@ -673,6 +677,8 @@ export type Database = {
           note?: string | null
           package?: string
           paid?: boolean
+          sessions_total?: number
+          sessions_used?: number
           trainer_id?: string | null
           trainer_percent?: number
           updated_at?: string
@@ -693,6 +699,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      gym_expenses: {
+        Row: {
+          amount: number
+          created_at: string
+          expense_date: string
+          id: string
+          note: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          expense_date?: string
+          id?: string
+          note?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          expense_date?: string
+          id?: string
+          note?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       gym_payouts: {
         Row: {
