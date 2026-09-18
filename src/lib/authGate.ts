@@ -114,6 +114,7 @@ export function logout() {
   try {
     window.localStorage.removeItem(KEY);
     window.localStorage.removeItem(ROLE_KEY);
+    window.localStorage.removeItem(TRAINER_KEY);
   } catch {}
 }
 

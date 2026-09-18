@@ -123,11 +123,15 @@ function RootComponent() {
     setAuthed(isLoggedIn());
   }, [pathname]);
 
-  // Администратор зала работает только в разделе зала
+  // Администратор зала и тренер работают только в своих разделах
   useEffect(() => {
     if (!isLoggedIn()) return;
-    if (getSection() === "gym" && pathname !== "/gym") {
+    const section = getSection();
+    if (section === "gym" && pathname !== "/gym") {
       router.navigate({ to: "/gym", replace: true });
+    }
+    if (section === "trainer" && pathname !== "/trainer") {
+      router.navigate({ to: "/trainer", replace: true });
     }
   }, [pathname, router]);
 
