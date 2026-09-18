@@ -1437,3 +1437,170 @@ function PeopleCard({
     </Card>
   );
 }
+
+/** Напоминания: у кого абонемент заканчивается или истекает срок. */
+function RemindersCard({ entries }: { entries: GymEntry[] }) {
+  const t = today();
+  const soon = entries.filter((r) => {
+    if (r.frozen) return false;
+    const left = Number(r.sessions_total) - Number(r.sessions_used);
+    const expSoon = r.valid_until ? daysBetween(t, r.valid_until) <= 7 : false;
+    return (left > 0 && left <= 2) || left === 0 || expSoon;
+  });
+  if (soon.length === 0) return null;
+
+  return (
+    <Card className="border-amber-500/50">
+      <CardHeader className="pb-2"><CardTitle className="text-sm">Напоминания клиентам</CardTitle></CardHeader>
+      <CardContent>
+        <ul className="divide-y rounded-md border">
+          {soon.map((r) => {
+            const left = Number(r.sessions_total) - Number(r.sessions_used);
+            const days = r.valid_until ? daysBetween(t, r.valid_until) : null;
+            return (
+              <li key={r.id} className="flex flex-wrap items-center gap-2 px-2 py-1.5 text-sm">
+                <span className="font-medium">{r.client_name}</span>
+                <span className="text-muted-foreground">
+                  {left === 0 ? "абонемент закончился" : `осталось ${left} зан.`}
+                  {days !== null && (days < 0 ? " · срок истёк" : ` · срок через ${days} дн.`)}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      </CardContent>
+    </Card>
+  );
+}
+
+function daysBetween(from: string, to: string) {
+  const a = new Date(`${from}T00:00:00Z`).getTime();
+  const b = new Date(`${to}T00:00:00Z`).getTime();
+  return Math.round((b - a) / 86400000);
+}
+
+function SubscriptionCard({
+  entry: r,
+  trainerName,
+  onVisit,
+  onChanged,
+}: {
+  entry: GymEntry;
+  trainerName: string;
+  onVisit: (used: number) => void;
+  onChanged: () => void;
+}) {
+  const left = Number(r.sessions_total) - Number(r.sessions_used);
+  const rest = restSum(r);
+  const [until, setUntil] = useState(r.valid_until ?? "");
+  const days = r.valid_until ? daysBetween(today(), r.valid_until) : null;
+
+  return (
+    <Card className={r.frozen ? "opacity-70" : undefined}>
+      <CardContent className="space-y-2 p-3">
+        <div className="flex items-center gap-2">
+          <span className="font-medium">{r.client_name}</span>
+          <span className="text-xs text-muted-foreground">{dmyFull(r.entry_date)} · {trainerName}</span>
+          <span className="ml-auto font-semibold">{money(Number(r.amount))}</span>
+        </div>
+        <div className={left === 0 ? "text-sm font-medium text-destructive" : "text-sm"}>
+          {left === 0 ? "Абонемент закончился — пора продлевать" : `Осталось ${left} из ${r.sessions_total}`}
+          {r.frozen && <span className="ml-2 text-xs text-sky-600">заморожен</span>}
+        </div>
+        {left <= 2 && left > 0 && !r.frozen && <div className="text-xs text-amber-600">Скоро закончится</div>}
+        {days !== null && (
+          <div className={days < 0 ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>
+            {days < 0 ? `Срок истёк ${dmyFull(r.valid_until!)}` : `Действует до ${dmyFull(r.valid_until!)} (${days} дн.)`}
+          </div>
+        )}
+        {rest > 0 ? (
+          <div className="text-xs text-amber-600">
+            Оплачено {money(paidSum(r))} из {money(Number(r.amount))} · долг {money(rest)}
+          </div>
+        ) : (
+          <div className="text-xs text-emerald-600">Оплачен полностью</div>
+        )}
+        {rest > 0 && <PartialPayInline entry={r} onChanged={onChanged} />}
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" disabled={left === 0 || r.frozen} onClick={() => onVisit(Number(r.sessions_used) + 1)}>
+            Отметить посещение
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={Number(r.sessions_used) === 0}
+            onClick={() => onVisit(Number(r.sessions_used) - 1)}
+          >
+            Отменить
+          </Button>
+          <Button
+            size="sm"
+            variant={r.frozen ? "secondary" : "outline"}
+            onClick={async () => {
+              await setGymEntryFrozen(r.id, !r.frozen);
+              onChanged();
+              toast.success(r.frozen ? "Абонемент разморожен" : "Абонемент заморожен");
+            }}
+          >
+            {r.frozen ? "Разморозить" : "Заморозить"}
+          </Button>
+        </div>
+        <div className="flex items-end gap-2">
+          <div className="w-[160px]">
+            <Label className="text-xs">Действует до</Label>
+            <Input type="date" value={until} onChange={(e) => setUntil(e.target.value)} />
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={async () => {
+              await setGymEntryValidUntil(r.id, until || null);
+              onChanged();
+              toast.success("Срок сохранён");
+            }}
+          >
+            Сохранить срок
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/** Приём части оплаты по занятию или абонементу. */
+function PartialPayInline({ entry, onChanged }: { entry: GymEntry; onChanged: () => void }) {
+  const [sum, setSum] = useState("");
+  const [busy, setBusy] = useState(false);
+  const rest = restSum(entry);
+
+  async function pay() {
+    const value = Number(sum.replace(",", "."));
+    if (!Number.isFinite(value) || value <= 0) return toast.error("Укажите сумму");
+    if (value > rest) return toast.error(`Больше остатка ${money(rest)} принять нельзя`);
+    setBusy(true);
+    try {
+      await addGymPayment(entry, value);
+      setSum("");
+      onChanged();
+      toast.success(`Принято ${money(value)}`);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <Input
+        className="h-9 w-[110px]"
+        inputMode="decimal"
+        value={sum}
+        onChange={(e) => setSum(e.target.value)}
+        placeholder="часть"
+        onKeyDown={(e) => { if (e.key === "Enter") pay(); }}
+      />
+      <Button size="sm" variant="outline" onClick={pay} disabled={busy}>Внести</Button>
+    </div>
+  );
+}
