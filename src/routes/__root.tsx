@@ -140,6 +140,7 @@ function RootComponent() {
       case "/stats":
       case "/settings":
       case "/expenses":
+      case "/gym":
         router.invalidate();
         break;
       default:
@@ -149,6 +150,7 @@ function RootComponent() {
   }, [router]);
 
   const isLoginRoute = pathname === "/login";
+  const isGymRoute = pathname === "/gym";
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -157,7 +159,7 @@ function RootComponent() {
           <div className="min-h-screen" />
         ) : !authed && !isLoginRoute ? (
           <RedirectToLogin />
-        ) : isLoginRoute ? (
+        ) : isLoginRoute || isGymRoute ? (
           <Outlet />
         ) : (
           <SidebarProvider>
