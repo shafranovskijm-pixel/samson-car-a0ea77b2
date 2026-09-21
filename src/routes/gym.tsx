@@ -501,6 +501,7 @@ function GymPage() {
                 </Button>
               </CardContent>
             </Card>}
+            </div>
           </TabsContent>
 
           <TabsContent value="subs" className="space-y-3">
