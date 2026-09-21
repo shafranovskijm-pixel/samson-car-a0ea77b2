@@ -821,7 +821,7 @@ function LedgerTable({
               {trainers.map((trainer) => (
                 <th
                   key={trainer.id}
-                  className="border-b border-r p-3 text-left font-normal"
+                  className="border-b border-r p-1.5 text-left font-normal"
                 >
                   <Button variant="ghost" className="h-auto w-full max-w-full justify-start overflow-hidden px-1 py-1 text-left" onClick={() => onTrainer(trainer.id)}>
                     <span className="block w-full min-w-0"><span className="block text-[9px] uppercase text-muted-foreground">Тренер</span><span className="block w-full min-w-0 truncate font-semibold">{trainer.name}</span></span>
