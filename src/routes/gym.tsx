@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CheckCircle2,
@@ -202,6 +202,7 @@ function GymPage() {
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const [editing, setEditing] = useState<GymEntry | null>(null);
   const [showAdd, setShowAdd] = useState(false);
+  const addCardRef = useRef<HTMLDivElement>(null);
   const [activeView, setActiveView] = useState("table");
   const [showSettings, setShowSettings] = useState(false);
 
