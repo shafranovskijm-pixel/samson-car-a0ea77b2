@@ -12,6 +12,7 @@ import {
   Pencil,
   Plus,
   Printer,
+  Settings,
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -201,6 +202,8 @@ function GymPage() {
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const [editing, setEditing] = useState<GymEntry | null>(null);
   const [showAdd, setShowAdd] = useState(false);
+  const [activeView, setActiveView] = useState("table");
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     const price = loadPrices()[pkg];
@@ -278,7 +281,9 @@ function GymPage() {
   /** Касса зала за всё время: поступило деньгами − выдано тренерам − расходы. */
   const cash = useMemo(() => {
     const got = (allEntries.data ?? []).reduce((a, r) => a + paidSum(r), 0);
-    const toTrainers = (payouts.data ?? []).reduce((a, p) => a + Number(p.amount), 0);
+    const toTrainers = (payouts.data ?? [])
+      .filter((p) => p.status === "confirmed")
+      .reduce((a, p) => a + Number(p.amount), 0);
     const spent = (allExpenses.data ?? []).reduce((a, e) => a + Number(e.amount), 0);
     return { got, toTrainers, spent, left: got - toTrainers - spent };
   }, [allEntries.data, payouts.data, allExpenses.data]);
@@ -336,7 +341,7 @@ function GymPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="gym-shell min-h-screen bg-background">
       <header className="flex h-12 items-center gap-2 border-b px-3 print:hidden">
         <Dumbbell className="h-4 w-4" />
         <div className="text-sm font-medium">Тренажёрный зал</div>
@@ -361,19 +366,23 @@ function GymPage() {
       </header>
 
       <div className="space-y-3 bg-muted/40 p-2 sm:p-4">
-        <Tabs defaultValue="table">
-          <TabsList className="flex w-full justify-start gap-1 overflow-x-auto print:hidden">
-            <TabsTrigger value="table" className="shrink-0">Занятия</TabsTrigger>
-            <TabsTrigger value="subs" className="shrink-0">Абонементы</TabsTrigger>
-            <TabsTrigger value="clients" className="shrink-0">Клиенты</TabsTrigger>
-            <TabsTrigger value="trainers" className="shrink-0">Тренеры</TabsTrigger>
-            <TabsTrigger value="salary" className="shrink-0">Зарплата</TabsTrigger>
-            <TabsTrigger value="payouts" className="shrink-0">Выплаты</TabsTrigger>
-            <TabsTrigger value="debts" className="shrink-0">Долги</TabsTrigger>
-            <TabsTrigger value="expenses" className="shrink-0">Касса</TabsTrigger>
-            <TabsTrigger value="monthly" className="shrink-0">Сводка</TabsTrigger>
-            <TabsTrigger value="people" className="shrink-0">Люди</TabsTrigger>
-          </TabsList>
+        <Tabs value={activeView} onValueChange={setActiveView}>
+          <Dialog open={showSettings} onOpenChange={setShowSettings}>
+            <DialogContent className="max-w-xl">
+              <DialogHeader><DialogTitle>Настройки и разделы</DialogTitle></DialogHeader>
+              <TabsList className="grid h-auto grid-cols-2 gap-2 bg-transparent sm:grid-cols-3">
+                {[
+                  ["table", "Занятия"], ["subs", "Абонементы"], ["clients", "Клиенты"],
+                  ["trainers", "Тренеры"], ["salary", "Зарплата"], ["payouts", "Выплаты"],
+                  ["debts", "Долги"], ["expenses", "Касса"], ["monthly", "Сводка"], ["people", "Люди"],
+                ].map(([value, label]) => (
+                  <TabsTrigger key={value} value={value} onClick={() => setShowSettings(false)} className="border bg-background py-3">
+                    {label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </DialogContent>
+          </Dialog>
 
           <TabsContent value="table" className="space-y-3">
             <LedgerTable
@@ -383,8 +392,15 @@ function GymPage() {
               totals={totals}
               cash={cash}
               onMonthChange={(value) => { setKind("month"); setAnchor(`${value}-01`); }}
-              onAdd={() => setShowAdd((value) => !value)}
+              onAdd={(prefill) => {
+                if (prefill?.date) setDate(prefill.date);
+                if (prefill?.trainerId) setTrainerId(prefill.trainerId);
+                setShowAdd(true);
+              }}
               onEdit={setEditing}
+              onClient={(name) => { setSelectedClient(name); setActiveView("clients"); }}
+              onTrainer={(id) => { setSelectedTrainer(id); setActiveView("trainers"); }}
+              onSettings={() => setShowSettings(true)}
               onPay={(entry) => togglePaid.mutate({ id: entry.id, paid: true })}
               payingId={togglePaid.isPending ? togglePaid.variables?.id ?? null : null}
               onExport={exportEntries}
@@ -499,8 +515,8 @@ function GymPage() {
                 <div className="grid gap-2 sm:grid-cols-2">
                   {(clients.data ?? []).map((c) => {
                     const list = (allEntries.data ?? []).filter((r) => r.client_name === c.name);
-                    const paid = list.filter((r) => r.paid).reduce((a, r) => a + Number(r.amount), 0);
-                    const debt = list.filter((r) => !r.paid).reduce((a, r) => a + Number(r.amount), 0);
+                    const paid = list.reduce((a, r) => a + paidSum(r), 0);
+                    const debt = list.reduce((a, r) => a + restSum(r), 0);
                     return (
                       <Card key={c.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedClient(c.name)}>
                         <CardContent className="p-3">
@@ -719,6 +735,11 @@ function GymPage() {
           setEditing(null);
           invalidate();
         }}
+        onDelete={async (id) => {
+          await removeEntry.mutateAsync(id);
+          setEditing(null);
+          toast.success("Занятие удалено");
+        }}
       />
     </div>
   );
@@ -733,6 +754,9 @@ function LedgerTable({
   onMonthChange,
   onAdd,
   onEdit,
+  onClient,
+  onTrainer,
+  onSettings,
   onPay,
   payingId,
   onExport,
@@ -743,20 +767,28 @@ function LedgerTable({
   totals: { income: number; payout: number; debt: number; spent: number; profit: number };
   cash: { got: number; toTrainers: number; spent: number; left: number };
   onMonthChange: (value: string) => void;
-  onAdd: () => void;
+  onAdd: (prefill?: { date?: string; trainerId?: string }) => void;
   onEdit: (entry: GymEntry) => void;
+  onClient: (name: string) => void;
+  onTrainer: (id: string) => void;
+  onSettings: () => void;
   onPay: (entry: GymEntry) => void;
   payingId: string | null;
   onExport: () => void;
 }) {
-  const packageCount = (value: string) => rows.filter((r) => r.package === value).length;
+  const daysInMonth = new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0).getDate();
+  const days = Array.from({ length: daysInMonth }, (_, index) => {
+    const day = String(index + 1).padStart(2, "0");
+    return { day, date: `${month}-${day}` };
+  });
+  const monthIncome = rows.reduce((sum, row) => sum + paidSum(row), 0);
 
   return (
-    <section className="overflow-hidden rounded-sm border bg-card shadow-sm">
-      <div className="flex flex-col gap-3 border-b bg-muted/40 p-3 sm:flex-row sm:items-end sm:justify-between sm:p-4">
+    <section className="overflow-hidden rounded-lg border border-border bg-card shadow-lg">
+      <div className="flex flex-col gap-3 border-b bg-card/80 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
         <div>
-          <h1 className="font-display text-3xl capitalize text-foreground">{monthLabel(month)}</h1>
-          <p className="text-xs font-medium uppercase text-muted-foreground">Реестр посещений и оплат</p>
+          <h1 className="font-mono text-2xl font-bold uppercase text-foreground sm:text-3xl">{monthLabel(month)}</h1>
+          <p className="mt-1 text-xs font-medium uppercase text-muted-foreground">Интерактивная ведомость занятий</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 print:hidden">
           <Input
@@ -772,109 +804,89 @@ function LedgerTable({
           <Button variant="outline" size="icon" title="Печать" onClick={() => window.print()}>
             <Printer className="h-4 w-4" />
           </Button>
-          <Button onClick={onAdd}>
+          <Button variant="outline" size="icon" title="Настройки и разделы" onClick={onSettings}>
+            <Settings className="h-4 w-4" />
+          </Button>
+          <Button onClick={() => onAdd()}>
             <Plus className="mr-1 h-4 w-4" /> Добавить
           </Button>
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-max border-collapse text-[11px] leading-tight">
-          <thead>
-            <tr className="bg-muted/50">
-              <th className="sticky left-0 z-20 w-16 border bg-muted p-2 text-center font-bold uppercase text-muted-foreground">Число</th>
+      <div className="hidden max-h-[62vh] overflow-auto md:block">
+        <table className="w-full min-w-[760px] table-fixed border-collapse text-xs leading-tight">
+          <thead className="sticky top-0 z-20 bg-card/95 backdrop-blur">
+            <tr>
+              <th className="sticky left-0 z-30 w-16 border-b border-r bg-muted/80 p-3 text-center font-mono font-bold uppercase text-muted-foreground">Дата</th>
               {trainers.map((trainer) => (
                 <th
                   key={trainer.id}
-                  className="h-28 w-12 min-w-12 border p-1 align-middle font-medium text-muted-foreground"
+                  className="border-b border-r p-3 text-left font-normal"
                 >
-                  <span className="inline-block [writing-mode:vertical-rl] rotate-180 whitespace-nowrap">{trainer.name}</span>
+                  <Button variant="ghost" className="h-auto w-full justify-start px-1 py-1 text-left" onClick={() => onTrainer(trainer.id)}>
+                    <span><span className="block text-[9px] uppercase text-muted-foreground">Тренер</span><span className="block truncate font-semibold">{trainer.name}</span></span>
+                  </Button>
                 </th>
               ))}
-              {PACKAGES.map((pack) => (
-                <th key={pack.value} className="h-28 w-9 min-w-9 border bg-accent/40 p-1 align-middle font-semibold text-muted-foreground">
-                  <span className="inline-block [writing-mode:vertical-rl] rotate-180 whitespace-nowrap">{pack.label}</span>
-                </th>
-              ))}
-              <th className="sticky right-24 z-20 min-w-24 border bg-muted p-2 text-right font-bold uppercase">Сумма</th>
-              <th className="sticky right-0 z-20 min-w-24 border bg-muted p-2 text-right font-bold uppercase">
-                Тренеру<span className="mt-1 block text-[9px] font-normal text-muted-foreground">по проценту</span>
-              </th>
+              <th className="w-28 border-b bg-muted/60 p-3 text-right font-mono font-bold uppercase">Итого</th>
             </tr>
           </thead>
-          <tbody className="font-mono">
-            {rows.length === 0 && (
-              <tr>
-                <td colSpan={trainers.length + 6} className="h-28 border p-4 text-center text-muted-foreground">
-                  В этом месяце записей нет
-                </td>
-              </tr>
-            )}
-            {rows.map((entry) => (
-              <tr key={entry.id} className="group h-10 hover:bg-accent/30">
-                <td className="sticky left-0 z-10 border bg-card p-2 text-center text-muted-foreground group-hover:bg-accent">{dmy(entry.entry_date)}</td>
-                {trainers.map((trainer) => (
-                  <td key={trainer.id} className="max-w-24 border p-1.5 text-center">
-                    {entry.trainer_id === trainer.id && (
-                      <button
-                        type="button"
-                        title={`${entry.client_name}: ${money(Number(entry.amount))}`}
-                        onClick={() => onEdit(entry)}
-                        className="max-w-20 truncate font-medium text-primary underline-offset-2 hover:underline"
-                      >
-                        {entry.client_name}
-                      </button>
-                    )}
-                  </td>
-                ))}
-                {PACKAGES.map((pack) => (
-                  <td key={pack.value} className="border bg-accent/20 p-1 text-center font-bold">
-                    {entry.package === pack.value ? "+" : ""}
-                  </td>
-                ))}
-                <td className="sticky right-24 z-10 border bg-card p-2 text-right font-bold tabular-nums group-hover:bg-accent">
-                  {money(Number(entry.amount))}
-                  {restSum(entry) > 0 ? (
-                    <div className="mt-1 flex flex-col items-end gap-1 print:hidden">
-                      <span className="text-[9px] font-normal text-destructive">долг {money(restSum(entry))}</span>
-                      <Button
-                        size="sm"
-                        className="h-6 px-2 text-[10px]"
-                        disabled={payingId === entry.id}
-                        onClick={() => onPay(entry)}
-                      >
-                        <CreditCard className="mr-1 h-3 w-3" />
-                        Оплатить
-                      </Button>
+          <tbody>
+            {days.map(({ day, date }) => {
+              const dayRows = rows.filter((row) => row.entry_date === date);
+              return <tr key={date} className="group min-h-12 hover:bg-accent/30">
+                <td className="sticky left-0 z-10 border-b border-r bg-card p-3 text-center font-mono font-bold group-hover:bg-accent">{day}</td>
+                {trainers.map((trainer) => {
+                  const cellRows = dayRows.filter((row) => row.trainer_id === trainer.id);
+                  return <td key={trainer.id} className="border-b border-r p-1 align-top">
+                    <div className="flex min-h-10 flex-col gap-1">
+                      {cellRows.map((entry) => <div key={entry.id} className="group/entry flex items-start gap-1 rounded-md border border-primary/20 bg-primary/10 p-2">
+                        <Button variant="ghost" className="h-auto min-w-0 flex-1 justify-start p-0 text-left" onClick={() => onClient(entry.client_name)}>
+                          <span className="min-w-0"><span className="block truncate font-medium">{entry.client_name}</span><span className="block font-mono text-[9px] text-muted-foreground">{entry.package} зан. · {money(Number(entry.amount))}</span></span>
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 opacity-60 hover:opacity-100" title="Изменить занятие" onClick={() => onEdit(entry)}><Pencil className="h-3 w-3" /></Button>
+                        {restSum(entry) > 0 && <Button size="icon" className="h-6 w-6 shrink-0" title={`Оплатить ${money(restSum(entry))}`} disabled={payingId === entry.id} onClick={() => onPay(entry)}><CreditCard className="h-3 w-3" /></Button>}
+                      </div>)}
+                      <Button variant="ghost" className="min-h-8 w-full border border-dashed border-border text-muted-foreground opacity-30 transition-opacity hover:opacity-100 group-hover:opacity-100" title={`Добавить занятие на ${dmy(date)} · ${trainer.name}`} onClick={() => onAdd({ date, trainerId: trainer.id })}><Plus className="h-3 w-3" /></Button>
                     </div>
-                  ) : (
-                    <span className="block text-[9px] font-normal text-emerald-600">оплачено</span>
-                  )}
-                </td>
-                <td className="sticky right-0 z-10 border bg-muted/70 p-2 text-right font-bold tabular-nums text-primary">
-                  {money(sharePaid(entry))}
-                </td>
-              </tr>
-            ))}
+                  </td>;
+                })}
+                <td className="border-b bg-muted/30 p-3 text-right font-mono font-bold tabular-nums">{money(dayRows.reduce((sum, row) => sum + paidSum(row), 0))}</td>
+              </tr>;
+            })}
           </tbody>
-          <tfoot>
-            <tr className="bg-foreground font-semibold text-background">
-              <td className="sticky left-0 z-20 border border-background/20 bg-foreground p-2 text-center">Итого</td>
-              <td colSpan={trainers.length} className="border border-background/20 p-2 text-right text-[10px] font-normal">
-                Касса сейчас {money(cash.left)} · долг клиентов {money(totals.debt)}
-              </td>
-              {PACKAGES.map((pack) => (
-                <td key={pack.value} className="border border-background/20 p-2 text-center tabular-nums">{packageCount(pack.value)}</td>
-              ))}
-              <td className="sticky right-24 z-20 border border-background/20 bg-foreground p-2 text-right tabular-nums">{money(totals.income)}</td>
-              <td className="sticky right-0 z-20 border border-background/20 bg-foreground p-2 text-right tabular-nums">{money(totals.payout)}</td>
-            </tr>
-          </tfoot>
         </table>
       </div>
 
+      <div className="max-h-[62vh] divide-y overflow-y-auto md:hidden">
+        {days.map(({ day, date }) => {
+          const dayRows = rows.filter((row) => row.entry_date === date);
+          return <div key={date} className="grid grid-cols-[42px_1fr] gap-2 p-2">
+            <div className="pt-2 text-center font-mono text-sm font-bold">{day}</div>
+            <div className="space-y-1">
+              {dayRows.map((entry) => <div key={entry.id} className="flex items-center gap-2 rounded-md border border-primary/20 bg-primary/10 p-2">
+                <Button variant="ghost" className="h-auto min-w-0 flex-1 justify-start p-0 text-left" onClick={() => onClient(entry.client_name)}>
+                  <span className="min-w-0"><span className="block truncate font-medium">{entry.client_name}</span><span className="block text-xs text-muted-foreground">{trainers.find((trainer) => trainer.id === entry.trainer_id)?.name ?? "Без тренера"} · {entry.package} зан.</span></span>
+                </Button>
+                <span className="font-mono text-xs font-semibold">{money(Number(entry.amount))}</span>
+                <Button variant="ghost" size="icon" className="h-8 w-8" title="Изменить занятие" onClick={() => onEdit(entry)}><Pencil className="h-3.5 w-3.5" /></Button>
+                {restSum(entry) > 0 && <Button size="icon" className="h-8 w-8" title={`Оплатить ${money(restSum(entry))}`} disabled={payingId === entry.id} onClick={() => onPay(entry)}><CreditCard className="h-3.5 w-3.5" /></Button>}
+              </div>)}
+              <Button variant="ghost" className="h-9 w-full justify-start border border-dashed text-muted-foreground" onClick={() => onAdd({ date })}><Plus className="mr-2 h-3.5 w-3.5" /> Добавить занятие</Button>
+            </div>
+          </div>;
+        })}
+      </div>
+
+      <div className="grid grid-cols-2 gap-px bg-primary p-px text-primary-foreground sm:grid-cols-4">
+        <div className="bg-primary p-3"><span className="block text-[9px] uppercase opacity-70">Касса сейчас</span><strong className="font-mono text-base">{money(cash.left)}</strong></div>
+        <div className="bg-primary p-3"><span className="block text-[9px] uppercase opacity-70">Долг клиентов</span><strong className="font-mono text-base">{money(totals.debt)}</strong></div>
+        <div className="bg-primary p-3"><span className="block text-[9px] uppercase opacity-70">Поступило за месяц</span><strong className="font-mono text-base">{money(monthIncome)}</strong></div>
+        <div className="bg-primary p-3"><span className="block text-[9px] uppercase opacity-70">Начислено тренерам</span><strong className="font-mono text-base">{money(totals.payout)}</strong></div>
+      </div>
+
       <div className="flex flex-wrap justify-between gap-2 border-t bg-muted/30 px-3 py-2 text-[10px] uppercase text-muted-foreground">
-        <span>Нажмите имя клиента, чтобы изменить запись</span>
+        <span>Пустая ячейка — добавить · имя клиента — история · тренер — начисления</span>
         <span>Поступило {money(totals.income)} · зал {money(totals.profit)} · расходы {money(totals.spent)}</span>
       </div>
     </section>
@@ -895,11 +907,13 @@ function EditEntryDialog({
   trainers,
   onClose,
   onSaved,
+  onDelete,
 }: {
   entry: GymEntry | null;
   trainers: GymTrainer[];
   onClose: () => void;
   onSaved: () => void;
+  onDelete: (id: string) => Promise<void>;
 }) {
   const [date, setDate] = useState("");
   const [client, setClient] = useState("");
@@ -987,7 +1001,10 @@ function EditEntryDialog({
             <Label>Сумма</Label>
             <Input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
           </div>
-          <Button className="w-full" onClick={save} disabled={busy}>Сохранить</Button>
+          <div className="flex gap-2">
+            <Button className="flex-1" onClick={save} disabled={busy}>Сохранить</Button>
+            <Button variant="destructive" size="icon" title="Удалить занятие" disabled={busy} onClick={() => entry && onDelete(entry.id)}><Trash2 className="h-4 w-4" /></Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
@@ -1097,8 +1114,8 @@ function ClientDetail({
   trainerName: (id: string | null) => string;
   onBack: () => void;
 }) {
-  const paid = entries.filter((r) => r.paid).reduce((a, r) => a + Number(r.amount), 0);
-  const debt = entries.filter((r) => !r.paid).reduce((a, r) => a + Number(r.amount), 0);
+  const paid = entries.reduce((a, r) => a + paidSum(r), 0);
+  const debt = entries.reduce((a, r) => a + restSum(r), 0);
   const left = entries.reduce((a, r) => a + Math.max(0, Number(r.sessions_total) - Number(r.sessions_used)), 0);
 
   return (
