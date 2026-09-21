@@ -813,7 +813,7 @@ function LedgerTable({
         </div>
       </div>
 
-      <div className="max-h-[62vh] overflow-auto">
+      <div className="hidden max-h-[62vh] overflow-auto md:block">
         <table className="w-full min-w-[760px] table-fixed border-collapse text-xs leading-tight">
           <thead className="sticky top-0 z-20 bg-card/95 backdrop-blur">
             <tr>
@@ -855,16 +855,34 @@ function LedgerTable({
               </tr>;
             })}
           </tbody>
-          <tfoot>
-            <tr className="bg-primary font-semibold text-primary-foreground">
-              <td className="sticky left-0 z-20 border-r border-primary-foreground/20 bg-primary p-3 text-center">Итого</td>
-              <td colSpan={Math.max(1, trainers.length)} className="p-3 text-left text-[10px] font-normal sm:text-right">
-                Касса {money(cash.left)} · долг {money(totals.debt)} · тренерам {money(totals.payout)}
-              </td>
-              <td className="p-3 text-right font-mono tabular-nums">{money(monthIncome)}</td>
-            </tr>
-          </tfoot>
         </table>
+      </div>
+
+      <div className="max-h-[62vh] divide-y overflow-y-auto md:hidden">
+        {days.map(({ day, date }) => {
+          const dayRows = rows.filter((row) => row.entry_date === date);
+          return <div key={date} className="grid grid-cols-[42px_1fr] gap-2 p-2">
+            <div className="pt-2 text-center font-mono text-sm font-bold">{day}</div>
+            <div className="space-y-1">
+              {dayRows.map((entry) => <div key={entry.id} className="flex items-center gap-2 rounded-md border border-primary/20 bg-primary/10 p-2">
+                <Button variant="ghost" className="h-auto min-w-0 flex-1 justify-start p-0 text-left" onClick={() => onClient(entry.client_name)}>
+                  <span className="min-w-0"><span className="block truncate font-medium">{entry.client_name}</span><span className="block text-xs text-muted-foreground">{trainers.find((trainer) => trainer.id === entry.trainer_id)?.name ?? "Без тренера"} · {entry.package} зан.</span></span>
+                </Button>
+                <span className="font-mono text-xs font-semibold">{money(Number(entry.amount))}</span>
+                <Button variant="ghost" size="icon" className="h-8 w-8" title="Изменить занятие" onClick={() => onEdit(entry)}><Pencil className="h-3.5 w-3.5" /></Button>
+                {restSum(entry) > 0 && <Button size="icon" className="h-8 w-8" title={`Оплатить ${money(restSum(entry))}`} disabled={payingId === entry.id} onClick={() => onPay(entry)}><CreditCard className="h-3.5 w-3.5" /></Button>}
+              </div>)}
+              <Button variant="ghost" className="h-9 w-full justify-start border border-dashed text-muted-foreground" onClick={() => onAdd({ date })}><Plus className="mr-2 h-3.5 w-3.5" /> Добавить занятие</Button>
+            </div>
+          </div>;
+        })}
+      </div>
+
+      <div className="grid grid-cols-2 gap-px bg-primary p-px text-primary-foreground sm:grid-cols-4">
+        <div className="bg-primary p-3"><span className="block text-[9px] uppercase opacity-70">Касса сейчас</span><strong className="font-mono text-base">{money(cash.left)}</strong></div>
+        <div className="bg-primary p-3"><span className="block text-[9px] uppercase opacity-70">Долг клиентов</span><strong className="font-mono text-base">{money(totals.debt)}</strong></div>
+        <div className="bg-primary p-3"><span className="block text-[9px] uppercase opacity-70">Поступило за месяц</span><strong className="font-mono text-base">{money(monthIncome)}</strong></div>
+        <div className="bg-primary p-3"><span className="block text-[9px] uppercase opacity-70">Начислено тренерам</span><strong className="font-mono text-base">{money(totals.payout)}</strong></div>
       </div>
 
       <div className="flex flex-wrap justify-between gap-2 border-t bg-muted/30 px-3 py-2 text-[10px] uppercase text-muted-foreground">
