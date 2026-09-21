@@ -203,6 +203,9 @@ function GymPage() {
   const [editing, setEditing] = useState<GymEntry | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const addCardRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (showAdd) addCardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [showAdd]);
   const [activeView, setActiveView] = useState("table");
   const [showSettings, setShowSettings] = useState(false);
 
@@ -426,7 +429,8 @@ function GymPage() {
               onExport={exportEntries}
             />
 
-            {showAdd && <Card className="print:hidden rounded-sm">
+            <div ref={addCardRef} className="scroll-mt-24">
+            {showAdd && <Card className="print:hidden rounded-sm ring-2 ring-primary/40">
               <CardContent className="space-y-3 p-3">
                 <div className="font-display text-xl">Новая запись</div>
                 <div className="grid gap-2 sm:grid-cols-5">
