@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CheckCircle2,
@@ -202,10 +202,9 @@ function GymPage() {
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const [editing, setEditing] = useState<GymEntry | null>(null);
   const [showAdd, setShowAdd] = useState(false);
-  const addCardRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (showAdd) addCardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [showAdd]);
+  const [addMode, setAddMode] = useState<"entry" | "client" | "trainer">("entry");
+  const [quickName, setQuickName] = useState("");
+  const [quickAddPending, setQuickAddPending] = useState(false);
   const [activeView, setActiveView] = useState("table");
   const [showSettings, setShowSettings] = useState(false);
 
@@ -251,6 +250,7 @@ function GymPage() {
     },
     onSuccess: () => {
       setClientName("");
+      setShowAdd(false);
       invalidate();
       toast.success("Запись добавлена");
     },
@@ -418,6 +418,7 @@ function GymPage() {
               onAdd={(prefill) => {
                 if (prefill?.date) setDate(prefill.date);
                 if (prefill?.trainerId) setTrainerId(prefill.trainerId);
+                setAddMode("entry");
                 setShowAdd(true);
               }}
               onEdit={setEditing}
@@ -429,11 +430,28 @@ function GymPage() {
               onExport={exportEntries}
             />
 
-            <div ref={addCardRef} className="scroll-mt-24">
-            {showAdd && <Card className="print:hidden rounded-sm ring-2 ring-primary/40">
-              <CardContent className="space-y-3 p-3">
-                <div className="font-display text-xl">Новая запись</div>
-                <div className="grid gap-2 sm:grid-cols-5">
+            <Dialog open={showAdd} onOpenChange={setShowAdd}>
+              <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Что добавить?</DialogTitle>
+                </DialogHeader>
+                <div className="grid grid-cols-3 gap-2">
+                  <Button variant={addMode === "entry" ? "default" : "outline"} onClick={() => setAddMode("entry")}>
+                    Занятие
+                  </Button>
+                  <Button variant={addMode === "client" ? "default" : "outline"} onClick={() => { setAddMode("client"); setQuickName(""); }}>
+                    Клиента
+                  </Button>
+                  <Button variant={addMode === "trainer" ? "default" : "outline"} onClick={() => { setAddMode("trainer"); setQuickName(""); }}>
+                    Тренера
+                  </Button>
+                </div>
+
+                {addMode === "entry" && <div className="space-y-4">
+                  <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                    Заполните дату, клиента, тренера, пакет и сумму. Затем нажмите «Записать в ведомость».
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   <div>
                     <Label>Дата</Label>
                     <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
@@ -488,20 +506,67 @@ function GymPage() {
                       <Input type="date" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} />
                     </div>
                   )}
-                </div>
-                <Button
-                  variant={paidNow ? "secondary" : "outline"}
-                  size="sm"
-                  onClick={() => setPaidNow((v) => !v)}
-                >
-                  {paidNow ? "Оплачено сразу" : "В долг"}
-                </Button>
-                <Button onClick={() => addEntry.mutate()} disabled={addEntry.isPending}>
-                  <Plus className="mr-1 h-4 w-4" /> Записать в ведомость
-                </Button>
-              </CardContent>
-            </Card>}
-            </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant={paidNow ? "secondary" : "outline"}
+                      size="sm"
+                      onClick={() => setPaidNow((v) => !v)}
+                    >
+                      {paidNow ? "Оплачено сразу" : "В долг"}
+                    </Button>
+                    <Button onClick={() => addEntry.mutate()} disabled={addEntry.isPending}>
+                      <Plus className="mr-1 h-4 w-4" /> {addEntry.isPending ? "Записываю…" : "Записать в ведомость"}
+                    </Button>
+                  </div>
+                </div>}
+
+                {addMode !== "entry" && <div className="space-y-4">
+                  <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                    {addMode === "client" ? "Введите имя клиента — он сразу появится в списке." : "Введите имя тренера — его колонка сразу появится в ведомости."}
+                  </div>
+                  <div>
+                    <Label>{addMode === "client" ? "Имя клиента" : "Имя тренера"}</Label>
+                    <Input
+                      autoFocus
+                      value={quickName}
+                      onChange={(event) => setQuickName(event.target.value)}
+                      placeholder={addMode === "client" ? "Например, Иван" : "Например, Анна"}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") event.currentTarget.form?.requestSubmit();
+                      }}
+                    />
+                  </div>
+                  <Button
+                    disabled={quickAddPending || !quickName.trim()}
+                    onClick={async () => {
+                      const name = quickName.trim();
+                      if (!name) return;
+                      setQuickAddPending(true);
+                      try {
+                        if (addMode === "client") {
+                          await createGymClient(name);
+                          await qc.invalidateQueries({ queryKey: ["gym-clients"] });
+                          toast.success("Клиент добавлен");
+                        } else {
+                          await createGymTrainer(name);
+                          await qc.invalidateQueries({ queryKey: ["gym-trainers"] });
+                          toast.success("Тренер добавлен");
+                        }
+                        setQuickName("");
+                        setShowAdd(false);
+                      } catch (error) {
+                        toast.error(error instanceof Error ? error.message : "Не удалось добавить");
+                      } finally {
+                        setQuickAddPending(false);
+                      }
+                    }}
+                  >
+                    <Plus className="mr-1 h-4 w-4" /> {quickAddPending ? "Добавляю…" : "Добавить"}
+                  </Button>
+                </div>}
+              </DialogContent>
+            </Dialog>
           </TabsContent>
 
           <TabsContent value="subs" className="space-y-3">
