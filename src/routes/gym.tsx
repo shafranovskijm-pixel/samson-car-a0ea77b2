@@ -365,6 +365,25 @@ function GymPage() {
         </div>
       </header>
 
+      {activeView !== "table" && (
+        <div className="flex items-center gap-2 border-b bg-card px-3 py-2 print:hidden">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setSelectedClient(null);
+              setSelectedTrainer(null);
+              setActiveView("table");
+            }}
+          >
+            <ChevronLeft className="mr-1 h-4 w-4" /> Назад к ведомости
+          </Button>
+          <Button variant="outline" size="sm" className="ml-auto" onClick={() => setShowSettings(true)}>
+            Разделы
+          </Button>
+        </div>
+      )}
+
       <div className="space-y-3 bg-muted/40 p-2 sm:p-4">
         <Tabs value={activeView} onValueChange={setActiveView}>
           <Dialog open={showSettings} onOpenChange={setShowSettings}>
