@@ -10,7 +10,13 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getTrainerSession, logout } from "@/lib/authGate";
-import { confirmGymPayout, listGymEntries, listGymPayouts, listTrainerEntries } from "@/lib/gymApi";
+import {
+  confirmGymPayout,
+  listGymEntries,
+  listGymPayouts,
+  listTrainerEntries,
+  markGymVisit,
+} from "@/lib/gymApi";
 
 /** Сколько клиент фактически заплатил по занятию. */
 function gotSum(r: { amount: number; paid: boolean; paid_amount?: number }) {
@@ -77,6 +83,16 @@ function TrainerPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["gym-payouts"] });
       toast.success("Получение подтверждено");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const markVisit = useMutation({
+    mutationFn: ({ id, used }: { id: string; used: number }) => markGymVisit(id, used),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["gym-entries"] });
+      qc.invalidateQueries({ queryKey: ["gym-trainer-entries"] });
+      toast.success("Занятие отмечено, списано с абонемента");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -255,6 +271,39 @@ function TrainerPage() {
                       {gotSum(r) > 0 ? `оплачено частично ${Math.round(gotSum(r))} ₽` : "не оплачено"}
                     </span>
                   )}
+                  <div className="flex w-full items-center gap-2 border-t pt-2">
+                    <span className="text-xs text-muted-foreground">
+                      Осталось занятий: {Math.max(0, Number(r.sessions_total) - Number(r.sessions_used))} из {r.sessions_total}
+                    </span>
+                    <div className="ml-auto flex items-center gap-2">
+                      {Number(r.sessions_used) > 0 && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={markVisit.isPending || r.frozen}
+                          onClick={() => markVisit.mutate({ id: r.id, used: Number(r.sessions_used) - 1 })}
+                        >
+                          Отменить
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        disabled={
+                          markVisit.isPending ||
+                          r.frozen ||
+                          Number(r.sessions_used) >= Number(r.sessions_total)
+                        }
+                        onClick={() => markVisit.mutate({ id: r.id, used: Number(r.sessions_used) + 1 })}
+                      >
+                        <CheckCircle2 className="mr-1 h-4 w-4" />
+                        {Number(r.sessions_used) >= Number(r.sessions_total)
+                          ? "Абонемент закрыт"
+                          : r.frozen
+                            ? "Заморожен"
+                            : "Тренировка проведена"}
+                      </Button>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             ))}
