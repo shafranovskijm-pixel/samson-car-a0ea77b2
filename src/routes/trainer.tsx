@@ -10,7 +10,13 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getTrainerSession, logout } from "@/lib/authGate";
-import { confirmGymPayout, listGymEntries, listGymPayouts, listTrainerEntries } from "@/lib/gymApi";
+import {
+  confirmGymPayout,
+  listGymEntries,
+  listGymPayouts,
+  listTrainerEntries,
+  markGymVisit,
+} from "@/lib/gymApi";
 
 /** Сколько клиент фактически заплатил по занятию. */
 function gotSum(r: { amount: number; paid: boolean; paid_amount?: number }) {
@@ -77,6 +83,16 @@ function TrainerPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["gym-payouts"] });
       toast.success("Получение подтверждено");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const markVisit = useMutation({
+    mutationFn: ({ id, used }: { id: string; used: number }) => markGymVisit(id, used),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["gym-entries"] });
+      qc.invalidateQueries({ queryKey: ["gym-trainer-entries"] });
+      toast.success("Занятие отмечено, списано с абонемента");
     },
     onError: (e: Error) => toast.error(e.message),
   });
