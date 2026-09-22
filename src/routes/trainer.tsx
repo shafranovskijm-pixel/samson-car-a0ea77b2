@@ -11,11 +11,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getTrainerSession, logout } from "@/lib/authGate";
 import {
+  addGymPayment,
   confirmGymPayout,
   listGymEntries,
   listGymPayouts,
   listTrainerEntries,
   markGymVisit,
+  type GymEntry,
 } from "@/lib/gymApi";
 
 /** Сколько клиент фактически заплатил по занятию. */
@@ -88,11 +90,25 @@ function TrainerPage() {
   });
 
   const markVisit = useMutation({
-    mutationFn: ({ id, used }: { id: string; used: number }) => markGymVisit(id, used),
-    onSuccess: () => {
+    mutationFn: async ({ entry, used }: { entry: GymEntry; used: number }) => {
+      await markGymVisit(entry.id, used);
+      // Проводим занятие по кассе: цена одного занятия уходит в поступления
+      // и в начисление тренеру (только при отметке, не при отмене).
+      const total = Math.max(1, Number(entry.sessions_total));
+      const perSession = Number(entry.amount) / total;
+      const rest = Number(entry.amount) - Math.min(Number(entry.paid_amount ?? 0), Number(entry.amount));
+      const add = used > Number(entry.sessions_used) ? Math.min(perSession, rest) : 0;
+      if (add > 0) await addGymPayment(entry, add);
+      return add;
+    },
+    onSuccess: (add) => {
       qc.invalidateQueries({ queryKey: ["gym-entries"] });
       qc.invalidateQueries({ queryKey: ["gym-trainer-entries"] });
-      toast.success("Занятие отмечено, списано с абонемента");
+      toast.success(
+        add > 0
+          ? `Занятие проведено, в кассу ${money(add)}`
+          : "Отметка обновлена",
+      );
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -281,7 +297,7 @@ function TrainerPage() {
                           size="sm"
                           variant="ghost"
                           disabled={markVisit.isPending || r.frozen}
-                          onClick={() => markVisit.mutate({ id: r.id, used: Number(r.sessions_used) - 1 })}
+                          onClick={() => markVisit.mutate({ entry: r, used: Number(r.sessions_used) - 1 })}
                         >
                           Отменить
                         </Button>
@@ -293,7 +309,7 @@ function TrainerPage() {
                           r.frozen ||
                           Number(r.sessions_used) >= Number(r.sessions_total)
                         }
-                        onClick={() => markVisit.mutate({ id: r.id, used: Number(r.sessions_used) + 1 })}
+                        onClick={() => markVisit.mutate({ entry: r, used: Number(r.sessions_used) + 1 })}
                       >
                         <CheckCircle2 className="mr-1 h-4 w-4" />
                         {Number(r.sessions_used) >= Number(r.sessions_total)
