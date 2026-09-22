@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CheckCircle2,
@@ -23,6 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { UssuriyskClock } from "@/components/UssuriyskClock";
 import {
   Select,
   SelectContent,
@@ -59,6 +60,7 @@ import {
   type GymEntry,
   type GymTrainer,
 } from "@/lib/gymApi";
+import { ussDateISO } from "@/lib/tz";
 
 export const Route = createFileRoute("/gym")({
   component: GymPage,
@@ -87,7 +89,7 @@ function money(n: number) {
 }
 
 function today() {
-  return new Date().toISOString().slice(0, 10);
+  return ussDateISO();
 }
 
 function dmy(d: string) {
@@ -350,6 +352,7 @@ function GymPage() {
         <Dumbbell className="h-4 w-4" />
         <div className="text-sm font-medium">Тренажёрный зал</div>
         <div className="ml-auto flex items-center gap-2">
+          <UssuriyskClock />
           {getSection() !== "gym" && (
             <Button variant="outline" size="sm" onClick={() => navigate({ to: "/" })}>
               В автосервис
@@ -866,12 +869,27 @@ function LedgerTable({
   payingId: string | null;
   onExport: () => void;
 }) {
+  const desktopScrollRef = useRef<HTMLDivElement>(null);
+  const mobileScrollRef = useRef<HTMLDivElement>(null);
+  const currentDate = today();
   const daysInMonth = new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0).getDate();
   const days = Array.from({ length: daysInMonth }, (_, index) => {
     const day = String(index + 1).padStart(2, "0");
     return { day, date: `${month}-${day}` };
   });
   const monthIncome = rows.reduce((sum, row) => sum + paidSum(row), 0);
+
+  useEffect(() => {
+    if (!currentDate.startsWith(`${month}-`)) return;
+    const scrollToToday = (container: HTMLDivElement | null) => {
+      const row = container?.querySelector<HTMLElement>(`[data-ledger-date="${currentDate}"]`);
+      if (container && row) container.scrollTop = Math.max(0, row.offsetTop - 46);
+    };
+    requestAnimationFrame(() => {
+      scrollToToday(desktopScrollRef.current);
+      scrollToToday(mobileScrollRef.current);
+    });
+  }, [currentDate, month]);
 
   return (
     <section className="overflow-hidden rounded-lg border border-border bg-card shadow-lg">
@@ -903,7 +921,7 @@ function LedgerTable({
         </div>
       </div>
 
-      <div className="hidden max-h-[62vh] overflow-auto md:block">
+      <div ref={desktopScrollRef} className="hidden max-h-[62vh] overflow-auto md:block">
         <table className="w-full min-w-[760px] table-fixed border-collapse text-xs leading-tight">
           <thead className="sticky top-0 z-20 bg-card/95 backdrop-blur">
             <tr>
@@ -924,8 +942,9 @@ function LedgerTable({
           <tbody>
             {days.map(({ day, date }) => {
               const dayRows = rows.filter((row) => row.entry_date === date);
-              return <tr key={date} className="group min-h-12 hover:bg-accent/30">
-                <td className="sticky left-0 z-10 border-b border-r bg-card p-3 text-center font-mono font-bold group-hover:bg-accent">{day}</td>
+              const isCurrentDate = date === currentDate;
+              return <tr key={date} data-ledger-date={date} className={isCurrentDate ? "group min-h-12 bg-accent/50" : "group min-h-12 hover:bg-accent/30"}>
+                <td className="sticky left-0 z-10 border-b border-r bg-card p-3 text-center font-mono font-bold group-hover:bg-accent">{day}{isCurrentDate && <span className="mt-1 block text-[8px] uppercase text-primary">Сегодня</span>}</td>
                 {trainers.map((trainer) => {
                   const cellRows = dayRows.filter((row) => row.trainer_id === trainer.id);
                   return <td key={trainer.id} className="border-b border-r p-1 align-top">
@@ -948,11 +967,12 @@ function LedgerTable({
         </table>
       </div>
 
-      <div className="max-h-[62vh] divide-y overflow-y-auto md:hidden">
+      <div ref={mobileScrollRef} className="max-h-[62vh] divide-y overflow-y-auto md:hidden">
         {days.map(({ day, date }) => {
           const dayRows = rows.filter((row) => row.entry_date === date);
-          return <div key={date} className="grid grid-cols-[42px_1fr] gap-2 p-2">
-            <div className="pt-2 text-center font-mono text-sm font-bold">{day}</div>
+          const isCurrentDate = date === currentDate;
+          return <div key={date} data-ledger-date={date} className={isCurrentDate ? "grid grid-cols-[50px_1fr] gap-2 bg-accent/50 p-2" : "grid grid-cols-[42px_1fr] gap-2 p-2"}>
+            <div className="pt-2 text-center font-mono text-sm font-bold">{day}{isCurrentDate && <span className="mt-1 block text-[8px] uppercase text-primary">Сегодня</span>}</div>
             <div className="space-y-1">
               {dayRows.map((entry) => <div key={entry.id} className="flex items-center gap-2 rounded-md border border-primary/20 bg-primary/10 p-2">
                 <Button variant="ghost" className="h-auto min-w-0 flex-1 justify-start p-0 text-left" onClick={() => onClient(entry.client_name)}>
