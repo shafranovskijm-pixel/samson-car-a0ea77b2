@@ -297,7 +297,7 @@ function TrainerPage() {
                           size="sm"
                           variant="ghost"
                           disabled={markVisit.isPending || r.frozen}
-                          onClick={() => markVisit.mutate({ id: r.id, used: Number(r.sessions_used) - 1 })}
+                          onClick={() => markVisit.mutate({ entry: r, used: Number(r.sessions_used) - 1 })}
                         >
                           Отменить
                         </Button>
@@ -309,7 +309,7 @@ function TrainerPage() {
                           r.frozen ||
                           Number(r.sessions_used) >= Number(r.sessions_total)
                         }
-                        onClick={() => markVisit.mutate({ id: r.id, used: Number(r.sessions_used) + 1 })}
+                        onClick={() => markVisit.mutate({ entry: r, used: Number(r.sessions_used) + 1 })}
                       >
                         <CheckCircle2 className="mr-1 h-4 w-4" />
                         {Number(r.sessions_used) >= Number(r.sessions_total)
