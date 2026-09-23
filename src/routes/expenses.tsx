@@ -293,13 +293,13 @@ function ExpensesPage() {
   const mechanicsDebtTotal = accruedToDate - paidToDate;
   const openingDebt = mechanicsDebtTotal - mechanicsDebt;
 
-  // Касса сейчас: все платежи клиентов минус выплаты мастерам (авансы, удержания, ЗП)
-  // и прочие расходы — с начала работы по сегодняшний день.
-  const cashInNow = paymentsNow.reduce((s, p) => s + Number(p.amount ?? 0), 0);
+  // Касса за выбранный период: платежи клиентов минус выплаты мастерам
+  // (авансы, удержания, ЗП) и прочие расходы за тот же диапазон дат.
+  const cashInNow = cashPayments.reduce((s, p) => s + Number(p.amount ?? 0), 0);
   const payrollOutNow =
-    advancesNow.reduce((s, a) => s + Number(a.amount ?? 0), 0) +
-    expensesNow.filter((e) => e.is_payroll).reduce((s, e) => s + Number(e.amount ?? 0), 0);
-  const otherOutNow = expensesNow
+    cashAdvances.reduce((s, a) => s + Number(a.amount ?? 0), 0) +
+    cashExpenses.filter((e) => e.is_payroll).reduce((s, e) => s + Number(e.amount ?? 0), 0);
+  const otherOutNow = cashExpenses
     .filter((e) => !e.is_payroll)
     .reduce((s, e) => s + Number(e.amount ?? 0), 0);
   const cashNow = cashInNow - payrollOutNow - otherOutNow;
@@ -630,9 +630,9 @@ function ExpensesPage() {
         mechanicsDebtTotal={mechanicsDebtTotal}
         accruedToDate={accruedToDate}
         paidToDate={paidToDate}
-        cashPayments={paymentsNow}
-        cashAdvances={advancesNow}
-        cashExpenses={expensesNow}
+        cashPayments={cashPayments}
+        cashAdvances={cashAdvances}
+        cashExpenses={cashExpenses}
       />
     </div>
   );
