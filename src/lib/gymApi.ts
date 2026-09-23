@@ -139,10 +139,10 @@ export async function createGymPayout(input: {
   ) as GymPayout;
 }
 
-export async function confirmGymPayout(id: string) {
+export async function confirmGymPayout(id: string, by: "trainer" | "reception" = "trainer") {
   const r = await supabase
     .from("gym_payouts")
-    .update({ status: "confirmed", confirmed_at: new Date().toISOString() })
+    .update({ status: "confirmed", confirmed_at: new Date().toISOString(), confirmed_by: by })
     .eq("id", id);
   if (r.error) throw r.error;
 }
