@@ -1538,11 +1538,38 @@ function TrainerDetail({
                   <span className="inline-flex items-center gap-1 text-emerald-600">
                     <CheckCircle2 className="h-4 w-4" />
                     получено{p.confirmed_at ? ` ${new Date(p.confirmed_at).toLocaleDateString("ru-RU")}` : ""}
+                    {p.confirmed_by === "reception"
+                      ? " · подписал рецепшен"
+                      : p.confirmed_by === "trainer"
+                        ? " · подтвердил тренер"
+                        : ""}
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 text-amber-600">
-                    <Clock className="h-4 w-4" /> ждёт подтверждения
-                  </span>
+                  <>
+                    <span className="inline-flex items-center gap-1 text-amber-600">
+                      <Clock className="h-4 w-4" /> ждёт подтверждения
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="ml-auto"
+                      disabled={busy}
+                      onClick={async () => {
+                        setBusy(true);
+                        try {
+                          await confirmGymPayout(p.id, "reception");
+                          onChanged();
+                          toast.success("Выдача подписана");
+                        } catch (e) {
+                          toast.error((e as Error).message);
+                        } finally {
+                          setBusy(false);
+                        }
+                      }}
+                    >
+                      Подписать выдачу
+                    </Button>
+                  </>
                 )}
               </li>
             ))}
