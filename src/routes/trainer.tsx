@@ -14,6 +14,7 @@ import {
   confirmGymPayout,
   listGymEntries,
   listGymPayouts,
+  listGymVisits,
   listTrainerEntries,
   writeOffGymSessions,
   type GymEntry,
