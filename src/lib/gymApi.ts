@@ -268,6 +268,26 @@ export async function markGymVisit(id: string, used: number) {
   if (r.error) throw r.error;
 }
 
+/**
+ * Списать одно или несколько занятий абонемента.
+ * Возвращает сумму, которая ушла в кассу (и в начисление тренеру).
+ * count > 0 — списание, count < 0 — отмена (в кассу ничего не добавляется).
+ */
+export async function writeOffGymSessions(entry: GymEntry, count: number): Promise<number> {
+  const total = Math.max(1, Number(entry.sessions_total));
+  const used = Math.max(0, Math.min(total, Number(entry.sessions_used)));
+  const next = Math.max(0, Math.min(total, used + Math.trunc(count)));
+  const delta = next - used;
+  if (delta === 0) return 0;
+  await markGymVisit(entry.id, next);
+  if (delta < 0) return 0;
+  const perSession = Number(entry.amount) / total;
+  const debt = Number(entry.amount) - Math.min(Number(entry.paid_amount ?? 0), Number(entry.amount));
+  const add = Math.min(perSession * delta, debt);
+  if (add > 0) await addGymPayment(entry, add);
+  return add > 0 ? add : 0;
+}
+
 export async function listGymExpenses(fromDate?: string, toDate?: string): Promise<GymExpense[]> {
   let q = supabase.from("gym_expenses").select(EXPENSE_COLS).order("expense_date", { ascending: false });
   if (fromDate) q = q.gte("expense_date", fromDate);
