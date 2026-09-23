@@ -89,12 +89,19 @@ function TrainerPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const visits = useQuery({
+    queryKey: ["gym-visits", session?.id],
+    queryFn: () => listGymVisits(),
+    enabled: !!session,
+  });
+
   const markVisit = useMutation({
     mutationFn: ({ entry, count }: { entry: GymEntry; count: number }) =>
-      writeOffGymSessions(entry, count),
+      writeOffGymSessions(entry, count, "trainer"),
     onSuccess: (add) => {
       qc.invalidateQueries({ queryKey: ["gym-entries"] });
       qc.invalidateQueries({ queryKey: ["gym-trainer-entries"] });
+      qc.invalidateQueries({ queryKey: ["gym-visits"] });
       toast.success(
         add > 0
           ? `Списано, в кассу ${money(add)}`
