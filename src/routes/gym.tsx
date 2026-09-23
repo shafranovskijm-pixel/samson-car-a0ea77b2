@@ -1472,15 +1472,32 @@ function TrainerDetail({
   trainer,
   payouts,
   onBack,
+  onChanged,
 }: {
   trainer: GymTrainer;
   payouts: TrainerPayout[];
   onBack: () => void;
+  onChanged: () => void;
 }) {
   const entries = useQuery({
     queryKey: ["gym-trainer-entries", trainer.id],
     queryFn: () => listTrainerEntries(trainer.id),
   });
+  const [busy, setBusy] = useState(false);
+
+  async function writeOff(entry: GymEntry, count: number) {
+    setBusy(true);
+    try {
+      const add = await writeOffGymSessions(entry, count);
+      await entries.refetch();
+      onChanged();
+      toast.success(add > 0 ? `Списано, в кассу ${money(add)}` : "Отметка обновлена");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const all = entries.data ?? [];
   const accrued = all.reduce((a, r) => a + sharePaid(r), 0);
