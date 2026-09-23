@@ -90,23 +90,14 @@ function TrainerPage() {
   });
 
   const markVisit = useMutation({
-    mutationFn: async ({ entry, used }: { entry: GymEntry; used: number }) => {
-      await markGymVisit(entry.id, used);
-      // Проводим занятие по кассе: цена одного занятия уходит в поступления
-      // и в начисление тренеру (только при отметке, не при отмене).
-      const total = Math.max(1, Number(entry.sessions_total));
-      const perSession = Number(entry.amount) / total;
-      const rest = Number(entry.amount) - Math.min(Number(entry.paid_amount ?? 0), Number(entry.amount));
-      const add = used > Number(entry.sessions_used) ? Math.min(perSession, rest) : 0;
-      if (add > 0) await addGymPayment(entry, add);
-      return add;
-    },
+    mutationFn: ({ entry, count }: { entry: GymEntry; count: number }) =>
+      writeOffGymSessions(entry, count),
     onSuccess: (add) => {
       qc.invalidateQueries({ queryKey: ["gym-entries"] });
       qc.invalidateQueries({ queryKey: ["gym-trainer-entries"] });
       toast.success(
         add > 0
-          ? `Занятие проведено, в кассу ${money(add)}`
+          ? `Списано, в кассу ${money(add)}`
           : "Отметка обновлена",
       );
     },
