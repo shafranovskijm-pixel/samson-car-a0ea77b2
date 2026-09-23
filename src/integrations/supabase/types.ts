@@ -743,6 +743,7 @@ export type Database = {
         Row: {
           amount: number
           confirmed_at: string | null
+          confirmed_by: string | null
           created_at: string
           id: string
           note: string | null
@@ -757,6 +758,7 @@ export type Database = {
         Insert: {
           amount: number
           confirmed_at?: string | null
+          confirmed_by?: string | null
           created_at?: string
           id?: string
           note?: string | null
@@ -771,6 +773,7 @@ export type Database = {
         Update: {
           amount?: number
           confirmed_at?: string | null
+          confirmed_by?: string | null
           created_at?: string
           id?: string
           note?: string | null

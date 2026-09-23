@@ -20,12 +20,13 @@ export type GymPayout = {
   status: string;
   sent_at: string;
   confirmed_at: string | null;
+  confirmed_by: string | null;
   note: string | null;
 };
 
 const TRAINER_COLS = "id,name,sort_order,percent,deleted_at,login,password";
 const PAYOUT_COLS =
-  "id,trainer_id,amount,paid_at,period_from,period_to,status,sent_at,confirmed_at,note";
+  "id,trainer_id,amount,paid_at,period_from,period_to,status,sent_at,confirmed_at,confirmed_by,note";
 
 export type GymClient = {
   id: string;
@@ -138,10 +139,10 @@ export async function createGymPayout(input: {
   ) as GymPayout;
 }
 
-export async function confirmGymPayout(id: string) {
+export async function confirmGymPayout(id: string, by: "trainer" | "reception" = "trainer") {
   const r = await supabase
     .from("gym_payouts")
-    .update({ status: "confirmed", confirmed_at: new Date().toISOString() })
+    .update({ status: "confirmed", confirmed_at: new Date().toISOString(), confirmed_by: by })
     .eq("id", id);
   if (r.error) throw r.error;
 }
@@ -265,6 +266,26 @@ export async function markGymVisit(id: string, used: number) {
   const safeUsed = Math.max(0, Math.min(total, Math.trunc(used)));
   const r = await supabase.from("gym_entries").update({ sessions_used: safeUsed }).eq("id", id);
   if (r.error) throw r.error;
+}
+
+/**
+ * Списать одно или несколько занятий абонемента.
+ * Возвращает сумму, которая ушла в кассу (и в начисление тренеру).
+ * count > 0 — списание, count < 0 — отмена (в кассу ничего не добавляется).
+ */
+export async function writeOffGymSessions(entry: GymEntry, count: number): Promise<number> {
+  const total = Math.max(1, Number(entry.sessions_total));
+  const used = Math.max(0, Math.min(total, Number(entry.sessions_used)));
+  const next = Math.max(0, Math.min(total, used + Math.trunc(count)));
+  const delta = next - used;
+  if (delta === 0) return 0;
+  await markGymVisit(entry.id, next);
+  if (delta < 0) return 0;
+  const perSession = Number(entry.amount) / total;
+  const debt = Number(entry.amount) - Math.min(Number(entry.paid_amount ?? 0), Number(entry.amount));
+  const add = Math.min(perSession * delta, debt);
+  if (add > 0) await addGymPayment(entry, add);
+  return add > 0 ? add : 0;
 }
 
 export async function listGymExpenses(fromDate?: string, toDate?: string): Promise<GymExpense[]> {

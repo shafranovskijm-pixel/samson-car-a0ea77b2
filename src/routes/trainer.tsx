@@ -11,12 +11,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getTrainerSession, logout } from "@/lib/authGate";
 import {
-  addGymPayment,
   confirmGymPayout,
   listGymEntries,
   listGymPayouts,
   listTrainerEntries,
-  markGymVisit,
+  writeOffGymSessions,
   type GymEntry,
 } from "@/lib/gymApi";
 
@@ -90,23 +89,14 @@ function TrainerPage() {
   });
 
   const markVisit = useMutation({
-    mutationFn: async ({ entry, used }: { entry: GymEntry; used: number }) => {
-      await markGymVisit(entry.id, used);
-      // Проводим занятие по кассе: цена одного занятия уходит в поступления
-      // и в начисление тренеру (только при отметке, не при отмене).
-      const total = Math.max(1, Number(entry.sessions_total));
-      const perSession = Number(entry.amount) / total;
-      const rest = Number(entry.amount) - Math.min(Number(entry.paid_amount ?? 0), Number(entry.amount));
-      const add = used > Number(entry.sessions_used) ? Math.min(perSession, rest) : 0;
-      if (add > 0) await addGymPayment(entry, add);
-      return add;
-    },
+    mutationFn: ({ entry, count }: { entry: GymEntry; count: number }) =>
+      writeOffGymSessions(entry, count),
     onSuccess: (add) => {
       qc.invalidateQueries({ queryKey: ["gym-entries"] });
       qc.invalidateQueries({ queryKey: ["gym-trainer-entries"] });
       toast.success(
         add > 0
-          ? `Занятие проведено, в кассу ${money(add)}`
+          ? `Списано, в кассу ${money(add)}`
           : "Отметка обновлена",
       );
     },
@@ -273,56 +263,70 @@ function TrainerPage() {
             {rows.length === 0 && (
               <p className="p-4 text-center text-sm text-muted-foreground">Нет занятий за месяц</p>
             )}
-            {rows.map((r) => (
-              <Card key={r.id}>
-                <CardContent className="flex flex-wrap items-center gap-2 p-3 text-sm">
-                  <span className="font-medium">{r.entry_date.slice(8, 10)}.{r.entry_date.slice(5, 7)}</span>
-                  <span className="truncate">{r.client_name}</span>
-                  <span className="text-muted-foreground">{r.package} зан.</span>
-                  <span className="ml-auto font-semibold">
-                    {money((gotSum(r) * Number(r.trainer_percent)) / 100)}
-                  </span>
-                  {gotSum(r) < Number(r.amount) && (
-                    <span className="text-xs text-amber-600">
-                      {gotSum(r) > 0 ? `оплачено частично ${Math.round(gotSum(r))} ₽` : "не оплачено"}
-                    </span>
-                  )}
-                  <div className="flex w-full items-center gap-2 border-t pt-2">
-                    <span className="text-xs text-muted-foreground">
-                      Осталось занятий: {Math.max(0, Number(r.sessions_total) - Number(r.sessions_used))} из {r.sessions_total}
-                    </span>
-                    <div className="ml-auto flex items-center gap-2">
-                      {Number(r.sessions_used) > 0 && (
+            {rows.map((r) => {
+              const used = Number(r.sessions_used);
+              const total = Number(r.sessions_total);
+              const left = Math.max(0, total - used);
+              return (
+                <Card key={r.id}>
+                  <CardContent className="space-y-2 p-3 text-sm">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-base font-semibold">{r.client_name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {r.entry_date.slice(8, 10)}.{r.entry_date.slice(5, 7)} · {r.package} зан.
+                      </span>
+                      <span className="ml-auto font-semibold">
+                        {money((gotSum(r) * Number(r.trainer_percent)) / 100)}
+                      </span>
+                    </div>
+                    {gotSum(r) < Number(r.amount) && (
+                      <div className="text-xs text-amber-600">
+                        {gotSum(r) > 0 ? `оплачено частично ${Math.round(gotSum(r))} ₽` : "не оплачено"}
+                      </div>
+                    )}
+                    <div className="flex flex-wrap items-center gap-3 border-t pt-2 text-xs">
+                      <span className="text-muted-foreground">
+                        Списано тренировок: <span className="font-semibold text-foreground">{used}</span> из {total}
+                      </span>
+                      <span className="text-muted-foreground">
+                        Остаток: <span className="font-semibold text-foreground">{left}</span>
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        size="sm"
+                        disabled={markVisit.isPending || r.frozen || left === 0}
+                        onClick={() => markVisit.mutate({ entry: r, count: 1 })}
+                      >
+                        <CheckCircle2 className="mr-1 h-4 w-4" />
+                        {left === 0 ? "Абонемент закрыт" : r.frozen ? "Заморожен" : "Списать занятие"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={markVisit.isPending || r.frozen || left === 0}
+                        onClick={() => {
+                          if (!window.confirm(`Списать все ${left} тренировок у ${r.client_name}?`)) return;
+                          markVisit.mutate({ entry: r, count: left });
+                        }}
+                      >
+                        Списать все тренировки ({left})
+                      </Button>
+                      {used > 0 && (
                         <Button
                           size="sm"
                           variant="ghost"
                           disabled={markVisit.isPending || r.frozen}
-                          onClick={() => markVisit.mutate({ entry: r, used: Number(r.sessions_used) - 1 })}
+                          onClick={() => markVisit.mutate({ entry: r, count: -1 })}
                         >
                           Отменить
                         </Button>
                       )}
-                      <Button
-                        size="sm"
-                        disabled={
-                          markVisit.isPending ||
-                          r.frozen ||
-                          Number(r.sessions_used) >= Number(r.sessions_total)
-                        }
-                        onClick={() => markVisit.mutate({ entry: r, used: Number(r.sessions_used) + 1 })}
-                      >
-                        <CheckCircle2 className="mr-1 h-4 w-4" />
-                        {Number(r.sessions_used) >= Number(r.sessions_total)
-                          ? "Абонемент закрыт"
-                          : r.frozen
-                            ? "Заморожен"
-                            : "Тренировка проведена"}
-                      </Button>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </TabsContent>
         </Tabs>
       </div>

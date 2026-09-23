@@ -57,6 +57,7 @@ import {
   setGymEntryValidUntil,
   updateGymEntry,
   updateGymTrainer,
+  writeOffGymSessions,
   type GymEntry,
   type GymTrainer,
 } from "@/lib/gymApi";
@@ -637,6 +638,10 @@ function GymPage() {
                     trainer={t}
                     payouts={(payouts.data ?? []).filter((p) => p.trainer_id === t.id)}
                     onBack={() => setSelectedTrainer(null)}
+                    onChanged={() => {
+                      invalidate();
+                      qc.invalidateQueries({ queryKey: ["gym-payouts"] });
+                    }}
                   />
                 );
               })()
@@ -1365,11 +1370,11 @@ function PayoutCard({
                     variant="outline"
                     size="sm"
                     onClick={async () => {
-                      await confirmGymPayout(p.id);
+                      await confirmGymPayout(p.id, "reception");
                       onChanged();
                     }}
                   >
-                    Отметить полученной
+                    Подписать выдачу
                   </Button>
                 )}
                 <Button
@@ -1465,6 +1470,7 @@ type TrainerPayout = {
   paid_at: string;
   status: string;
   confirmed_at: string | null;
+  confirmed_by?: string | null;
   note: string | null;
 };
 
@@ -1472,15 +1478,32 @@ function TrainerDetail({
   trainer,
   payouts,
   onBack,
+  onChanged,
 }: {
   trainer: GymTrainer;
   payouts: TrainerPayout[];
   onBack: () => void;
+  onChanged: () => void;
 }) {
   const entries = useQuery({
     queryKey: ["gym-trainer-entries", trainer.id],
     queryFn: () => listTrainerEntries(trainer.id),
   });
+  const [busy, setBusy] = useState(false);
+
+  async function writeOff(entry: GymEntry, count: number) {
+    setBusy(true);
+    try {
+      const add = await writeOffGymSessions(entry, count);
+      await entries.refetch();
+      onChanged();
+      toast.success(add > 0 ? `Списано, в кассу ${money(add)}` : "Отметка обновлена");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const all = entries.data ?? [];
   const accrued = all.reduce((a, r) => a + sharePaid(r), 0);
@@ -1516,11 +1539,38 @@ function TrainerDetail({
                   <span className="inline-flex items-center gap-1 text-emerald-600">
                     <CheckCircle2 className="h-4 w-4" />
                     получено{p.confirmed_at ? ` ${new Date(p.confirmed_at).toLocaleDateString("ru-RU")}` : ""}
+                    {p.confirmed_by === "reception"
+                      ? " · подписал рецепшен"
+                      : p.confirmed_by === "trainer"
+                        ? " · подтвердил тренер"
+                        : ""}
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 text-amber-600">
-                    <Clock className="h-4 w-4" /> ждёт подтверждения
-                  </span>
+                  <>
+                    <span className="inline-flex items-center gap-1 text-amber-600">
+                      <Clock className="h-4 w-4" /> ждёт подтверждения
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="ml-auto"
+                      disabled={busy}
+                      onClick={async () => {
+                        setBusy(true);
+                        try {
+                          await confirmGymPayout(p.id, "reception");
+                          onChanged();
+                          toast.success("Выдача подписана");
+                        } catch (e) {
+                          toast.error((e as Error).message);
+                        } finally {
+                          setBusy(false);
+                        }
+                      }}
+                    >
+                      Подписать выдачу
+                    </Button>
+                  </>
                 )}
               </li>
             ))}
@@ -1537,18 +1587,54 @@ function TrainerDetail({
                 {entries.isLoading ? "Загрузка…" : "Занятий нет"}
               </li>
             )}
-            {all.map((r) => (
-              <li key={r.id} className="flex flex-wrap items-center gap-2 px-2 py-1.5 text-sm">
-                <span className="whitespace-nowrap">{dmy(r.entry_date)}</span>
-                <span className="truncate">{r.client_name}</span>
-                <span className="text-muted-foreground">{r.package} зан.</span>
-                <span className="ml-auto">{money(Number(r.amount))}</span>
-                <span className="font-medium">
-                  тренеру {money(share(r))} ({Number(r.trainer_percent)}%)
-                </span>
-                {!r.paid && <span className="text-xs text-amber-600">не оплачено</span>}
-              </li>
-            ))}
+            {all.map((r) => {
+              const used = Number(r.sessions_used);
+              const total = Number(r.sessions_total);
+              const left = Math.max(0, total - used);
+              return (
+                <li key={r.id} className="space-y-1 px-2 py-2 text-sm">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="whitespace-nowrap">{dmy(r.entry_date)}</span>
+                    <span className="truncate font-medium">{r.client_name}</span>
+                    <span className="text-muted-foreground">{r.package} зан.</span>
+                    <span className="ml-auto">{money(Number(r.amount))}</span>
+                    <span className="font-medium">
+                      тренеру {money(share(r))} ({Number(r.trainer_percent)}%)
+                    </span>
+                    {!r.paid && <span className="text-xs text-amber-600">не оплачено</span>}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <span>Списано: <span className="font-semibold text-foreground">{used}</span> из {total}</span>
+                    <span>Остаток: <span className="font-semibold text-foreground">{left}</span></span>
+                    <div className="ml-auto flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        disabled={busy || r.frozen || left === 0}
+                        onClick={() => writeOff(r, 1)}
+                      >
+                        Списать занятие
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={busy || r.frozen || left === 0}
+                        onClick={() => {
+                          if (!window.confirm(`Списать все ${left} тренировок у ${r.client_name}?`)) return;
+                          writeOff(r, left);
+                        }}
+                      >
+                        Списать все ({left})
+                      </Button>
+                      {used > 0 && (
+                        <Button size="sm" variant="ghost" disabled={busy || r.frozen} onClick={() => writeOff(r, -1)}>
+                          Отменить
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         </CardContent>
       </Card>
