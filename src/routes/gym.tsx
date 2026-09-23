@@ -1370,7 +1370,7 @@ function PayoutCard({
                     variant="outline"
                     size="sm"
                     onClick={async () => {
-                      await confirmGymPayout(p.id);
+                      await confirmGymPayout(p.id, "reception");
                       onChanged();
                     }}
                   >
