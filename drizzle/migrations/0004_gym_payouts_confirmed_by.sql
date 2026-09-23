@@ -1,0 +1,1 @@
+ALTER TABLE public.gym_payouts ADD COLUMN IF NOT EXISTS confirmed_by text;

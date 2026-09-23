@@ -29,6 +29,13 @@
       "when": 1789736933382,
       "tag": "0003_gym_partial_payment_and_validity",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790144231405,
+      "tag": "0004_gym_payouts_confirmed_by",
+      "breakpoints": true
     }
   ]
 }
