@@ -1587,18 +1587,54 @@ function TrainerDetail({
                 {entries.isLoading ? "Загрузка…" : "Занятий нет"}
               </li>
             )}
-            {all.map((r) => (
-              <li key={r.id} className="flex flex-wrap items-center gap-2 px-2 py-1.5 text-sm">
-                <span className="whitespace-nowrap">{dmy(r.entry_date)}</span>
-                <span className="truncate">{r.client_name}</span>
-                <span className="text-muted-foreground">{r.package} зан.</span>
-                <span className="ml-auto">{money(Number(r.amount))}</span>
-                <span className="font-medium">
-                  тренеру {money(share(r))} ({Number(r.trainer_percent)}%)
-                </span>
-                {!r.paid && <span className="text-xs text-amber-600">не оплачено</span>}
-              </li>
-            ))}
+            {all.map((r) => {
+              const used = Number(r.sessions_used);
+              const total = Number(r.sessions_total);
+              const left = Math.max(0, total - used);
+              return (
+                <li key={r.id} className="space-y-1 px-2 py-2 text-sm">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="whitespace-nowrap">{dmy(r.entry_date)}</span>
+                    <span className="truncate font-medium">{r.client_name}</span>
+                    <span className="text-muted-foreground">{r.package} зан.</span>
+                    <span className="ml-auto">{money(Number(r.amount))}</span>
+                    <span className="font-medium">
+                      тренеру {money(share(r))} ({Number(r.trainer_percent)}%)
+                    </span>
+                    {!r.paid && <span className="text-xs text-amber-600">не оплачено</span>}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <span>Списано: <span className="font-semibold text-foreground">{used}</span> из {total}</span>
+                    <span>Остаток: <span className="font-semibold text-foreground">{left}</span></span>
+                    <div className="ml-auto flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        disabled={busy || r.frozen || left === 0}
+                        onClick={() => writeOff(r, 1)}
+                      >
+                        Списать занятие
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={busy || r.frozen || left === 0}
+                        onClick={() => {
+                          if (!window.confirm(`Списать все ${left} тренировок у ${r.client_name}?`)) return;
+                          writeOff(r, left);
+                        }}
+                      >
+                        Списать все ({left})
+                      </Button>
+                      {used > 0 && (
+                        <Button size="sm" variant="ghost" disabled={busy || r.frozen} onClick={() => writeOff(r, -1)}>
+                          Отменить
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         </CardContent>
       </Card>
