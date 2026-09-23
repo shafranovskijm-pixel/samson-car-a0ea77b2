@@ -14,6 +14,7 @@ import {
   confirmGymPayout,
   listGymEntries,
   listGymPayouts,
+  listGymVisits,
   listTrainerEntries,
   writeOffGymSessions,
   type GymEntry,
@@ -88,12 +89,19 @@ function TrainerPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const visits = useQuery({
+    queryKey: ["gym-visits", session?.id],
+    queryFn: () => listGymVisits(),
+    enabled: !!session,
+  });
+
   const markVisit = useMutation({
     mutationFn: ({ entry, count }: { entry: GymEntry; count: number }) =>
-      writeOffGymSessions(entry, count),
+      writeOffGymSessions(entry, count, "trainer"),
     onSuccess: (add) => {
       qc.invalidateQueries({ queryKey: ["gym-entries"] });
       qc.invalidateQueries({ queryKey: ["gym-trainer-entries"] });
+      qc.invalidateQueries({ queryKey: ["gym-visits"] });
       toast.success(
         add > 0
           ? `Списано, в кассу ${money(add)}`
@@ -292,6 +300,30 @@ function TrainerPage() {
                         Остаток: <span className="font-semibold text-foreground">{left}</span>
                       </span>
                     </div>
+                    {(() => {
+                      const vs = (visits.data ?? []).filter((v) => v.entry_id === r.id);
+                      if (vs.length === 0)
+                        return used > 0 ? (
+                          <div className="text-xs text-muted-foreground">Даты списаний не записаны (списано до ведения журнала)</div>
+                        ) : null;
+                      return (
+                        <div className="text-xs text-muted-foreground">
+                          Когда списано:{" "}
+                          <span className="text-foreground">
+                            {vs
+                              .map((v) =>
+                                new Date(v.visit_at).toLocaleString("ru-RU", {
+                                  day: "2-digit",
+                                  month: "2-digit",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                }),
+                              )
+                              .join(", ")}
+                          </span>
+                        </div>
+                      );
+                    })()}
                     <div className="flex flex-wrap items-center gap-2">
                       <Button
                         size="sm"

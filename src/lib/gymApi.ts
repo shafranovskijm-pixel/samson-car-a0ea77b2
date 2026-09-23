@@ -273,19 +273,64 @@ export async function markGymVisit(id: string, used: number) {
  * Возвращает сумму, которая ушла в кассу (и в начисление тренеру).
  * count > 0 — списание, count < 0 — отмена (в кассу ничего не добавляется).
  */
-export async function writeOffGymSessions(entry: GymEntry, count: number): Promise<number> {
+export async function writeOffGymSessions(
+  entry: GymEntry,
+  count: number,
+  by: "trainer" | "reception" = "trainer",
+): Promise<number> {
   const total = Math.max(1, Number(entry.sessions_total));
   const used = Math.max(0, Math.min(total, Number(entry.sessions_used)));
   const next = Math.max(0, Math.min(total, used + Math.trunc(count)));
   const delta = next - used;
   if (delta === 0) return 0;
   await markGymVisit(entry.id, next);
-  if (delta < 0) return 0;
+  if (delta < 0) {
+    // отмена — убираем последние записи журнала
+    const last = await supabase
+      .from("gym_visits")
+      .select("id")
+      .eq("entry_id", entry.id)
+      .order("visit_at", { ascending: false })
+      .limit(Math.abs(delta));
+    const ids = (last.data ?? []).map((v: { id: string }) => v.id);
+    if (ids.length) await supabase.from("gym_visits").delete().in("id", ids);
+    return 0;
+  }
   const perSession = Number(entry.amount) / total;
   const debt = Number(entry.amount) - Math.min(Number(entry.paid_amount ?? 0), Number(entry.amount));
   const add = Math.min(perSession * delta, debt);
   if (add > 0) await addGymPayment(entry, add);
+  const now = new Date().toISOString();
+  await supabase.from("gym_visits").insert(
+    Array.from({ length: delta }, () => ({
+      entry_id: entry.id,
+      trainer_id: entry.trainer_id,
+      visit_at: now,
+      created_by: by,
+      amount: perSession,
+    })),
+  );
   return add > 0 ? add : 0;
+}
+
+export type GymVisit = {
+  id: string;
+  entry_id: string;
+  visit_at: string;
+  created_by: string | null;
+  amount: number;
+};
+
+/** Журнал списаний по занятиям (когда и кем списано). */
+export async function listGymVisits(entryIds?: string[]): Promise<GymVisit[]> {
+  let q = supabase
+    .from("gym_visits")
+    .select("id,entry_id,visit_at,created_by,amount")
+    .order("visit_at", { ascending: true });
+  if (entryIds && entryIds.length) q = q.in("entry_id", entryIds);
+  const r = await q;
+  if (r.error) throw r.error;
+  return (r.data ?? []) as GymVisit[];
 }
 
 export async function listGymExpenses(fromDate?: string, toDate?: string): Promise<GymExpense[]> {

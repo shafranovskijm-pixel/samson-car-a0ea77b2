@@ -53,6 +53,7 @@ import {
   listTrainerEntries,
   markGymVisit,
   addGymPayment,
+  listGymVisits,
   setGymEntryFrozen,
   setGymEntryValidUntil,
   updateGymEntry,
@@ -1489,13 +1490,18 @@ function TrainerDetail({
     queryKey: ["gym-trainer-entries", trainer.id],
     queryFn: () => listTrainerEntries(trainer.id),
   });
+  const visits = useQuery({
+    queryKey: ["gym-visits", trainer.id],
+    queryFn: () => listGymVisits(),
+  });
   const [busy, setBusy] = useState(false);
 
   async function writeOff(entry: GymEntry, count: number) {
     setBusy(true);
     try {
-      const add = await writeOffGymSessions(entry, count);
+      const add = await writeOffGymSessions(entry, count, "reception");
       await entries.refetch();
+      await visits.refetch();
       onChanged();
       toast.success(add > 0 ? `Списано, в кассу ${money(add)}` : "Отметка обновлена");
     } catch (e) {
@@ -1606,6 +1612,27 @@ function TrainerDetail({
                   <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                     <span>Списано: <span className="font-semibold text-foreground">{used}</span> из {total}</span>
                     <span>Остаток: <span className="font-semibold text-foreground">{left}</span></span>
+                    {(() => {
+                      const vs = (visits.data ?? []).filter((v) => v.entry_id === r.id);
+                      if (vs.length === 0) return null;
+                      return (
+                        <span>
+                          Когда:{" "}
+                          <span className="text-foreground">
+                            {vs
+                              .map((v) =>
+                                new Date(v.visit_at).toLocaleString("ru-RU", {
+                                  day: "2-digit",
+                                  month: "2-digit",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                }),
+                              )
+                              .join(", ")}
+                          </span>
+                        </span>
+                      );
+                    })()}
                     <div className="ml-auto flex flex-wrap gap-2">
                       <Button
                         size="sm"

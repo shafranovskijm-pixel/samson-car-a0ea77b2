@@ -831,6 +831,41 @@ export type Database = {
         }
         Relationships: []
       }
+      gym_visits: {
+        Row: {
+          amount: number
+          created_by: string | null
+          entry_id: string
+          id: string
+          trainer_id: string | null
+          visit_at: string
+        }
+        Insert: {
+          amount?: number
+          created_by?: string | null
+          entry_id: string
+          id?: string
+          trainer_id?: string | null
+          visit_at?: string
+        }
+        Update: {
+          amount?: number
+          created_by?: string | null
+          entry_id?: string
+          id?: string
+          trainer_id?: string | null
+          visit_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gym_visits_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "gym_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mechanic_advances: {
         Row: {
           amount: number
