@@ -20,12 +20,13 @@ export type GymPayout = {
   status: string;
   sent_at: string;
   confirmed_at: string | null;
+  confirmed_by: string | null;
   note: string | null;
 };
 
 const TRAINER_COLS = "id,name,sort_order,percent,deleted_at,login,password";
 const PAYOUT_COLS =
-  "id,trainer_id,amount,paid_at,period_from,period_to,status,sent_at,confirmed_at,note";
+  "id,trainer_id,amount,paid_at,period_from,period_to,status,sent_at,confirmed_at,confirmed_by,note";
 
 export type GymClient = {
   id: string;
