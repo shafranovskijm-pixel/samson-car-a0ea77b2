@@ -148,20 +148,11 @@ function ExpensesPage() {
     queryFn: () => listExpenses(undefined, toIso),
   });
 
-  // Касса «сейчас»: не зависит от выбранного периода — всё с начала работы до сегодня.
-  const todayIso = isoDate(new Date());
-  const { data: paymentsNow = [] } = useQuery({
-    queryKey: ["payments-range", "to-now", todayIso],
-    queryFn: () => listPaymentsRange("1970-01-01", todayIso),
-  });
-  const { data: advancesNow = [] } = useQuery({
-    queryKey: ["mechanic_advances", "to-now", todayIso],
-    queryFn: () => listMechanicAdvances({ to: todayIso }),
-  });
-  const { data: expensesNow = [] } = useQuery({
-    queryKey: ["expenses", "to-now", todayIso],
-    queryFn: () => listExpenses(undefined, todayIso),
-  });
+  // Касса считается по выбранному периоду: поступления, выплаты и расходы
+  // берутся за тот же диапазон дат, что и остальные карточки.
+  const cashPayments = payments;
+  const cashAdvances = advances;
+  const cashExpenses = expenses;
 
   // Только выполненные записи участвуют в «начислении» ЗП и обязательств.
   const doneAppts = useMemo(() => appts.filter((a) => a.status === "done"), [appts]);
@@ -302,13 +293,13 @@ function ExpensesPage() {
   const mechanicsDebtTotal = accruedToDate - paidToDate;
   const openingDebt = mechanicsDebtTotal - mechanicsDebt;
 
-  // Касса сейчас: все платежи клиентов минус выплаты мастерам (авансы, удержания, ЗП)
-  // и прочие расходы — с начала работы по сегодняшний день.
-  const cashInNow = paymentsNow.reduce((s, p) => s + Number(p.amount ?? 0), 0);
+  // Касса за выбранный период: платежи клиентов минус выплаты мастерам
+  // (авансы, удержания, ЗП) и прочие расходы за тот же диапазон дат.
+  const cashInNow = cashPayments.reduce((s, p) => s + Number(p.amount ?? 0), 0);
   const payrollOutNow =
-    advancesNow.reduce((s, a) => s + Number(a.amount ?? 0), 0) +
-    expensesNow.filter((e) => e.is_payroll).reduce((s, e) => s + Number(e.amount ?? 0), 0);
-  const otherOutNow = expensesNow
+    cashAdvances.reduce((s, a) => s + Number(a.amount ?? 0), 0) +
+    cashExpenses.filter((e) => e.is_payroll).reduce((s, e) => s + Number(e.amount ?? 0), 0);
+  const otherOutNow = cashExpenses
     .filter((e) => !e.is_payroll)
     .reduce((s, e) => s + Number(e.amount ?? 0), 0);
   const cashNow = cashInNow - payrollOutNow - otherOutNow;
@@ -346,7 +337,7 @@ function ExpensesPage() {
         <CardContent className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
           <div className="min-w-0">
             <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-              Касса сейчас
+              Касса — {rangeLabel}
             </div>
             <div
               className={`mt-1 text-2xl font-bold tracking-tight tabular-nums sm:text-3xl ${
@@ -639,9 +630,9 @@ function ExpensesPage() {
         mechanicsDebtTotal={mechanicsDebtTotal}
         accruedToDate={accruedToDate}
         paidToDate={paidToDate}
-        cashPayments={paymentsNow}
-        cashAdvances={advancesNow}
-        cashExpenses={expensesNow}
+        cashPayments={cashPayments}
+        cashAdvances={cashAdvances}
+        cashExpenses={cashExpenses}
       />
     </div>
   );
