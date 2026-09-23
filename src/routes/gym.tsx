@@ -1374,7 +1374,7 @@ function PayoutCard({
                       onChanged();
                     }}
                   >
-                    Отметить полученной
+                    Подписать выдачу
                   </Button>
                 )}
                 <Button
