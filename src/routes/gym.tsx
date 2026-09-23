@@ -1470,6 +1470,7 @@ type TrainerPayout = {
   paid_at: string;
   status: string;
   confirmed_at: string | null;
+  confirmed_by?: string | null;
   note: string | null;
 };
 
