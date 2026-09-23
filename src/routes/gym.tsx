@@ -1489,13 +1489,18 @@ function TrainerDetail({
     queryKey: ["gym-trainer-entries", trainer.id],
     queryFn: () => listTrainerEntries(trainer.id),
   });
+  const visits = useQuery({
+    queryKey: ["gym-visits", trainer.id],
+    queryFn: () => listGymVisits(),
+  });
   const [busy, setBusy] = useState(false);
 
   async function writeOff(entry: GymEntry, count: number) {
     setBusy(true);
     try {
-      const add = await writeOffGymSessions(entry, count);
+      const add = await writeOffGymSessions(entry, count, "reception");
       await entries.refetch();
+      await visits.refetch();
       onChanged();
       toast.success(add > 0 ? `Списано, в кассу ${money(add)}` : "Отметка обновлена");
     } catch (e) {
