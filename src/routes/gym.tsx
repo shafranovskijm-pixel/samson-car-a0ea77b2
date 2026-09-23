@@ -57,6 +57,7 @@ import {
   setGymEntryValidUntil,
   updateGymEntry,
   updateGymTrainer,
+  writeOffGymSessions,
   type GymEntry,
   type GymTrainer,
 } from "@/lib/gymApi";
