@@ -637,6 +637,10 @@ function GymPage() {
                     trainer={t}
                     payouts={(payouts.data ?? []).filter((p) => p.trainer_id === t.id)}
                     onBack={() => setSelectedTrainer(null)}
+                    onChanged={() => {
+                      invalidate();
+                      qc.invalidateQueries({ queryKey: ["gym-payouts"] });
+                    }}
                   />
                 );
               })()
