@@ -337,7 +337,7 @@ function ExpensesPage() {
         <CardContent className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
           <div className="min-w-0">
             <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-              Касса сейчас
+              Касса — {rangeLabel}
             </div>
             <div
               className={`mt-1 text-2xl font-bold tracking-tight tabular-nums sm:text-3xl ${

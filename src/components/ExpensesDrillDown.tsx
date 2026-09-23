@@ -66,7 +66,7 @@ type Props = {
   paidToDate?: number;
   /** Все начисления мастерам до конца периода (для прогресса). */
   accruedToDate?: number;
-  /** Касса «сейчас»: все платежи, авансы и расходы с начала работы по сегодня. */
+  /** Касса за выбранный период: платежи, авансы и расходы в том же диапазоне дат. */
   cashPayments?: AppointmentPayment[];
   cashAdvances?: MechanicAdvance[];
   cashExpenses?: Expense[];
@@ -78,7 +78,7 @@ const TITLE: Record<DrillMetric, string> = {
   payout: "Зарплаты мастеров",
   expense: "Прочие расходы",
   debt: "Долг / переплата мастерам",
-  cash: "Касса сейчас",
+  cash: "Касса за период",
 };
 
 export function ExpensesDrillDown(props: Props) {
@@ -92,7 +92,7 @@ export function ExpensesDrillDown(props: Props) {
           </DialogTitle>
           <div className="text-xs text-muted-foreground">
             {metric === "cash"
-              ? "Все движения денег с начала работы по сегодня"
+              ? "Все движения денег за выбранный период"
               : `За ${props.periodLabel} · ${props.rangeLabel}`}
           </div>
         </DialogHeader>
@@ -737,7 +737,7 @@ function ExpenseView(p: Props) {
   );
 }
 
-/** Касса «сейчас»: прозрачный расчёт — поступления минус выплаты мастерам и расходы. */
+/** Касса за период: прозрачный расчёт — поступления минус выплаты мастерам и расходы. */
 function CashView(p: Props) {
   const payments = useMemo(
     () =>
