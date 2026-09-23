@@ -300,6 +300,30 @@ function TrainerPage() {
                         Остаток: <span className="font-semibold text-foreground">{left}</span>
                       </span>
                     </div>
+                    {(() => {
+                      const vs = (visits.data ?? []).filter((v) => v.entry_id === r.id);
+                      if (vs.length === 0)
+                        return used > 0 ? (
+                          <div className="text-xs text-muted-foreground">Даты списаний не записаны (списано до ведения журнала)</div>
+                        ) : null;
+                      return (
+                        <div className="text-xs text-muted-foreground">
+                          Когда списано:{" "}
+                          <span className="text-foreground">
+                            {vs
+                              .map((v) =>
+                                new Date(v.visit_at).toLocaleString("ru-RU", {
+                                  day: "2-digit",
+                                  month: "2-digit",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                }),
+                              )
+                              .join(", ")}
+                          </span>
+                        </div>
+                      );
+                    })()}
                     <div className="flex flex-wrap items-center gap-2">
                       <Button
                         size="sm"
