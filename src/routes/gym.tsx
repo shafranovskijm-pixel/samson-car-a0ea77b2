@@ -53,6 +53,7 @@ import {
   listTrainerEntries,
   markGymVisit,
   addGymPayment,
+  listGymVisits,
   setGymEntryFrozen,
   setGymEntryValidUntil,
   updateGymEntry,
