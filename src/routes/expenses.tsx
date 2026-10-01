@@ -462,8 +462,20 @@ function ExpensesPage() {
             <div className="mt-1 text-[11px] text-muted-foreground">
               По оплаченным работам (в прибыли учитывается эта сумма)
             </div>
-            <div className="mt-1 text-[10px] text-muted-foreground">
-              начислено за {periodLabel}: {fmt(mechanicsAccrued)}
+            <div className="mt-2 space-y-1 rounded-md bg-muted/50 p-2 text-[10px] leading-snug text-muted-foreground">
+              <div>
+                <span className="font-semibold text-foreground">{fmt(cashPayout)}</span> — доля мастеров
+                с денег, которые реально пришли в кассу за {periodLabel} ({fmt(revenue)}).
+              </div>
+              <div>
+                <span className="font-semibold text-foreground">{fmt(mechanicsAccrued)}</span> — начислено
+                мастерам за работы, выполненные за {periodLabel} на {fmt(accruedRevenue)}, включая ещё
+                не оплаченные клиентами.
+              </div>
+              <div>
+                Суммы разные, потому что часть работ сделана, но деньги ещё не пришли, а часть денег пришла
+                за прошлые работы.
+              </div>
             </div>
             <div className="mt-auto border-t pt-3">
               <button
