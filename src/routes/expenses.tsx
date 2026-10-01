@@ -465,7 +465,7 @@ function ExpensesPage() {
             <div className="mt-2 space-y-1 rounded-md bg-muted/50 p-2 text-[10px] leading-snug text-muted-foreground">
               <div>
                 <span className="font-semibold text-foreground">{fmt(cashPayout)}</span> — доля мастеров
-                с денег, которые реально пришли в кассу за {periodLabel} ({fmt(cashPayments)}).
+                с денег, которые реально пришли в кассу за {periodLabel} ({fmt(revenue)}).
               </div>
               <div>
                 <span className="font-semibold text-foreground">{fmt(mechanicsAccrued)}</span> — начислено
