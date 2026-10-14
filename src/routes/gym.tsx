@@ -1465,6 +1465,91 @@ function TrainerRow({ trainer, onChanged }: { trainer: GymTrainer; onChanged: ()
   );
 }
 
+function TrainerSettings({
+  trainer,
+  onChanged,
+  onDeleted,
+}: {
+  trainer: GymTrainer;
+  onChanged: () => void;
+  onDeleted: () => void;
+}) {
+  const [name, setName] = useState(trainer.name);
+  const [login, setLogin] = useState(trainer.login ?? "");
+  const [password, setPassword] = useState(trainer.password ?? "");
+  const [percent, setPercent] = useState(String(trainer.percent));
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    const p = Number(percent.replace(",", "."));
+    if (!name.trim()) return toast.error("Введите имя");
+    if (!Number.isFinite(p) || p < 0 || p > 100) return toast.error("Процент должен быть от 0 до 100");
+    setSaving(true);
+    try {
+      await updateGymTrainer(trainer.id, {
+        name: name.trim(),
+        login: login.trim() || null,
+        password: password.trim() || null,
+        percent: p,
+      });
+      onChanged();
+      toast.success("Настройки тренера сохранены");
+    } catch {
+      toast.error("Не удалось сохранить — возможно, такой логин уже занят");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm">Настройки тренера</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="grid gap-3 sm:grid-cols-4">
+          <div>
+            <Label>Имя</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+          <div>
+            <Label>Логин для входа</Label>
+            <Input value={login} onChange={(e) => setLogin(e.target.value)} placeholder="ivan" />
+          </div>
+          <div>
+            <Label>Пароль</Label>
+            <Input value={password} onChange={(e) => setPassword(e.target.value)} placeholder="1234" />
+          </div>
+          <div>
+            <Label>Процент тренера</Label>
+            <Input inputMode="numeric" value={percent} onChange={(e) => setPercent(e.target.value)} />
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {trainer.login ? `Тренер входит через значок «Тренер» с логином «${trainer.login}».` : "Логин не задан — тренер пока не может войти в кабинет."}{" "}
+          Новый процент применяется только к новым занятиям.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" onClick={save} disabled={saving}>{saving ? "Сохраняю…" : "Сохранить"}</Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-destructive"
+            onClick={async () => {
+              if (!window.confirm(`Удалить тренера «${trainer.name}»? Его прошлые занятия останутся в ведомости.`)) return;
+              await deleteGymTrainer(trainer.id);
+              onChanged();
+              onDeleted();
+            }}
+          >
+            <Trash2 className="mr-1 h-4 w-4" /> Удалить тренера
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 type TrainerPayout = {
   id: string;
   amount: number;
@@ -1531,6 +1616,8 @@ function TrainerDetail({
         <Stat title="Ждёт подтверждения" value={money(pending)} accent={pending ? "text-amber-600" : undefined} />
         <Stat title="К выдаче" value={money(accrued - received - pending)} accent="text-emerald-600" />
       </div>
+
+      <TrainerSettings key={trainer.id} trainer={trainer} onChanged={onChanged} onDeleted={onBack} />
 
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-sm">Выплаты — когда и сколько получил</CardTitle></CardHeader>
