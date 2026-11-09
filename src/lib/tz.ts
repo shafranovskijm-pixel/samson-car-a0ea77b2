@@ -11,6 +11,21 @@ export function ussDateISO(d: Date = new Date()): string {
   return shifted.toISOString().slice(0, 10);
 }
 
+// Дата оплаты по умолчанию: если работа была в прошлом месяце — дата работы,
+// иначе сегодня (всё по Уссурийску). Чтобы оплата за октябрь не уходила в ноябрь.
+export function defaultPaidDate(startsAt: string | Date | null | undefined, now: Date = new Date()): string {
+  const today = ussDateISO(now);
+  if (!startsAt) return today;
+  const work = ussDateISO(new Date(startsAt));
+  return work.slice(0, 7) < today.slice(0, 7) ? work : today;
+}
+
+// Работа из прошлого месяца относительно сегодняшнего дня (Уссурийск).
+export function isPastMonthWork(startsAt: string | Date | null | undefined, now: Date = new Date()): boolean {
+  if (!startsAt) return false;
+  return ussDateISO(new Date(startsAt)).slice(0, 7) < ussDateISO(now).slice(0, 7);
+}
+
 // Возвращает "HH:mm" в TZ Уссурийска.
 export function ussTimeHM(d: Date = new Date()): string {
   const shifted = new Date(d.getTime() + OFFSET_MIN * 60_000);
