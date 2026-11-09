@@ -1,5 +1,5 @@
 import React from "react";
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppointmentDialog } from "./AppointmentDialog";
@@ -45,7 +45,11 @@ function setup(id = "october") {
   return { qc, close, switchTo: (next: string, open = true) => rendered.rerender(view(next, open)) };
 }
 const date = () => screen.getByLabelText<HTMLInputElement>("Дата оплаты");
-const paymentButton = () => screen.getByRole("button", { name: /^Добавить$/ });
+const paymentButton = () => {
+  const section = date().parentElement?.parentElement;
+  if (!section) throw new Error("Payment controls missing");
+  return within(section).getByRole("button", { name: /^Добавить$/ });
+};
 function fillPayment() {
   fireEvent.click(screen.getByRole("button", { name: /Заполнить остатком/ }));
 }
