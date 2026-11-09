@@ -111,7 +111,10 @@ export function AppointmentDialog({
   });
   const { data: existing } = useQuery({
     queryKey: ["appointment", appointmentId],
-    queryFn: () => getAppointment(appointmentId!),
+    queryFn: () => {
+      if (!appointmentId) throw new Error("Не выбрана запись");
+      return getAppointment(appointmentId);
+    },
     enabled: !!appointmentId && open,
   });
 
@@ -496,14 +499,19 @@ export function AppointmentDialog({
         comment: comment || null,
         services: servicesPayload,
       };
-      if (isEdit) await updateAppointment(appointmentId!, payload);
-      else await createAppointment(payload);
+      if (appointmentId) {
+        await qc.cancelQueries({ queryKey: ["appointment", appointmentId], exact: true });
+        await updateAppointment(appointmentId, payload);
+        // Publish the successfully saved date immediately, including for a cached reopen.
+        qc.setQueryData(["appointment", appointmentId], existing ? { ...existing, ...payload } : undefined);
+      } else await createAppointment(payload);
 
     },
     onSuccess: () => {
       toast.success(isEdit ? "Запись обновлена" : "Запись создана");
       bump(selected.map((s) => s.service_id).filter((id) => id && !id.startsWith("custom:")));
       qc.invalidateQueries({ queryKey: ["appointments"] });
+      if (appointmentId) qc.invalidateQueries({ queryKey: ["appointment", appointmentId], exact: true });
       qc.invalidateQueries({ queryKey: ["client-reminders"] });
       onOpenChange(false);
     },
@@ -957,8 +965,14 @@ export function AppointmentDialog({
               </div>
             </Section>
 
-            {isEdit && appointmentId && (
-              <PaymentsSection appointmentId={appointmentId} total={total} startsAt={existing?.starts_at} />
+            {isEdit && appointmentId && existing?.id === appointmentId && (
+              <PaymentsSection
+                key={appointmentId}
+                appointmentId={appointmentId}
+                total={total}
+                startsAt={existing.starts_at}
+                workDateUnsaved={saveMutation.isPending || startDate !== ussDateISO(new Date(existing.starts_at)) || startTime !== ussTimeHM(new Date(existing.starts_at))}
+              />
             )}
 
 
@@ -1133,10 +1147,12 @@ function PaymentsSection({
   appointmentId,
   total,
   startsAt,
+  workDateUnsaved,
 }: {
   appointmentId: string;
   total: number;
-  startsAt?: string;
+  startsAt: string;
+  workDateUnsaved: boolean;
 }) {
   const qc = useQueryClient();
   const confirmAction = useConfirm();
@@ -1149,6 +1165,10 @@ function PaymentsSection({
   const due = Math.max(0, total - paid);
 
   const [paidAt, setPaidAt] = useState(() => defaultPaidDate(startsAt));
+  const paidDateEdited = useRef(false);
+  useEffect(() => {
+    if (!paidDateEdited.current) setPaidAt(defaultPaidDate(startsAt));
+  }, [startsAt]);
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
 
@@ -1161,6 +1181,7 @@ function PaymentsSection({
 
   const addMut = useMutation({
     mutationFn: () => {
+      if (workDateUnsaved) throw new Error("Сначала сохраните дату работы");
       let amt = Math.max(0, Math.round(Number(amount) || 0));
       if (amt > due) amt = due;
       return createAppointmentPayment({
@@ -1242,7 +1263,10 @@ function PaymentsSection({
       <div className="mt-3 grid grid-cols-[130px_minmax(0,1fr)_auto] items-end gap-2">
         <div>
           <Label className="text-xs">Дата</Label>
-          <Input type="date" value={paidAt} onChange={(e) => setPaidAt(e.target.value)} />
+          <Input type="date" aria-label="Дата оплаты" value={paidAt} onChange={(e) => {
+            paidDateEdited.current = true;
+            setPaidAt(e.target.value);
+          }} />
         </div>
         <div>
           <Label className="text-xs">Сумма, ₽</Label>
@@ -1257,11 +1281,12 @@ function PaymentsSection({
         <Button
           type="button"
           onClick={() => addMut.mutate()}
-          disabled={addMut.isPending || !amount || Number(amount) <= 0}
+          disabled={workDateUnsaved || addMut.isPending || !paidAt || !amount || Number(amount) <= 0}
         >
           <Plus className="mr-1 h-4 w-4" /> Добавить
         </Button>
       </div>
+      {workDateUnsaved && <p className="mt-2 text-xs text-muted-foreground">Сначала сохраните изменённую дату работы, затем добавьте оплату.</p>}
       <div className="mt-2">
         <Input
           value={note}
@@ -1276,7 +1301,7 @@ function PaymentsSection({
             size="sm"
             variant="secondary"
             onClick={() => {
-              setPaidAt(defaultPaidDate(startsAt));
+              if (!paidDateEdited.current) setPaidAt(defaultPaidDate(startsAt));
               setAmount(String(due));
             }}
           >
