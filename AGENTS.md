@@ -8,3 +8,5 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Appointment payment forms mount only for a loaded matching appointment and are keyed by its ID; saved work-date changes refresh automatic payment dates but never a manually edited date, preventing stale-month payments.
