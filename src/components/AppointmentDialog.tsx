@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { ussDateISO, ussTimeHM, ussLocalToInstant } from "@/lib/tz";
+import { defaultPaidDate, ussDateISO, ussTimeHM, ussLocalToInstant } from "@/lib/tz";
 import { Trash2, Plus, X, ChevronsUpDown, Search, Check, Calculator, User, Car, CalendarClock, Wrench, ClipboardList, Bell, MessageSquare, ExternalLink } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 
@@ -958,7 +958,7 @@ export function AppointmentDialog({
             </Section>
 
             {isEdit && appointmentId && (
-              <PaymentsSection appointmentId={appointmentId} total={total} />
+              <PaymentsSection appointmentId={appointmentId} total={total} startsAt={existing?.starts_at} />
             )}
 
 
@@ -1132,9 +1132,11 @@ function ServicePicker({
 function PaymentsSection({
   appointmentId,
   total,
+  startsAt,
 }: {
   appointmentId: string;
   total: number;
+  startsAt?: string;
 }) {
   const qc = useQueryClient();
   const confirmAction = useConfirm();
@@ -1146,7 +1148,7 @@ function PaymentsSection({
   const paid = payments.reduce((s, p) => s + Number(p.amount ?? 0), 0);
   const due = Math.max(0, total - paid);
 
-  const [paidAt, setPaidAt] = useState(() => ussDateISO());
+  const [paidAt, setPaidAt] = useState(() => defaultPaidDate(startsAt));
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
 
@@ -1274,7 +1276,7 @@ function PaymentsSection({
             size="sm"
             variant="secondary"
             onClick={() => {
-              setPaidAt(ussDateISO());
+              setPaidAt(defaultPaidDate(startsAt));
               setAmount(String(due));
             }}
           >
