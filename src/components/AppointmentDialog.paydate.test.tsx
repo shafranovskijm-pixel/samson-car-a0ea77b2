@@ -27,6 +27,7 @@ vi.mock("@/components/ui/dialog", () => ({
 }));
 
 const october = "2026-10-15T05:00:00Z";
+const clients: QueryClient[] = [];
 const entry = (id: string, starts_at = october) => ({
   id, starts_at, car_id: "car", car: null, mechanic_id: null,
   duration_minutes: 60, status: "completed", mileage: null, comment: null,
@@ -38,7 +39,8 @@ function deferred<T>() {
   return { promise, resolve };
 }
 function setup(id = "october") {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { retry: false } } });
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false } } });
+  clients.push(qc);
   const close = vi.fn();
   const view = (appointmentId: string, open = true) => <QueryClientProvider client={qc}><AppointmentDialog open={open} appointmentId={appointmentId} onOpenChange={close} /></QueryClientProvider>;
   const rendered = render(view(id));
@@ -63,7 +65,7 @@ beforeEach(() => {
   api.save.mockResolvedValue(undefined);
   api.pay.mockResolvedValue({ id: "payment" });
 });
-afterEach(() => { cleanup(); vi.useRealTimers(); });
+afterEach(() => { cleanup(); clients.splice(0).forEach((qc) => qc.clear()); vi.useRealTimers(); });
 
 describe("AppointmentDialog: дата оплаты при асинхронной загрузке", () => {
   it("не открывает оплату до первого uncached ответа и отправляет октябрьскую дату", async () => {
@@ -79,17 +81,39 @@ describe("AppointmentDialog: дата оплаты при асинхронной
   });
 
   it("сбрасывает ручную дату при переключении работы, включая uncached и cached переходы", async () => {
-    const { switchTo } = setup();
+    const { switchTo, qc } = setup();
     await waitFor(() => expect(date().value).toBe("2026-10-15"));
     fireEvent.change(date(), { target: { value: "2026-11-03" } });
+    fillPayment();
+    fireEvent.change(screen.getByPlaceholderText("Заметка (необязательно): наличными, перевод…"), { target: { value: "Ручная заметка" } });
     const load = deferred<ReturnType<typeof entry>>();
     api.get.mockReturnValueOnce(load.promise);
     switchTo("other");
     expect(screen.queryByLabelText("Дата оплаты")).toBeNull();
     await act(async () => { load.resolve(entry("other", "2026-10-31T05:00:00Z")); });
     await waitFor(() => expect(date().value).toBe("2026-10-31"));
+    expect(paymentButton().hasAttribute("disabled")).toBe(true);
+    expect(screen.getByPlaceholderText<HTMLInputElement>("Заметка (необязательно): наличными, перевод…").value).toBe("");
+    expect(qc.getQueryData(["appointment", "october"])).toBeDefined();
     switchTo("october");
     await waitFor(() => expect(date().value).toBe("2026-10-15"));
+  });
+
+  it("сохранение новой даты работы не затирает ручную дату оплаты в открытом окне", async () => {
+    const { close } = setup();
+    await waitFor(() => expect(date().value).toBe("2026-10-15"));
+    fireEvent.change(date(), { target: { value: "2026-10-20" } });
+    const workDate = document.querySelector<HTMLInputElement>('input[type="date"]');
+    if (!workDate) throw new Error("Work date missing");
+    fireEvent.change(workDate, { target: { value: "2026-10-31" } });
+    api.get.mockResolvedValue(entry("october", "2026-10-31T05:00:00Z"));
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+    await waitFor(() => expect(close).toHaveBeenCalledWith(false));
+    expect(date().value).toBe("2026-10-20");
+    fillPayment();
+    await waitFor(() => expect(paymentButton().hasAttribute("disabled")).toBe(false));
+    fireEvent.click(paymentButton());
+    await waitFor(() => expect(api.pay).toHaveBeenCalledWith(expect.objectContaining({ paid_at: "2026-10-20" })));
   });
 
   it("не затирает вручную введённую дату при refetch, даже с новой датой работы", async () => {
