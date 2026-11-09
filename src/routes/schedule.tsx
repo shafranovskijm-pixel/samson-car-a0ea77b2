@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format, parseISO } from "date-fns";
-import { isTodayUss, isTomorrowUss, isYesterdayUss, ussDayKey } from "@/lib/tz";
+import { defaultPaidDate, isPastMonthWork, isTodayUss, isTomorrowUss, isYesterdayUss, ussDayKey } from "@/lib/tz";
 import { ru } from "date-fns/locale";
 import { Check, ChevronDown, Plus, Printer, Trash2 } from "lucide-react";
 
@@ -108,9 +108,10 @@ function SchedulePage() {
     total: number;
     paid: number;
     paid_at: string;
+    starts_at: string;
     amount: string;
     note: string;
-  }>({ open: false, id: null, total: 0, paid: 0, paid_at: "", amount: "", note: "" });
+  }>({ open: false, id: null, total: 0, paid: 0, paid_at: "", starts_at: "", amount: "", note: "" });
 
   const statusMut = useMutation({
     mutationFn: ({ id, status }: { id: string; status: AppointmentStatus }) =>
@@ -174,10 +175,15 @@ function SchedulePage() {
     statusMut.mutate({ id, status });
   };
 
-  const payFullNow = (id: string, total: number, paid: number) => {
+  const payFullNow = (id: string, total: number, paid: number, startsAt?: string) => {
     const due = Math.max(0, total - paid);
     if (due <= 0) {
       toast.info("Уже оплачено полностью");
+      return;
+    }
+    if (isPastMonthWork(startsAt)) {
+      openPayDialog(id, total, paid, startsAt);
+      toast.info("Работа из прошлого месяца — проверьте дату оплаты");
       return;
     }
     addPayMut.mutate(
@@ -191,14 +197,15 @@ function SchedulePage() {
     );
   };
 
-  const openPayDialog = (id: string, total: number, paid: number) => {
+  const openPayDialog = (id: string, total: number, paid: number, startsAt?: string) => {
     const due = Math.max(0, total - paid);
     setPayDlg({
       open: true,
       id,
       total,
       paid,
-      paid_at: format(new Date(), "yyyy-MM-dd"),
+      starts_at: startsAt ?? "",
+      paid_at: defaultPaidDate(startsAt),
       amount: String(due > 0 ? due : total),
       note: "",
     });
@@ -463,14 +470,14 @@ function SchedulePage() {
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
                                 onClick={() =>
-                                  payFullNow(a.id, a.total_price ?? 0, a.paid_amount ?? 0)
+                                  payFullNow(a.id, a.total_price ?? 0, a.paid_amount ?? 0, a.starts_at)
                                 }
                               >
                                 Оплачено полностью
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() =>
-                                  openPayDialog(a.id, a.total_price ?? 0, a.paid_amount ?? 0)
+                                  openPayDialog(a.id, a.total_price ?? 0, a.paid_amount ?? 0, a.starts_at)
                                 }
                               >
                                 Записать платёж…
@@ -552,6 +559,14 @@ function SchedulePage() {
                   onChange={(e) => setPayDlg((d) => ({ ...d, paid_at: e.target.value }))}
                 />
               </div>
+              {payDlg.starts_at && payDlg.paid_at && (
+                <p className="col-span-2 text-xs text-muted-foreground">
+                  Работа от {format(parseISO(payDlg.starts_at), "dd.MM")}, оплата попадёт в кассу за{" "}
+                  <span className="font-medium text-foreground">
+                    {format(parseISO(payDlg.paid_at), "LLLL yyyy", { locale: ru })}
+                  </span>
+                </p>
+              )}
               <div className="space-y-1.5">
                 <Label htmlFor="pay-amount">Сумма, ₽</Label>
                 <Input
