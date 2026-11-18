@@ -10,3 +10,4 @@
 <!-- LOVABLE:END -->
 
 - Appointment payment forms mount only for a loaded matching appointment and are keyed by its ID; saved work-date changes refresh automatic payment dates but never a manually edited date, preventing stale-month payments.
+- Reconcile work-date totals against payment-date receipts with the shared paymentReconciliation helper; show cross-period payments separately so differing totals remain explainable without changing accounting.

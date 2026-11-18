@@ -54,6 +54,14 @@ import type { AppointmentWithRelations } from "@/lib/api";
 
 export const Route = createFileRoute("/schedule")({
   ssr: false,
+  head: () => ({ meta: [
+    { title: "Записи по дням — Samson Auto CRM" },
+    { name: "description", content: "Работы автосервиса, оплаты клиентов и задолженность по датам записей." },
+    { property: "og:title", content: "Записи по дням — Samson Auto CRM" },
+    { property: "og:description", content: "Работы, оплаты и задолженность клиентов автосервиса." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: SchedulePage,
 });
 
@@ -345,11 +353,11 @@ function SchedulePage() {
         <div className="mb-4 rounded-xl border bg-card p-3 text-sm">
           <div className="grid gap-2 sm:grid-cols-3">
             <div><div className="text-xs text-muted-foreground">Сумма работ в списке</div><div className="text-lg font-semibold tabular-nums">{rub(totals.work)}</div></div>
-            <div><div className="text-xs text-muted-foreground">Оплачено клиентами</div><div className="text-lg font-semibold tabular-nums text-primary">{rub(totals.paid)}</div></div>
+            <div><div className="text-xs text-muted-foreground">За эти работы оплачено (за все даты)</div><div className="text-lg font-semibold tabular-nums text-primary">{rub(totals.paid)}</div></div>
             <div><div className="text-xs text-muted-foreground">Ждёт оплаты</div><div className={`text-lg font-semibold tabular-nums ${totals.due > 0 ? "text-destructive" : ""}`}>{rub(totals.due)}</div></div>
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
-            В «Расходы» (поступило и касса) попадают только оплаченные деньги и по дате оплаты, а не по дате работы. Поэтому сумма работ здесь может быть больше, чем «Поступило» в расходах, на сумму «Ждёт оплаты». Отменённые записи не считаются. Чтобы увидеть, какие работы не оплачены, выберите фильтр оплаты «Не оплачен».
+            Здесь итог по всем показанным работам и с учётом фильтров. «Оплачено» включает оплаты этих работ за любые даты. В «Расходах» поступления считаются по дате оплаты за выбранный период, включая оплаты работ других месяцев. Поэтому разница бывает в обе стороны. Точная сверка с датами работ и оплат — в «Расходах» под кассой. Отменённые записи здесь не учитываются.
           </p>
         </div>
       )}

@@ -55,6 +55,7 @@ import {
 } from "@/lib/api";
 import { effectivePayout, type PayoutMechanic, type PayoutService } from "@/lib/payouts";
 import { ExpensesMonthlyTable } from "@/components/ExpensesMonthlyTable";
+import { PaymentReconciliation } from "@/components/PaymentReconciliation";
 import { ExpensesDrillDown, type DrillMetric } from "@/components/ExpensesDrillDown";
 import {
   type PeriodKey,
@@ -78,6 +79,10 @@ export const Route = createFileRoute("/expenses")({
     meta: [
       { title: "Расходы — Samson Auto CRM" },
       { name: "description", content: "Оборот, прибыль, ЗП мастеров и авансы." },
+      { property: "og:title", content: "Расходы — Samson Auto CRM" },
+      { property: "og:description", content: "Сверка поступлений, стоимости работ, выплат и кассы за выбранный период." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: ExpensesPage,
@@ -104,7 +109,7 @@ function ExpensesPage() {
   const rangeLabel = periodRangeLabel(period, anchor, custom);
 
 
-  const { data: appts = [] } = useQuery({
+  const { data: appts = [], isPending: apptsPending, isError: apptsError } = useQuery({
     queryKey: ["appointments", "expenses-range", fromIso, toIso],
     queryFn: () => listAppointments(rangeStart, rangeEnd),
   });
@@ -120,7 +125,7 @@ function ExpensesPage() {
     queryKey: ["mechanic_advances", fromIso, toIso],
     queryFn: () => listMechanicAdvances({ from: fromIso, to: toIso }),
   });
-  const { data: payments = [] } = useQuery({
+  const { data: payments = [], isPending: paymentsPending, isError: paymentsError } = useQuery({
     queryKey: ["payments-range", fromIso, toIso],
     queryFn: () => listPaymentsRange(fromIso, toIso),
   });
@@ -129,7 +134,7 @@ function ExpensesPage() {
     () => Array.from(new Set(payments.map((p) => p.appointment_id).filter(Boolean))),
     [payments],
   );
-  const { data: paymentAppts = [] } = useQuery({
+  const { data: paymentAppts = [], isPending: paymentApptsPending } = useQuery({
     queryKey: ["appointments", "by-payments", paymentApptIds],
     queryFn: () => listAppointmentsByIds(paymentApptIds),
     enabled: paymentApptIds.length > 0,
@@ -369,10 +374,11 @@ function ExpensesPage() {
           </div>
         </CardContent>
       </Card>
-
-
-
-
+      <PaymentReconciliation
+        works={Array.from(new Map([...appts, ...paymentAppts].map((a) => [a.id, a])).values())}
+        payments={payments} from={fromIso} to={toIso}
+        loading={apptsPending || paymentsPending || apptsError || paymentsError || (paymentApptIds.length > 0 && paymentApptsPending)}
+      />
       <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
         {/* Прибыль (кассовая) — герой */}
         <Card
