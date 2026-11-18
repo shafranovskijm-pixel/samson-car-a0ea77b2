@@ -277,6 +277,18 @@ function SchedulePage() {
     return entries;
   }, [appointments, mechanicFilter, statusFilter, paymentFilter, sortMode]);
 
+  const totals = useMemo(() => {
+    let work = 0, paid = 0;
+    for (const [, items] of grouped) for (const a of items) {
+      if (a.status === "cancelled") continue;
+      const t = Number(a.total_price ?? 0);
+      work += t;
+      paid += Math.min(Number(a.paid_amount ?? 0), t);
+    }
+    return { work, paid, due: Math.max(0, work - paid) };
+  }, [grouped]);
+  const rub = (n: number) => n.toLocaleString("ru-RU") + " ₽";
+
   const changeSort = (v: SortMode) => {
     setSortMode(v);
     if (typeof window !== "undefined") window.localStorage.setItem("schedule.sort", v);
@@ -328,6 +340,19 @@ function SchedulePage() {
           </SelectContent>
         </Select>
       </div>
+
+      {grouped.length > 0 && (
+        <div className="mb-4 rounded-xl border bg-card p-3 text-sm">
+          <div className="grid gap-2 sm:grid-cols-3">
+            <div><div className="text-xs text-muted-foreground">Сумма работ в списке</div><div className="text-lg font-semibold tabular-nums">{rub(totals.work)}</div></div>
+            <div><div className="text-xs text-muted-foreground">Оплачено клиентами</div><div className="text-lg font-semibold tabular-nums text-primary">{rub(totals.paid)}</div></div>
+            <div><div className="text-xs text-muted-foreground">Ждёт оплаты</div><div className={`text-lg font-semibold tabular-nums ${totals.due > 0 ? "text-destructive" : ""}`}>{rub(totals.due)}</div></div>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            В «Расходы» (поступило и касса) попадают только оплаченные деньги и по дате оплаты, а не по дате работы. Поэтому сумма работ здесь может быть больше, чем «Поступило» в расходах, на сумму «Ждёт оплаты». Отменённые записи не считаются. Чтобы увидеть, какие работы не оплачены, выберите фильтр оплаты «Не оплачен».
+          </p>
+        </div>
+      )}
 
       {grouped.length === 0 && (
         <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
